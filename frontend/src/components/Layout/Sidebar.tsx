@@ -72,6 +72,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { to: '/clientes', icon: Users, label: 'Clientes', color: 'text-pink-500' },
         { to: '/proveedores', icon: Truck, label: 'Proveedores', color: 'text-teal-500' },
+        { to: '/ordenes-compra', icon: Package, label: 'Ordenes de compra', color: 'text-emerald-500', badge: lowStockCount > 0 ? lowStockCount : null, badgeColor: 'bg-amber-500' },
         { to: '/empleados', icon: Briefcase, label: 'Empleados', color: 'text-indigo-500' },
       ],
     }] : []),

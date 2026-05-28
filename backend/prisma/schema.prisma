@@ -63,6 +63,9 @@ model Business {
   cashSessions         CashSession[]
   invoices             Invoice[]
   auditLogs            AuditLog[]
+  payrollPayments      PayrollPayment[]
+  attendanceRecords    AttendanceRecord[]
+  purchaseOrders       PurchaseOrder[]
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 }
@@ -91,6 +94,7 @@ model Product {
   business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transactionItems TransactionItem[]
   quoteItems       QuoteItem[]
+  purchaseOrderItems PurchaseOrderItem[]
   priceHistory     PriceHistory[]
   volumePricing    VolumePricing[]
   createdAt        DateTime          @default(now())
@@ -143,20 +147,26 @@ model Supplier {
   businessId   String
   business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  purchaseOrders PurchaseOrder[]
   createdAt    DateTime      @default(now())
 }
 
 model Employee {
-  id         String   @id @default(cuid())
-  name       String
-  phone      String?
-  email      String?
-  role       String?
-  salary     Float    @default(0)
-  active     Boolean  @default(true)
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  id                String             @id @default(cuid())
+  name              String
+  phone             String?
+  email             String?
+  role              String?
+  salary            Float              @default(0)
+  commissionRate    Float              @default(0)
+  active            Boolean            @default(true)
+  businessId        String
+  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  payrollPayments   PayrollPayment[]
+  attendanceRecords AttendanceRecord[]
+  createdAt         DateTime           @default(now())
+
+  @@index([businessId, active])
 }
 
 model Transaction {
@@ -285,4 +295,72 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   @@index([businessId, createdAt])
+}
+
+model PayrollPayment {
+  id               String      @id @default(cuid())
+  employeeId       String
+  employee         Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  businessId       String
+  business         Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactionId    String?
+  period           String
+  baseSalary       Float       @default(0)
+  commissionAmount Float       @default(0)
+  bonusAmount      Float       @default(0)
+  deductions       Float       @default(0)
+  totalAmount      Float
+  notes            String?
+  paidAt           DateTime    @default(now())
+
+  @@index([businessId, paidAt])
+  @@index([employeeId, period])
+}
+
+model AttendanceRecord {
+  id          String    @id @default(cuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  date        DateTime
+  checkIn     DateTime
+  checkOut    DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([businessId, date])
+  @@index([employeeId, date])
+}
+
+model PurchaseOrder {
+  id          String              @id @default(cuid())
+  number      Int
+  status      String              @default("DRAFT")
+  supplierId  String?
+  supplier    Supplier?           @relation(fields: [supplierId], references: [id])
+  businessId  String
+  business    Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  notes       String?
+  total       Float               @default(0)
+  items       PurchaseOrderItem[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  receivedAt  DateTime?
+
+  @@unique([businessId, number])
+  @@index([businessId, status])
+  @@index([supplierId, createdAt])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         Product?      @relation(fields: [productId], references: [id])
+  name            String
+  quantity        Int
+  receivedQty     Int           @default(0)
+  cost            Float         @default(0)
 }

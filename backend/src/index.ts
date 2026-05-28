@@ -11,6 +11,7 @@ import productsRouter from './routes/products'
 import clientsRouter from './routes/clients'
 import suppliersRouter from './routes/suppliers'
 import employeesRouter from './routes/employees'
+import purchaseOrdersRouter from './routes/purchaseOrders'
 import transactionsRouter from './routes/transactions'
 import quotesRouter from './routes/quotes'
 import statsRouter from './routes/stats'
@@ -53,6 +54,7 @@ bizRoutes.use('/products', productsRouter)
 bizRoutes.use('/clients', clientsRouter)
 bizRoutes.use('/suppliers', suppliersRouter)
 bizRoutes.use('/employees', employeesRouter)
+bizRoutes.use('/purchase-orders', purchaseOrdersRouter)
 bizRoutes.use('/transactions', transactionsRouter)
 bizRoutes.use('/quotes', quotesRouter)
 bizRoutes.use('/stats', statsRouter)

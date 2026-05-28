@@ -18,6 +18,7 @@ import { Cotizaciones } from '@/pages/Cotizaciones'
 import { Clientes } from '@/pages/Clientes'
 import { Proveedores } from '@/pages/Proveedores'
 import { Empleados } from '@/pages/Empleados'
+import { OrdenesCompra } from '@/pages/OrdenesCompra'
 import { Configuraciones } from '@/pages/Configuraciones'
 import { Caja } from '@/pages/Caja'
 import { CuentasCobrar } from '@/pages/CuentasCobrar'
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="/cotizaciones" element={<OwnerOnly><ErrorBoundary><Cotizaciones /></ErrorBoundary></OwnerOnly>} />
             <Route path="/clientes" element={<OwnerOnly><ErrorBoundary><Clientes /></ErrorBoundary></OwnerOnly>} />
             <Route path="/proveedores" element={<OwnerOnly><ErrorBoundary><Proveedores /></ErrorBoundary></OwnerOnly>} />
+            <Route path="/ordenes-compra" element={<OwnerOnly><ErrorBoundary><OrdenesCompra /></ErrorBoundary></OwnerOnly>} />
             <Route path="/empleados" element={<OwnerOnly><ErrorBoundary><Empleados /></ErrorBoundary></OwnerOnly>} />
             <Route path="/configuraciones" element={<OwnerOnly><ErrorBoundary><Configuraciones /></ErrorBoundary></OwnerOnly>} />
             <Route path="/caja" element={<ErrorBoundary><Caja /></ErrorBoundary>} />

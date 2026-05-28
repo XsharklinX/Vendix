@@ -81,3 +81,37 @@ Checkpoint inicial:
 - `npm run build:frontend`: pasa con warnings no bloqueantes de Vite/chunk size.
 
 Cada fase nueva debe volver a ejecutar ambas builds antes de considerarse cerrada.
+
+## v1.2 - Nomina y equipo
+
+Aplicado el 2026-05-28:
+- Se extendio `Employee` con `commissionRate`.
+- Se agregaron modelos `PayrollPayment` y `AttendanceRecord`.
+- El modulo `Empleados` ahora tiene pestanas de equipo, pagos de nomina, ventas/comisiones y asistencia.
+- Registrar pago de nomina crea automaticamente una transaccion `EXPENSE`.
+- Ventas por empleado y comisiones se calculan por periodo emparejando `Employee.email` con el usuario cajero.
+- La asistencia permite entrada/salida y calcula horas trabajadas.
+- El reporte de nomina se puede imprimir como PDF desde navegador y exportar como CSV compatible con Excel.
+
+Riesgos:
+- La vinculacion empleado-cajero por email es pragmatica. Para una version futura conviene `Employee.userId`.
+
+## v1.3 - Ordenes de compra
+
+Aplicado el 2026-05-28:
+- Se agregaron modelos `PurchaseOrder` y `PurchaseOrderItem`.
+- Se agrego nueva pantalla `Ordenes de compra`.
+- Crear orden con proveedor, productos, cantidades y costos.
+- Estados soportados: `DRAFT`, `SENT`, `PARTIALLY_RECEIVED`, `COMPLETED`, `CANCELLED`.
+- Recibir mercancia parcial o completa actualiza inventario automaticamente.
+- Se agregaron alertas de reorden usando `lowStockThreshold`.
+- Se puede imprimir una orden como PDF desde navegador.
+
+Riesgos:
+- Recibir una orden actualiza inventario, pero no crea automaticamente una transaccion financiera para evitar duplicados contables. Si el flujo de negocio lo requiere, debe agregarse una accion explicita de "registrar factura/compra".
+
+Verificacion v1.2/v1.3:
+- `npx prisma generate`: pasa.
+- `npx prisma db push`: pasa.
+- `npm run build:backend`: pasa.
+- `npm run build:frontend`: pasa con warnings no bloqueantes.
