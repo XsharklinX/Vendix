@@ -6,5 +6,7 @@ backend/prisma/dev.db
 backend/prisma/dev.db-journal
 backend/.env
 frontend/dist/
+release/
+dist/
 .DS_Store
 *.log
