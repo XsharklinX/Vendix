@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full hover:bg-gray-400; }
+}
+
+@layer components {
+  /* ── Botones ── */
+  .btn-primary {
+    @apply bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm
+           hover:bg-blue-700 active:scale-95 transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100
+           flex items-center gap-2 shadow-sm shadow-blue-200;
+  }
+  .btn-secondary {
+    @apply bg-white text-gray-700 border border-gray-200 px-5 py-2.5 rounded-xl
+           font-semibold text-sm hover:bg-gray-50 hover:border-gray-300
+           active:scale-95 transition-all duration-150
+           flex items-center gap-2;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm
+           hover:bg-red-700 active:scale-95 transition-all duration-150
+           flex items-center gap-2 shadow-sm shadow-red-200;
+  }
+  .btn-ghost {
+    @apply text-gray-500 px-3 py-2 rounded-xl text-sm font-medium
+           hover:bg-gray-100 hover:text-gray-700 active:scale-95 transition-all duration-150
+           flex items-center gap-2;
+  }
+
+  /* ── Inputs ── */
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900
+           bg-white transition-all duration-150 placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400
+           disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed;
+  }
+  .input-lg {
+    @apply input py-3 text-base;
+  }
+  .label {
+    @apply block text-sm font-semibold text-gray-700 mb-1.5;
+  }
+
+  /* ── Cards ── */
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100 shadow-sm;
+  }
+  .card-hover {
+    @apply card hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  /* ── Tabla ── */
+  .table-header {
+    @apply px-5 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider;
+  }
+  .table-cell {
+    @apply px-5 py-4 text-sm text-gray-700;
+  }
+  .table-row {
+    @apply hover:bg-blue-50/30 transition-colors duration-100;
+  }
+
+  /* ── Stat cards con gradiente ── */
+  .stat-card {
+    @apply rounded-2xl p-5 text-white relative overflow-hidden shadow-lg;
+  }
+  .stat-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-20;
+    background: radial-gradient(circle at top right, white, transparent 60%);
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    @apply flex items-center justify-between px-6 py-5 bg-white border-b border-gray-100 sticky top-0 z-10;
+  }
+
+  /* ── Sidebar item ── */
+  .nav-item {
+    @apply flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium
+           transition-all duration-150 cursor-pointer;
+  }
+  .nav-item-active {
+    @apply bg-blue-600 text-white shadow-sm shadow-blue-300;
+  }
+  .nav-item-inactive {
+    @apply text-gray-500 hover:bg-gray-100 hover:text-gray-800;
+  }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slideIn 0.15s ease-out;
+}

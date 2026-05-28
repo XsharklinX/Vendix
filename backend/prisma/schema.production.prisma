@@ -1,0 +1,215 @@
+// Este archivo es para producción (PostgreSQL en Railway/Supabase)
+// Para usarlo: cp prisma/schema.production.prisma prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  password   String
+  name       String
+  role       String     @default("OWNER")   // OWNER | CASHIER
+  staffOf    String?                         // businessId si es CASHIER
+  createdAt  DateTime   @default(now())
+  businesses Business[]
+}
+
+model Business {
+  id                String        @id @default(cuid())
+  name              String
+  type              String?
+  address           String?
+  city              String?
+  phone             String?
+  email             String?
+  taxId             String?
+  currency          String        @default("DOP")
+  lowStockThreshold Int           @default(5)
+  taxRate           Float         @default(0.18)
+  taxName           String        @default("ITBIS")
+  taxIncluded       Boolean       @default(true)
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products          Product[]
+  categories        Category[]
+  clients           Client[]
+  suppliers         Supplier[]
+  employees         Employee[]
+  transactions      Transaction[]
+  quotes            Quote[]
+  cashSessions      CashSession[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Category {
+  id         String    @id @default(cuid())
+  name       String
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  products   Product[]
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  name             String
+  description      String?
+  price            Float
+  cost             Float             @default(0)
+  quantity         Int               @default(0)
+  barcode          String?
+  imageUrl         String?
+  taxExempt        Boolean           @default(false)
+  categoryId       String?
+  category         Category?         @relation(fields: [categoryId], references: [id])
+  businessId       String
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactionItems TransactionItem[]
+  quoteItems       QuoteItem[]
+  priceHistory     PriceHistory[]
+  volumePricing    VolumePricing[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  oldPrice  Float
+  newPrice  Float
+  changedAt DateTime @default(now())
+}
+
+model VolumePricing {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQty    Int
+  price     Float
+}
+
+model Client {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  document     String?
+  address      String?
+  isVip        Boolean       @default(false)
+  discountRate Float         @default(0)
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  quotes       Quote[]
+  createdAt    DateTime      @default(now())
+}
+
+model Supplier {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  document     String?
+  address      String?
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+}
+
+model Employee {
+  id         String   @id @default(cuid())
+  name       String
+  phone      String?
+  email      String?
+  role       String?
+  salary     Float    @default(0)
+  active     Boolean  @default(true)
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  type          String            // SALE, EXPENSE, INCOME, PURCHASE, RETURN
+  amount        Float
+  description   String?
+  paymentMethod String            @default("CASH")
+  status        String            @default("COMPLETED")
+  discountValue Float             @default(0)
+  discountType  String            @default("NONE") // NONE, PERCENT, FIXED
+  taxAmount     Float             @default(0)
+  returnOfId    String?
+  clientId      String?
+  client        Client?           @relation(fields: [clientId], references: [id])
+  supplierId    String?
+  supplier      Supplier?         @relation(fields: [supplierId], references: [id])
+  businessId    String
+  business      Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cashSessionId String?
+  cashSession   CashSession?      @relation(fields: [cashSessionId], references: [id])
+  items         TransactionItem[]
+  createdAt     DateTime          @default(now())
+}
+
+model TransactionItem {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product?    @relation(fields: [productId], references: [id])
+  name          String
+  quantity      Int
+  price         Float
+  cost          Float       @default(0)
+}
+
+model Quote {
+  id         String      @id @default(cuid())
+  number     Int
+  concept    String?
+  status     String      @default("PENDING")
+  validUntil DateTime?
+  total      Float
+  notes      String?
+  clientId   String?
+  client     Client?     @relation(fields: [clientId], references: [id])
+  businessId String
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items      QuoteItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model QuoteItem {
+  id        String   @id @default(cuid())
+  quoteId   String
+  quote     Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  name      String
+  quantity  Int
+  price     Float
+}
+
+model CashSession {
+  id           String        @id @default(cuid())
+  openAmount   Float
+  closeAmount  Float?
+  notes        String?
+  openedAt     DateTime      @default(now())
+  closedAt     DateTime?
+  status       String        @default("OPEN")
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}

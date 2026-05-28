@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Research — Dashboard Finanzas PYME · Vendix</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.7; color: #1a1a2e; background: #f8f9fc; padding: 40px 20px 80px; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+
+  /* Header */
+  .page-header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 40px 48px; border-radius: 16px; margin-bottom: 36px; }
+  .page-header h1 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+  .page-header .meta { font-size: 13px; opacity: 0.75; }
+  .page-header .meta span { margin-right: 20px; }
+
+  /* TL;DR */
+  .tldr { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 36px; }
+  .tldr strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #3b82f6; margin-bottom: 6px; }
+  .tldr p { color: #1e3a8a; font-size: 15px; line-height: 1.6; }
+
+  /* Sections */
+  h2 { font-size: 22px; font-weight: 800; color: #1e3a8a; margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+  h3 { font-size: 17px; font-weight: 700; color: #1f2937; margin: 32px 0 12px; }
+  h4 { font-size: 14px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+  p { margin-bottom: 12px; color: #374151; }
+  ul, ol { margin: 12px 0 16px 20px; color: #374151; }
+  li { margin-bottom: 6px; }
+  a { color: #3b82f6; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Recommendation cards */
+  .rec { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .rec-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #1e3a8a; color: white; border-radius: 50%; font-size: 13px; font-weight: 800; margin-right: 10px; flex-shrink: 0; }
+  .rec-title { font-size: 17px; font-weight: 700; color: #111827; display: flex; align-items: center; margin-bottom: 12px; }
+  .rec-problem { background: #fef3c7; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #92400e; margin-bottom: 14px; }
+  .rec-problem strong { display: block; margin-bottom: 2px; }
+
+  /* ASCII mockups */
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 10px; font-family: 'Consolas', 'Monaco', monospace; font-size: 12.5px; line-height: 1.5; overflow-x: auto; margin: 14px 0; }
+
+  /* Pattern table */
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  th { background: #1e3a8a; color: white; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  td:first-child { font-weight: 600; }
+
+  /* Anti-pattern / unique cards */
+  .anti { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; }
+  .anti strong { color: #b91c1c; display: block; margin-bottom: 4px; }
+  .unique { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; }
+  .unique strong { color: #15803d; display: block; margin-bottom: 4px; }
+
+  /* Badges */
+  .badge-yes { color: #15803d; font-weight: 700; }
+  .badge-no { color: #b91c1c; font-weight: 700; }
+
+  /* Gap highlight */
+  .gap-box { background: linear-gradient(135deg, #eff6ff, #f0fdf4); border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px 24px; margin: 20px 0; }
+  .gap-box strong { color: #1e3a8a; }
+
+  /* Sources */
+  .sources { font-size: 13px; }
+  .sources li { margin-bottom: 4px; color: #6b7280; }
+
+  /* Footer */
+  .footer { text-align: center; margin-top: 60px; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-header">
+    <h1>Design Research: Dashboard, Onboarding y Transacciones</h1>
+    <p style="opacity:.85;margin-top:8px;font-size:15px;">Finanzas para PYMES — Treinta · Wave · QuickBooks · FreshBooks · Fiskl</p>
+    <div class="meta" style="margin-top:16px;">
+      <span>📅 2026-05-09</span>
+      <span>🏷️ Vendix — POS + contabilidad RD</span>
+      <span>🔍 Web Research</span>
+    </div>
+  </div>
+
+  <div class="tldr">
+    <strong>TL;DR</strong>
+    <p>Las apps líderes muestran <strong>máximo 5 KPIs con contexto comparativo</strong> (vs. período anterior), separan el onboarding en preguntas progresivas de valor-primero, y visualizan transacciones con dirección de dinero obvia + color coding. Vendix tiene la estructura correcta — el gap está en la capa de <strong>contexto, comparación y storytelling financiero</strong> que convierte datos crudos en decisiones.</p>
+  </div>
+
+  <!-- RECOMENDACIONES -->
+  <h2>🎯 Recomendaciones</h2>
+
+  <div class="rec">
+    <div class="rec-title"><span class="rec-num">1</span> Dashboard — Añadir contexto comparativo a cada métrica</div>
+    <div class="rec-problem"><strong>Problema actual:</strong> Vendix muestra el número de hoy. Los mejores apps muestran el número + si es bueno o malo vs. ayer/mes pasado.</div>
+    <p><strong>Wave y QuickBooks</strong> ponen △▽ + % de cambio junto a cada KPI. Cash flow siempre con 12-24 meses de histórico. Banner de "flagging" para lo que necesita atención.</p>
+    <pre>┌─────────────────────────────────────────────────────────┐
+│  Buenos días, Sharklin 👋  Viernes 9 mayo               │
+├──────────────┬──────────────┬──────────────┬────────────┤
+│ 💚 Ventas hoy│ 📈 Este mes  │ 💸 Gastos    │ 💰 Utilidad│
+│  DOP 4,200  │  DOP 82,400  │  DOP 31,000  │ DOP 51,400 │
+│  △ +12% ayer│  △ +8% mes  │  ▽ -3% mes   │ △ +14% mes │
+├──────────────┴──────────────┴──────────────┴────────────┤
+│  [Gráfico de ventas 30 días con línea de promedio]      │
+├─────────────────────────────────────────────────────────┤
+│ ⚠️  3 facturas pendientes · 2 productos agotándose      │
+└─────────────────────────────────────────────────────────┘</pre>
+  </div>
+
+  <div class="rec">
+    <div class="rec-title"><span class="rec-num">2</span> Dashboard — Banner de estado + saludo personalizado</div>
+    <div class="rec-problem"><strong>Problema actual:</strong> El dashboard no le dice al dueño si necesita hacer algo hoy.</div>
+    <p><strong>QuickBooks</strong> muestra "Todo al día ✓" vs. una lista de acciones pendientes. <strong>Treinta</strong> usa lenguaje coloquial sin jerga: "Lo que te deben" en vez de "Cuentas por cobrar".</p>
+    <pre>┌─────────────────────────────────────────────────────────┐
+│  ✅  Todo al día — sin pagos pendientes hoy             │
+│         — o —                                           │
+│  ⚠️  2 cosas necesitan atención  [Ver →]               │
+│      · DOP 5,200 en deudas vencidas hace +7 días       │
+│      · Arroz (3 unidades) casi agotado                  │
+└─────────────────────────────────────────────────────────┘</pre>
+  </div>
+
+  <div class="rec">
+    <div class="rec-title"><span class="rec-num">3</span> Dashboard — Gráfico con toggle de período y comparativa</div>
+    <div class="rec-problem"><strong>Problema actual:</strong> El gráfico actual no tiene comparativa vs. período anterior ni toggle rápido.</div>
+    <p><strong>FreshBooks</strong> permite esconder/reordenar gráficos. <strong>Fiskl</strong> añade la línea de breakeven — el dueño ve visualmente si ya cubrió sus gastos del mes.</p>
+    <pre>  Ventas este mes ━━━  Ventas mes pasado ┄┄┄  Breakeven ╌╌╌
+  DOP
+  80K │          ┃
+  60K │     ┃    ┃  ┃         ┃   ┄┄┄┄┄┄┄┄
+  40K │     ┃  ┃ ┃  ┃  ┃  ╌╌╌┄
+  20K │ ┃   ┃  ┃ ┃  ┃  ┃  ┃
+      └──────────────────────────────────────
+       L    M   X  J  V  S  D
+              [Día] [Semana] [Mes] [Año]</pre>
+  </div>
+
+  <div class="rec">
+    <div class="rec-title"><span class="rec-num">4</span> Onboarding — Valor primero, datos después</div>
+    <div class="rec-problem"><strong>Problema actual:</strong> El onboarding pide muchos datos antes de mostrar el producto.</div>
+    <p><strong>QuickBooks</strong> muestra el dashboard (con demo data) antes de terminar el setup. <strong>FreshBooks</strong> tiene un checklist de progreso visual. El patrón ganador en fintech 2024: email → tipo de negocio → dashboard demo → completar después.</p>
+    <pre>Paso 1 (30s)          Paso 2 (45s)          Demo inmediata
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│ Tu nombre    │      │ ¿Qué tipo de │      │ Dashboard    │
+│ Tu email     │  →   │ negocio?     │  →   │ con datos    │
+│ Contraseña   │      │ 🛒 Tienda    │      │ de ejemplo   │
+│              │      │ 🍽️ Restaur. │      │ ← tú aquí   │
+│ [Continuar]  │      │ 💼 Servicio  │      │              │
+└──────────────┘      └──────────────┘      └──────────────┘
+                                             ↓ completar
+                                             perfil en bg</pre>
+  </div>
+
+  <div class="rec">
+    <div class="rec-title"><span class="rec-num">5</span> Transacciones — Dirección de dinero obvia + jerarquía visual</div>
+    <div class="rec-problem"><strong>Problema actual:</strong> El tipo de transacción requiere leer el badge. El monto no tiene suficiente jerarquía visual.</div>
+    <p>El monto y su signo (+/−) deben ser lo primero que el ojo ve. Verde para ingresos, rojo para egresos. Nombre del cliente en negrita, categoría en gris debajo. Patrón universal en Wave, Mercury, QuickBooks.</p>
+    <pre>┌──────────────────────────────────────────────────────────┐
+│  [👤]  María González              📅 hoy 3:42 pm        │
+│        Venta · Efectivo                +DOP 1,850.00     │
+│                                        ▲ verde, grande   │
+│  ────────────────────────────────────────────────────    │
+│  [🏪]  Distribuidora Norte            📅 ayer            │
+│        Compra · Transferencia          −DOP 12,400.00    │
+│                                        ▲ rojo, grande    │
+└──────────────────────────────────────────────────────────┘</pre>
+  </div>
+
+  <div class="rec">
+    <div class="rec-title"><span class="rec-num">6</span> Transacciones — Reglas de categorización automática</div>
+    <div class="rec-problem"><strong>Problema actual:</strong> El usuario categoriza cada transacción manualmente.</div>
+    <p><strong>Zoho Books, Stripe y Mercury</strong> crean reglas: si el proveedor es "Distribuidora Norte" → siempre "Compras de inventario". Ahorra el 80% del tiempo de categorización. El trigger es simple: "¿Hacer esto siempre para este proveedor?"</p>
+    <pre>┌──────────────────────────────────────────────────────┐
+│  Acabas de categorizar como "Compras de inventario"  │
+│                                                      │
+│  ¿Hacer esto siempre para Distribuidora Norte?       │
+│                                                      │
+│     [Sí, crear regla]        [No, solo esta vez]     │
+└──────────────────────────────────────────────────────┘</pre>
+  </div>
+
+  <!-- TABLA DE PATRONES -->
+  <h2>📊 Patrones comparativos</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Patrón</th>
+        <th>Wave</th>
+        <th>QuickBooks</th>
+        <th>Fiskl</th>
+        <th>FreshBooks</th>
+        <th>Treinta</th>
+        <th>Vendix hoy</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Comparativa vs. período anterior</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-no">❌</td></tr>
+      <tr><td>Dashboard customizable (widgets)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-no">❌</td></tr>
+      <tr><td>Alertas de atención automáticas</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-yes">✅ stock</td></tr>
+      <tr><td>Onboarding por tipo de negocio</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td></tr>
+      <tr><td>Color coding verde/rojo claro</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅ parcial</td></tr>
+      <tr><td>Categorización automática con reglas</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-no">❌</td></tr>
+      <tr><td>Gráfico cashflow histórico</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-yes">✅</td></tr>
+      <tr><td>Lenguaje sin jerga contable</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+      <tr><td>Mobile-first</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-yes">✅</td><td class="badge-no">❌</td></tr>
+    </tbody>
+  </table>
+
+  <div class="gap-box">
+    <strong>Gap principal de Vendix:</strong> comparativa vs. período anterior · greeting contextual · categorización automática · onboarding adaptivo por tipo de negocio
+  </div>
+
+  <!-- ANTI-PATTERNS -->
+  <h2>🚫 Anti-patterns — Lo que evitar</h2>
+
+  <div class="anti"><strong>1. Números sin contexto</strong>Mostrar "DOP 82,400" sin decir si es bueno o malo es ruido. Siempre comparar con período anterior.</div>
+  <div class="anti"><strong>2. Onboarding tipo formulario burocrático</strong>Pedir 15 campos antes de mostrar el producto. Las apps líderes en 2024 muestran el dashboard antes de terminar el setup.</div>
+  <div class="anti"><strong>3. Transacciones como tabla plana</strong>Todos los elementos con el mismo peso visual obligan a leer todo. Monto y dirección del dinero deben ser lo primero que ves.</div>
+  <div class="anti"><strong>4. Jerga contable para no-contadores</strong>"Cuentas por cobrar" vs. "Lo que te deben". Treinta y Fiskl ganan en retención porque el dueño de tienda entiende la app.</div>
+  <div class="anti"><strong>5. Gráficos estáticos sin toggle de período</strong>Sin poder cambiar entre día/semana/mes/año, el gráfico pierde el 70% de su utilidad.</div>
+  <div class="anti"><strong>6. Notificaciones de todo o de nada</strong>El usuario ignora badges interminables. QuickBooks solo "flaggea" lo que requiere acción real.</div>
+
+  <!-- UNIQUE ANGLES -->
+  <h2>💡 Ángulos únicos — Lo que hace cada app diferente</h2>
+
+  <div class="unique"><strong>Treinta — Lenguaje coloquial LATAM</strong>Diseñado para el dueño de tienda sin educación financiera. UX de 3 botones grandes, cero jerga. El competidor más relevante por demografía.</div>
+  <div class="unique"><strong>QuickBooks — El tab "Planner" como agenda semanal</strong>Muestra qué vence, qué cobrar y qué pagar esta semana. Convierte una app de registro en una app de gestión.</div>
+  <div class="unique"><strong>Fiskl — Línea de breakeven en el gráfico P&amp;L</strong>El dueño ve visualmente si ya "cubrió gastos este mes". Muy poderoso psicológicamente — reduce la ansiedad financiera.</div>
+  <div class="unique"><strong>Wave — Cash flow predictivo con IA</strong>"En 30 días tu caja será X si el comportamiento se mantiene." Reduce la ansiedad del dueño sobre el futuro.</div>
+  <div class="unique"><strong>FreshBooks — Dashboard completamente personalizable</strong>El usuario reordena y esconde widgets. Un restaurante no necesita ver "facturas enviadas".</div>
+
+  <!-- SOURCES -->
+  <h2>📚 Sources</h2>
+  <ul class="sources">
+    <li><a href="https://support.waveapps.com/hc/en-us/articles/4404315432980">Wave Dashboard Help</a></li>
+    <li><a href="https://www.linktly.com/accounting-software/wave-review/">Wave Review 2026</a></li>
+    <li><a href="https://quickbooks.intuit.com/learn-support/en-us/help-article/product-setup/get-started-adjust-settings-sign-quickbooks-online/L3uA1fibV_US_en_US">QuickBooks Setup Guide</a></li>
+    <li><a href="https://blog.coupler.io/quickbooks-dashboard/">QuickBooks Dashboard Management</a></li>
+    <li><a href="https://www.useronboard.com/how-quickbooks-onboards-new-users/">QuickBooks Onboarding</a></li>
+    <li><a href="https://fiskl.com/features/dashboard/">Fiskl Dashboard Features</a></li>
+    <li><a href="https://www.freshbooks.com/blog/product-updates-2024">FreshBooks 2024 Updates</a></li>
+    <li><a href="https://www.ycombinator.com/companies/treinta">Treinta (Y Combinator)</a></li>
+    <li><a href="https://userpilot.com/blog/fintech-onboarding/">Fintech Onboarding Best Practices</a></li>
+    <li><a href="https://www.scottherrington.com/blog/designing-a-better-bank-app-transaction-list/">Transaction List UX Design</a></li>
+    <li><a href="https://stripe.com/resources/more/what-is-transaction-categorization-a-guide-to-transaction-taxonomy-and-its-benefits">Stripe Transaction Categorization</a></li>
+  </ul>
+
+  <div class="footer">
+    Generado por Vendix Design Research · 2026-05-09 · <code>e:/Programacion/FinanzasPro/.lazyweb/design-research/finanzas-smb-dashboard-2026-05-09/</code>
+  </div>
+</div>
+</body>
+</html>
