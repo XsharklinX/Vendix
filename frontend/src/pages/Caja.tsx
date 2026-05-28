@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { Wallet, Lock, Unlock, TrendingUp, TrendingDown, Banknote, CreditCard, ArrowLeftRight, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 interface CashTx {
   amount: number
@@ -46,6 +47,7 @@ export function Caja() {
   const [closeForm, setCloseForm] = useState({ amount: '', notes: '' })
   const [historyOpen, setHistoryOpen] = useState(false)
   const [detailSession, setDetailSession] = useState<CashSession | null>(null)
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
   const { data: current, isLoading } = useQuery<CashSession | null>({
     queryKey: ['cash-session', bid],
@@ -206,7 +208,18 @@ export function Caja() {
                   />
                 </div>
                 <button
-                  onClick={() => closeMutation.mutate()}
+                  onClick={async () => {
+                    const diff = closeForm.amount ? parseFloat(closeForm.amount) - expectedClose : null
+                    const diffMsg = diff !== null && Math.abs(diff) >= 0.01
+                      ? ` Hay una ${diff > 0 ? 'sobrante' : 'diferencia'} de ${formatCurrency(Math.abs(diff), cur)}.`
+                      : ''
+                    const ok = await confirm(
+                      'Cerrar turno',
+                      `¿Confirmas el cierre de caja con ${formatCurrency(parseFloat(closeForm.amount) || 0, cur)} en efectivo?${diffMsg}`,
+                      true
+                    )
+                    if (ok) closeMutation.mutate()
+                  }}
                   disabled={!closeForm.amount || closeMutation.isPending}
                   className="btn-primary w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700"
                 >
@@ -328,6 +341,8 @@ export function Caja() {
           </div>
         )}
       </Modal>
+
+      {confirmDialog}
 
       {/* Modal detalle turno */}
       <Modal open={!!detailSession} onClose={() => setDetailSession(null)} title="Detalle del turno" size="sm">

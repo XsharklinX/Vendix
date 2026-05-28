@@ -10,7 +10,7 @@ import { formatCurrency, formatDate, QUOTE_STATUS_LABELS } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Plus, FileText, Trash2, PlusCircle, AlertTriangle, ShoppingBag } from 'lucide-react'
+import { Plus, FileText, Trash2, PlusCircle, AlertTriangle, ShoppingBag, Search } from 'lucide-react'
 
 const itemSchema = z.object({
   productId: z.string().optional(),
@@ -50,6 +50,8 @@ export function Cotizaciones() {
   const [modalOpen, setModalOpen] = useState(false)
   const [detailQuote, setDetailQuote] = useState<Quote | null>(null)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const { data: quotes = [], isLoading } = useQuery<Quote[]>({
     queryKey: ['quotes', bid],
@@ -128,11 +130,20 @@ export function Cotizaciones() {
     }
   }
 
+  const filtered = quotes.filter(q => {
+    const matchSearch = !search ||
+      q.client?.name.toLowerCase().includes(search.toLowerCase()) ||
+      q.concept?.toLowerCase().includes(search.toLowerCase()) ||
+      String(q.number).includes(search)
+    const matchStatus = !statusFilter || q.status === statusFilter
+    return matchSearch && matchStatus
+  })
+
   return (
     <div>
       <PageHeader
         title="Cotizaciones"
-        subtitle={`${quotes.length} cotizaciones`}
+        subtitle={filtered.length !== quotes.length ? `${filtered.length} de ${quotes.length} cotizaciones` : `${quotes.length} cotizaciones`}
         action={
           <button onClick={() => { setModalOpen(true); reset({ items: [{ name: '', quantity: 1, price: 0 }] }); setError('') }} className="btn-primary">
             <Plus size={16} /> Crear cotización
@@ -140,16 +151,39 @@ export function Cotizaciones() {
         }
       />
 
-      <div className="p-6">
+      <div className="p-6 space-y-4">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por cliente, concepto o número..."
+              className="input pl-9"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="input w-44"
+          >
+            <option value="">Todos los estados</option>
+            <option value="PENDING">Pendientes</option>
+            <option value="ACCEPTED">Aceptadas</option>
+            <option value="REJECTED">Rechazadas</option>
+            <option value="EXPIRED">Expiradas</option>
+          </select>
+        </div>
+
         <div className="card overflow-hidden">
           {isLoading ? (
             <div className="py-16 text-center text-gray-400">Cargando...</div>
-          ) : quotes.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title="No hay cotizaciones"
-              description="Crea cotizaciones para tus clientes de forma ilimitada"
-              action={<button onClick={() => setModalOpen(true)} className="btn-primary">Crear cotización</button>}
+              title={search || statusFilter ? 'No hay resultados' : 'No hay cotizaciones'}
+              description={search || statusFilter ? 'Prueba con otros filtros' : 'Crea cotizaciones para tus clientes de forma ilimitada'}
+              action={!search && !statusFilter ? <button onClick={() => setModalOpen(true)} className="btn-primary">Crear cotización</button> : undefined}
             />
           ) : (
             <div className="overflow-x-auto">
@@ -166,7 +200,7 @@ export function Cotizaciones() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {quotes.map(q => {
+                  {filtered.map(q => {
                     const statusInfo = QUOTE_STATUS_LABELS[q.status]
                     const isOverdue = q.status === 'PENDING' && q.validUntil && new Date(q.validUntil) < new Date()
                     return (

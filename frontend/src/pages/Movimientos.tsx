@@ -230,6 +230,7 @@ export function Movimientos() {
             <option value="EXPENSE">Gastos</option>
             <option value="INCOME">Ingresos</option>
             <option value="PURCHASE">Compras</option>
+            <option value="RETURN">Devoluciones</option>
           </select>
         </div>
 
@@ -287,9 +288,14 @@ export function Movimientos() {
                     {/* Fecha + Estado */}
                     <div className="text-right flex-shrink-0 hidden sm:block">
                       <p className="text-xs text-gray-400">{formatDateTime(tx.createdAt)}</p>
-                      {tx.status !== 'COMPLETED' && (
+                      {tx.status === 'PENDING' && (
                         <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-50 text-yellow-700">
                           Pendiente
+                        </span>
+                      )}
+                      {tx.status === 'CANCELLED' && (
+                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          Anulada
                         </span>
                       )}
                     </div>
@@ -316,7 +322,7 @@ export function Movimientos() {
                           const ok = await confirm('Devolver venta', `¿Devolver esta venta de ${formatCurrency(tx.amount, cur)}? Se restaurará el stock.`, true)
                           if (ok) returnMutation.mutate(tx.id)
                         }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity btn-ghost text-xs px-2 py-1.5 text-orange-500 hover:bg-orange-50 flex-shrink-0"
+                        className="btn-ghost text-xs px-2 py-1.5 text-orange-500 hover:bg-orange-50 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
                         title="Devolver venta"
                       >
                         <RotateCcw size={13} />
