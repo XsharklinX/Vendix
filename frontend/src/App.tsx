@@ -1,32 +1,34 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { Layout } from '@/components/Layout/Layout'
-import { Login } from '@/pages/auth/Login'
-import { Register } from '@/pages/auth/Register'
-import { ForgotPassword } from '@/pages/auth/ForgotPassword'
-import { ResetPassword } from '@/pages/auth/ResetPassword'
-import { VerifyEmail } from '@/pages/auth/VerifyEmail'
-import { Onboarding } from '@/pages/Onboarding'
-import { AuditLog } from '@/pages/AuditLog'
-import { Dashboard } from '@/pages/Dashboard'
-import { Vender } from '@/pages/Vender'
-import { Movimientos } from '@/pages/Movimientos'
-import { Estadisticas } from '@/pages/Estadisticas'
-import { Inventario } from '@/pages/Inventario'
-import { Cotizaciones } from '@/pages/Cotizaciones'
-import { Clientes } from '@/pages/Clientes'
-import { Proveedores } from '@/pages/Proveedores'
-import { Empleados } from '@/pages/Empleados'
-import { OrdenesCompra } from '@/pages/OrdenesCompra'
-import { Configuraciones } from '@/pages/Configuraciones'
-import { Caja } from '@/pages/Caja'
-import { CuentasCobrar } from '@/pages/CuentasCobrar'
-import { Reportes } from '@/pages/Reportes'
-import { AiAssistant } from '@/pages/AiAssistant'
-import { Planner } from '@/pages/Planner'
 import { useAuthStore } from '@/store/auth'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+
+const Login = lazy(() => import('@/pages/auth/Login').then(module => ({ default: module.Login })))
+const Register = lazy(() => import('@/pages/auth/Register').then(module => ({ default: module.Register })))
+const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword').then(module => ({ default: module.ForgotPassword })))
+const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword').then(module => ({ default: module.ResetPassword })))
+const VerifyEmail = lazy(() => import('@/pages/auth/VerifyEmail').then(module => ({ default: module.VerifyEmail })))
+const Onboarding = lazy(() => import('@/pages/Onboarding').then(module => ({ default: module.Onboarding })))
+const AuditLog = lazy(() => import('@/pages/AuditLog').then(module => ({ default: module.AuditLog })))
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(module => ({ default: module.Dashboard })))
+const Vender = lazy(() => import('@/pages/Vender').then(module => ({ default: module.Vender })))
+const Movimientos = lazy(() => import('@/pages/Movimientos').then(module => ({ default: module.Movimientos })))
+const Estadisticas = lazy(() => import('@/pages/Estadisticas').then(module => ({ default: module.Estadisticas })))
+const Inventario = lazy(() => import('@/pages/Inventario').then(module => ({ default: module.Inventario })))
+const Cotizaciones = lazy(() => import('@/pages/Cotizaciones').then(module => ({ default: module.Cotizaciones })))
+const Clientes = lazy(() => import('@/pages/Clientes').then(module => ({ default: module.Clientes })))
+const Proveedores = lazy(() => import('@/pages/Proveedores').then(module => ({ default: module.Proveedores })))
+const Empleados = lazy(() => import('@/pages/Empleados').then(module => ({ default: module.Empleados })))
+const OrdenesCompra = lazy(() => import('@/pages/OrdenesCompra').then(module => ({ default: module.OrdenesCompra })))
+const Configuraciones = lazy(() => import('@/pages/Configuraciones').then(module => ({ default: module.Configuraciones })))
+const Caja = lazy(() => import('@/pages/Caja').then(module => ({ default: module.Caja })))
+const CuentasCobrar = lazy(() => import('@/pages/CuentasCobrar').then(module => ({ default: module.CuentasCobrar })))
+const Reportes = lazy(() => import('@/pages/Reportes').then(module => ({ default: module.Reportes })))
+const AiAssistant = lazy(() => import('@/pages/AiAssistant').then(module => ({ default: module.AiAssistant })))
+const Planner = lazy(() => import('@/pages/Planner').then(module => ({ default: module.Planner })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,11 +57,16 @@ function OwnerOnly({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function RouteLoader() {
+  return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Cargando...</div>
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <Suspense fallback={<RouteLoader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -88,6 +95,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
 
       <Toaster

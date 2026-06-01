@@ -1,9 +1,9 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } from 'electron'
-import { spawn, ChildProcess } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import http from 'http'
 import crypto from 'crypto'
+import electronUpdater, { type AppUpdater } from 'electron-updater'
 
 // ── Constantes ──────────────────────────────────────────────────────────────
 const PORT = 3001
@@ -11,7 +11,63 @@ const isDev = !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
-let serverProcess: ChildProcess | null = null
+
+function writeServerLog(message: string) {
+  const logFile = path.join(app.getPath('userData'), 'server.log')
+  fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${message}\n`)
+}
+
+function getAutoUpdater(): AppUpdater {
+  // electron-updater is CommonJS; destructuring avoids ESM interop issues.
+  return electronUpdater.autoUpdater
+}
+
+function configureAutoUpdates() {
+  if (isDev) return
+
+  const autoUpdater = getAutoUpdater()
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('error', error => {
+    console.error('[updater]', error)
+    writeServerLog(`[updater] error: ${error.stack || error.message}`)
+  })
+
+  autoUpdater.on('checking-for-update', () => {
+    writeServerLog('[updater] buscando actualizaciones')
+  })
+
+  autoUpdater.on('update-available', info => {
+    writeServerLog(`[updater] actualizacion disponible: ${info.version}`)
+  })
+
+  autoUpdater.on('update-not-available', info => {
+    writeServerLog(`[updater] sin actualizaciones: ${info.version}`)
+  })
+
+  autoUpdater.on('update-downloaded', info => {
+    writeServerLog(`[updater] actualizacion descargada: ${info.version}`)
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Actualizacion disponible',
+      message: `Vendix ${info.version} ya esta lista para instalar.`,
+      detail: 'La aplicacion se cerrara para aplicar la actualizacion. Tus datos locales se conservaran.',
+      buttons: ['Reiniciar e instalar', 'Mas tarde'],
+      defaultId: 0,
+      cancelId: 1,
+    }).then(({ response }) => {
+      if (response === 0) {
+        app.isQuitting = true
+        autoUpdater.quitAndInstall()
+      }
+    }).catch(error => console.error('[updater] dialog', error))
+  })
+
+  autoUpdater.checkForUpdatesAndNotify().catch(error => {
+    console.error('[updater] check', error)
+  })
+}
 
 // ── Helpers de rutas ────────────────────────────────────────────────────────
 function resourcePath(...parts: string[]) {
@@ -55,7 +111,6 @@ function ensureDatabase(): string {
 function startServer(dbPath: string, jwtSecret: string) {
   const serverScript = resourcePath('backend', 'dist', 'index.js')
   const frontendDist = resourcePath('frontend', 'dist')
-
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PORT: String(PORT),
@@ -66,20 +121,17 @@ function startServer(dbPath: string, jwtSecret: string) {
     CORS_ORIGIN: `http://localhost:${PORT}`,
   }
 
-  serverProcess = spawn(process.execPath, [serverScript], {
-    env,
-    stdio: isDev ? 'inherit' : 'pipe',
-  })
-
-  serverProcess.on('error', err => {
-    dialog.showErrorBox('Error del servidor', `No se pudo iniciar el servidor:\n${err.message}`)
-  })
-
-  if (!isDev && serverProcess.stderr) {
-    const logFile = path.join(app.getPath('userData'), 'server.log')
-    const logStream = fs.createWriteStream(logFile, { flags: 'a' })
-    serverProcess.stdout?.pipe(logStream)
-    serverProcess.stderr?.pipe(logStream)
+  try {
+    Object.assign(process.env, env)
+    writeServerLog(`cargando backend: ${serverScript}`)
+    require(serverScript)
+    writeServerLog('backend cargado')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    const details = error instanceof Error ? error.stack || error.message : String(error)
+    writeServerLog(`error cargando backend: ${details}`)
+    dialog.showErrorBox('Error del servidor', `No se pudo iniciar el servidor:\n${message}`)
+    throw error
   }
 }
 
@@ -191,6 +243,12 @@ function createTray() {
 
   const menu = Menu.buildFromTemplate([
     { label: 'Abrir Vendix', click: () => { mainWindow?.show(); mainWindow?.focus() } },
+    ...(!isDev ? [{
+      label: 'Buscar actualizaciones',
+      click: () => {
+        getAutoUpdater().checkForUpdatesAndNotify().catch(error => console.error('[updater] manual check', error))
+      },
+    }] : []),
     { type: 'separator' },
     { label: `Versión ${app.getVersion()}`, enabled: false },
     { type: 'separator' },
@@ -217,6 +275,7 @@ app.whenReady().then(async () => {
 
   await createWindow()
   createTray()
+  configureAutoUpdates()
 })
 
 app.on('window-all-closed', () => {
@@ -229,7 +288,6 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   app.isQuitting = true
-  serverProcess?.kill()
 })
 
 // Evitar múltiples instancias

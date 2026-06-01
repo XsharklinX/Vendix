@@ -4,17 +4,64 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
-const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const http_1 = __importDefault(require("http"));
 const crypto_1 = __importDefault(require("crypto"));
+const electron_updater_1 = __importDefault(require("electron-updater"));
 // ── Constantes ──────────────────────────────────────────────────────────────
 const PORT = 3001;
 const isDev = !electron_1.app.isPackaged;
 let mainWindow = null;
 let tray = null;
-let serverProcess = null;
+function writeServerLog(message) {
+    const logFile = path_1.default.join(electron_1.app.getPath('userData'), 'server.log');
+    fs_1.default.appendFileSync(logFile, `[${new Date().toISOString()}] ${message}\n`);
+}
+function getAutoUpdater() {
+    // electron-updater is CommonJS; destructuring avoids ESM interop issues.
+    return electron_updater_1.default.autoUpdater;
+}
+function configureAutoUpdates() {
+    if (isDev)
+        return;
+    const autoUpdater = getAutoUpdater();
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('error', error => {
+        console.error('[updater]', error);
+        writeServerLog(`[updater] error: ${error.stack || error.message}`);
+    });
+    autoUpdater.on('checking-for-update', () => {
+        writeServerLog('[updater] buscando actualizaciones');
+    });
+    autoUpdater.on('update-available', info => {
+        writeServerLog(`[updater] actualizacion disponible: ${info.version}`);
+    });
+    autoUpdater.on('update-not-available', info => {
+        writeServerLog(`[updater] sin actualizaciones: ${info.version}`);
+    });
+    autoUpdater.on('update-downloaded', info => {
+        writeServerLog(`[updater] actualizacion descargada: ${info.version}`);
+        electron_1.dialog.showMessageBox({
+            type: 'info',
+            title: 'Actualizacion disponible',
+            message: `Vendix ${info.version} ya esta lista para instalar.`,
+            detail: 'La aplicacion se cerrara para aplicar la actualizacion. Tus datos locales se conservaran.',
+            buttons: ['Reiniciar e instalar', 'Mas tarde'],
+            defaultId: 0,
+            cancelId: 1,
+        }).then(({ response }) => {
+            if (response === 0) {
+                electron_1.app.isQuitting = true;
+                autoUpdater.quitAndInstall();
+            }
+        }).catch(error => console.error('[updater] dialog', error));
+    });
+    autoUpdater.checkForUpdatesAndNotify().catch(error => {
+        console.error('[updater] check', error);
+    });
+}
 // ── Helpers de rutas ────────────────────────────────────────────────────────
 function resourcePath(...parts) {
     return isDev
@@ -67,18 +114,18 @@ function startServer(dbPath, jwtSecret) {
         FRONTEND_DIST: frontendDist,
         CORS_ORIGIN: `http://localhost:${PORT}`,
     };
-    serverProcess = (0, child_process_1.spawn)(process.execPath, [serverScript], {
-        env,
-        stdio: isDev ? 'inherit' : 'pipe',
-    });
-    serverProcess.on('error', err => {
-        electron_1.dialog.showErrorBox('Error del servidor', `No se pudo iniciar el servidor:\n${err.message}`);
-    });
-    if (!isDev && serverProcess.stderr) {
-        const logFile = path_1.default.join(electron_1.app.getPath('userData'), 'server.log');
-        const logStream = fs_1.default.createWriteStream(logFile, { flags: 'a' });
-        serverProcess.stdout?.pipe(logStream);
-        serverProcess.stderr?.pipe(logStream);
+    try {
+        Object.assign(process.env, env);
+        writeServerLog(`cargando backend: ${serverScript}`);
+        require(serverScript);
+        writeServerLog('backend cargado');
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const details = error instanceof Error ? error.stack || error.message : String(error);
+        writeServerLog(`error cargando backend: ${details}`);
+        electron_1.dialog.showErrorBox('Error del servidor', `No se pudo iniciar el servidor:\n${message}`);
+        throw error;
     }
 }
 // ── Esperar a que el servidor responda ───────────────────────────────────────
@@ -184,6 +231,12 @@ function createTray() {
     tray.setToolTip('Vendix');
     const menu = electron_1.Menu.buildFromTemplate([
         { label: 'Abrir Vendix', click: () => { mainWindow?.show(); mainWindow?.focus(); } },
+        ...(!isDev ? [{
+                label: 'Buscar actualizaciones',
+                click: () => {
+                    getAutoUpdater().checkForUpdatesAndNotify().catch(error => console.error('[updater] manual check', error));
+                },
+            }] : []),
         { type: 'separator' },
         { label: `Versión ${electron_1.app.getVersion()}`, enabled: false },
         { type: 'separator' },
@@ -206,6 +259,7 @@ electron_1.app.whenReady().then(async () => {
     }
     await createWindow();
     createTray();
+    configureAutoUpdates();
 });
 electron_1.app.on('window-all-closed', () => {
     // No salir al cerrar ventana — app vive en la bandeja
@@ -215,7 +269,6 @@ electron_1.app.on('activate', () => {
 });
 electron_1.app.on('before-quit', () => {
     electron_1.app.isQuitting = true;
-    serverProcess?.kill();
 });
 // Evitar múltiples instancias
 const gotLock = electron_1.app.requestSingleInstanceLock();

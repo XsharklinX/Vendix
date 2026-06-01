@@ -80,7 +80,10 @@ npm run build:frontend   # Compila la aplicacion React
 npm run build            # Build completo para escritorio
 npm run dist             # Genera instalador Windows
 npm run dist:portable    # Genera ejecutable portable
+npm run release:github   # Publica instalador y latest.yml en GitHub Releases
 ```
+
+Los pushes de codigo a `main` publican automaticamente una nueva release de Windows si el build completo termina correctamente. Consulta [Releases y auto-update](docs/releases-and-auto-update.md) para el flujo detallado.
 
 Para sincronizar el schema local:
 
@@ -151,6 +154,7 @@ La landing publica vive en `docs/`. Para publicarla:
 - [Base de datos](docs/database.md)
 - [Configuracion de entorno](docs/env-configuration.md)
 - [Roadmap implementado](docs/roadmap-progress.md)
+- [Releases y auto-update](docs/releases-and-auto-update.md)
 
 ## Contribuir
 

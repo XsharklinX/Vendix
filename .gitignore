@@ -8,5 +8,6 @@ backend/.env
 frontend/dist/
 release/
 dist/
+.build/
 .DS_Store
 *.log

@@ -166,6 +166,42 @@ cd backend && npm run db:push    # Sincronizar cambios del schema
 
 ---
 
+## Releases de Windows y auto-update
+
+El comando `npm run build` solo compila la aplicacion. Para generar el instalador NSIS:
+
+```bash
+npm run dist
+```
+
+Los artefactos quedan en `release/`:
+
+```text
+Vendix-Setup-X.Y.Z.exe
+Vendix-Setup-X.Y.Z.exe.blockmap
+latest.yml
+```
+
+Cada push de codigo a `main` ejecuta el workflow `.github/workflows/release.yml`. Si el build completo termina correctamente, GitHub Actions genera una version patch unica y publica automaticamente el instalador, `.blockmap` y `latest.yml`.
+
+Los cambios exclusivamente de documentacion no generan instaladores nuevos. Para publicar una version definida manualmente:
+
+1. Incrementar `version` en `package.json`.
+2. Confirmar que `npm run build` pasa.
+3. Crear un commit.
+4. Publicar un tag:
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+Las instalaciones existentes consultan GitHub Releases al iniciar, descargan la version mas reciente y tambien permiten buscar actualizaciones desde el menu de bandeja.
+
+No publicar la release como draft y no mezclar `latest.yml` con un `.exe` generado por otra build.
+
+---
+
 ## Checklist antes de entregar
 
 - [ ] `JWT_SECRET` cambiado en `backend/.env` (no dejar el valor por defecto)

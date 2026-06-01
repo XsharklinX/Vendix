@@ -1,6 +1,7 @@
 {
   "name": "vendix",
   "version": "1.1.0",
+  "author": "XsharklinX",
   "description": "Sistema de gestión de ventas para pequeños negocios",
   "private": true,
   "main": "electron/dist/main.js",
@@ -9,20 +10,18 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:electron": "concurrently -n BACK,FRONT,ELECTRON -c blue,green,cyan \"npm run dev:backend\" \"npm run dev:frontend\" \"wait-on http://localhost:5173 && node scripts/launch-dev.js\"",
-
     "setup": "npm run setup:backend && npm run setup:frontend && npm install",
     "setup:backend": "cd backend && npm install && npx prisma generate && npx prisma db push",
     "setup:frontend": "cd frontend && npm install",
-
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "build:electron": "tsc -p electron/tsconfig.json",
     "build:seed": "node scripts/create-seed-db.js",
-    "build:prune": "cd backend && npm prune --omit=dev",
-    "build": "npm run build:backend && npm run build:frontend && npm run build:seed && npm run build:electron && npm run build:prune",
-
-    "dist": "npm run build && electron-builder --win --x64",
-    "dist:portable": "npm run build && electron-builder --win portable --x64"
+    "build:runtime": "node scripts/prepare-backend-runtime.js",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:seed && npm run build:electron",
+    "dist": "npm run build && npm run build:runtime && electron-builder --win --x64",
+    "dist:portable": "npm run build && npm run build:runtime && electron-builder --win portable --x64",
+    "release:github": "npm run build && npm run build:runtime && electron-builder --win --x64 --publish always"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -46,15 +45,39 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "backend/dist",             "to": "backend/dist" },
-      { "from": "backend/node_modules",     "to": "backend/node_modules" },
-      { "from": "backend/prisma/schema.prisma", "to": "backend/prisma/schema.prisma" },
-      { "from": "frontend/dist",            "to": "frontend/dist" },
-      { "from": "electron/assets/seed.db",  "to": "electron/assets/seed.db" }
+      {
+        "from": "backend/dist",
+        "to": "backend/dist"
+      },
+      {
+        "from": ".build/backend-runtime/node_modules",
+        "to": "backend/node_modules"
+      },
+      {
+        "from": "backend/prisma/schema.prisma",
+        "to": "backend/prisma/schema.prisma"
+      },
+      {
+        "from": "frontend/dist",
+        "to": "frontend/dist"
+      },
+      {
+        "from": "electron/assets/seed.db",
+        "to": "electron/assets/seed.db"
+      }
     ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "requestedExecutionLevel": "asInvoker"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "electron/assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "Vendix-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -64,9 +87,20 @@
       "shortcutName": "Vendix",
       "deleteAppDataOnUninstall": false
     },
-    "compression": "store",
+    "compression": "normal",
     "portable": {
       "artifactName": "Vendix-Portable-${version}.exe"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "XsharklinX",
+        "repo": "Vendix",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
   }
 }
