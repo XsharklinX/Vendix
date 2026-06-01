@@ -1,5 +1,9 @@
 const menuToggle = document.querySelector('.menu-toggle')
 const mainNav = document.querySelector('.main-nav')
+const siteHeader = document.querySelector('.site-header')
+const scrollProgress = document.querySelector('.scroll-progress span')
+const heroVisual = document.querySelector('.hero-visual')
+const appWindow = document.querySelector('.app-window')
 
 menuToggle?.addEventListener('click', () => {
   const isOpen = mainNav.classList.toggle('open')
@@ -12,6 +16,30 @@ mainNav?.querySelectorAll('a').forEach(link => {
     menuToggle?.setAttribute('aria-expanded', 'false')
   })
 })
+
+function updateScrollState() {
+  const scrollable = document.documentElement.scrollHeight - window.innerHeight
+  const progress = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0
+  if (scrollProgress) scrollProgress.style.width = `${progress}%`
+  siteHeader?.classList.toggle('scrolled', window.scrollY > 24)
+}
+
+window.addEventListener('scroll', updateScrollState, { passive: true })
+updateScrollState()
+
+if (window.matchMedia('(pointer: fine)').matches) {
+  heroVisual?.addEventListener('pointermove', event => {
+    if (!appWindow) return
+    const bounds = heroVisual.getBoundingClientRect()
+    const rotateY = ((event.clientX - bounds.left) / bounds.width - 0.5) * 5
+    const rotateX = ((event.clientY - bounds.top) / bounds.height - 0.5) * -5
+    appWindow.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(1.2deg)`
+  })
+
+  heroVisual?.addEventListener('pointerleave', () => {
+    if (appWindow) appWindow.style.transform = 'perspective(1000px) rotateZ(1.2deg)'
+  })
+}
 
 const revealObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {

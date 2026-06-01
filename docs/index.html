@@ -9,7 +9,7 @@
     <meta property="og:description" content="POS, inventario, caja, facturacion y CRM en un solo lugar.">
     <meta property="og:type" content="website">
     <title>Vendix | Gestion comercial sin friccion</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="icon.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
@@ -17,8 +17,9 @@
   </head>
   <body>
     <div class="grain"></div>
+    <div class="scroll-progress" aria-hidden="true"><span></span></div>
     <header class="site-header">
-      <a class="brand" href="#inicio" aria-label="Vendix inicio"><span class="brand-mark">V</span><span>Vendix</span></a>
+      <a class="brand" href="#inicio" aria-label="Vendix inicio"><img class="brand-mark" src="icon.png" alt=""><span>Vendix</span></a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
         <span></span><span></span><span></span><span class="sr-only">Abrir menu</span>
       </button>
@@ -32,6 +33,7 @@
       <section class="hero section-shell" id="inicio">
         <div class="hero-copy reveal">
           <p class="eyebrow"><span></span> Gestion comercial para negocios reales</p>
+          <a class="release-pill download-link" href="https://github.com/XsharklinX/Vendix/releases/latest"><i></i><span data-release-version>Version estable disponible</span><b>Descargar</b></a>
           <h1>Todo tu negocio.<br><em>Una sola vista.</em></h1>
           <p class="hero-text">Vendix conecta ventas, inventario, caja, facturacion y clientes para que cada decision tenga contexto. Menos hojas de calculo. Mas control operativo.</p>
           <div class="hero-actions">
@@ -46,7 +48,7 @@
           <div class="app-window">
             <div class="window-top"><div class="window-dots"><i></i><i></i><i></i></div><span>Panel principal</span><b>VDX</b></div>
             <div class="app-body">
-              <aside class="mini-sidebar"><div class="side-logo">V</div><i class="active"></i><i></i><i></i><i></i><i></i><i></i></aside>
+              <aside class="mini-sidebar"><div class="side-logo"><img src="icon.png" alt=""></div><i class="active"></i><i></i><i></i><i></i><i></i><i></i></aside>
               <div class="dashboard">
                 <div class="dash-heading"><div><small>Resumen de hoy</small><strong>Buenos dias, equipo.</strong></div><button>Nueva venta</button></div>
                 <div class="metric-row">
@@ -93,7 +95,7 @@
             </div>
           </div>
           <div class="download-panel">
-            <div class="download-icon" aria-hidden="true">V</div>
+            <img class="download-icon" src="icon.png" alt="">
             <small>INSTALADOR OFICIAL</small>
             <strong>Vendix Desktop</strong>
             <p class="release-file" data-release-file>Buscando el instalador mas reciente...</p>
@@ -188,7 +190,7 @@
       </section>
     </main>
 
-    <footer><div class="section-shell footer-inner"><a class="brand" href="#inicio"><span class="brand-mark">V</span><span>Vendix</span></a><p>POS, inventario y CRM para pequenos negocios.</p><div><a href="https://github.com/XsharklinX/Vendix">GitHub</a><a href="README.md">Docs</a><a href="#faq">FAQ</a></div></div></footer>
+    <footer><div class="section-shell footer-inner"><a class="brand" href="#inicio"><img class="brand-mark" src="icon.png" alt=""><span>Vendix</span></a><p>POS, inventario y CRM para pequenos negocios.</p><div><a href="https://github.com/XsharklinX/Vendix">GitHub</a><a href="README.md">Docs</a><a href="#faq">FAQ</a></div></div></footer>
     <script src="script.js"></script>
   </body>
 </html>
