@@ -21,6 +21,10 @@ const updateSchema = z.object({
   taxIncluded: z.boolean().optional().nullable(),
   ncfType: z.string().optional().nullable(),
   ncfSequence: z.number().int().min(1).optional().nullable(),
+  invoicePrefix: z.string().min(1).max(12).optional().nullable(),
+  invoiceSequence: z.coerce.number().int().min(1).optional().nullable(),
+  invoiceTemplate: z.enum(['classic', 'modern', 'thermal']).optional().nullable(),
+  logoUrl: z.string().url().optional().nullable().or(z.literal('')),
   autoBackupEnabled: z.boolean().optional().nullable(),
   autoBackupInterval: z.number().int().min(1).max(365).optional().nullable(),
 })
@@ -135,6 +139,38 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
   } catch (e) {
     console.error('[business] GET /:id/export', e)
     return res.status(500).json({ error: 'Error al exportar' })
+  }
+})
+
+// Eliminar todos los datos operativos del negocio (mantiene cuenta y negocio)
+router.delete('/:id/reset', async (req: AuthRequest, res) => {
+  try {
+    const business = await prisma.business.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    })
+    if (!business) return res.status(403).json({ error: 'Acceso denegado' })
+
+    const { confirm } = z.object({ confirm: z.literal(business.name) }).parse(req.body)
+    void confirm
+
+    await prisma.$transaction([
+      prisma.transactionItem.deleteMany({ where: { transaction: { businessId: business.id } } }),
+      prisma.quoteItem.deleteMany({ where: { quote: { businessId: business.id } } }),
+      prisma.transaction.deleteMany({ where: { businessId: business.id } }),
+      prisma.quote.deleteMany({ where: { businessId: business.id } }),
+      prisma.cashSession.deleteMany({ where: { businessId: business.id } }),
+      prisma.auditLog.deleteMany({ where: { businessId: business.id } }),
+      prisma.product.deleteMany({ where: { businessId: business.id } }),
+      prisma.client.deleteMany({ where: { businessId: business.id } }),
+      prisma.supplier.deleteMany({ where: { businessId: business.id } }),
+      prisma.employee.deleteMany({ where: { businessId: business.id } }),
+    ])
+
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'El nombre del negocio no coincide' })
+    console.error('[business] DELETE /:id/reset', e)
+    return res.status(500).json({ error: 'Error interno' })
   }
 })
 

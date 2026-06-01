@@ -6,6 +6,7 @@ export interface InvoiceData {
   businessPhone?: string
   businessEmail?: string
   businessTaxId?: string
+  logoUrl?: string
   currency: string
   clientName?: string
   clientPhone?: string
@@ -21,6 +22,7 @@ export interface InvoiceData {
   paymentMethod: string
   status: 'COMPLETED' | 'PENDING'
   notes?: string
+  template?: 'classic' | 'modern' | 'thermal'
 }
 
 const fmt = (n: number, cur: string) =>
@@ -33,6 +35,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 export function generateInvoicePdf(data: InvoiceData) {
   const win = window.open('', '_blank', 'width=800,height=900')
   if (!win) return
+  const template = data.template ?? 'classic'
 
   const rows = data.items.map(i => `
     <tr>
@@ -48,7 +51,13 @@ export function generateInvoicePdf(data: InvoiceData) {
     <title>Factura ${data.invoiceNumber}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1e293b; background: #fff; padding: 32px; max-width: 720px; margin: 0 auto; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1e293b; background: ${template === 'modern' ? '#f8fafc' : '#fff'}; padding: 32px; max-width: ${template === 'thermal' ? '340px' : '720px'}; margin: 0 auto; }
+      body.modern .invoice-meta .num-badge, body.modern .logo-area h1 { color:#0f766e; }
+      body.modern .invoice-meta .num-badge { background:#ccfbf1; }
+      body.thermal { font-family: Consolas, monospace; font-size: 11px; }
+      body.thermal .header, body.thermal .parties { display:block; text-align:center; }
+      body.thermal .invoice-meta { text-align:center; margin-top:12px; }
+      .brand-logo { max-height: 64px; max-width: 160px; object-fit: contain; margin-bottom: 8px; }
       .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
       .logo-area h1 { font-size: 26px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
       .logo-area p { color: #64748b; font-size: 12px; margin-top: 2px; }
@@ -77,9 +86,10 @@ export function generateInvoicePdf(data: InvoiceData) {
       .powered { color: #cbd5e1; font-size: 11px; }
       @media print { body { padding: 16px; } @page { margin: 0; size: A4; } }
     </style>
-  </head><body>
+  </head><body class="${template}">
     <div class="header">
       <div class="logo-area">
+        ${data.logoUrl ? `<img class="brand-logo" src="${data.logoUrl}" alt="Logo">` : ''}
         <h1>${data.businessName}</h1>
         ${data.businessAddress ? `<p>${data.businessAddress}</p>` : ''}
         ${data.businessPhone ? `<p>Tel: ${data.businessPhone}</p>` : ''}

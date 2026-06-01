@@ -37,6 +37,8 @@ const txSchema = z.object({
   items: z.array(itemSchema).optional().default([]),
 })
 
+const calculateLoyaltyPoints = (amount: number) => Math.max(0, Math.floor(amount / 100))
+
 router.get('/', async (req: AuthRequest, res) => {
   try {
     const { businessId } = req.params
@@ -165,6 +167,16 @@ router.post('/', checkTransactionLimit, async (req: AuthRequest, res) => {
         }
       }
 
+      if (data.type === 'SALE' && data.status === 'COMPLETED' && data.clientId) {
+        const earnedPoints = calculateLoyaltyPoints(data.amount)
+        if (earnedPoints > 0) {
+          await tx.client.update({
+            where: { id: data.clientId, businessId },
+            data: { loyaltyPoints: { increment: earnedPoints } },
+          })
+        }
+      }
+
       return created
     })
 
@@ -208,6 +220,15 @@ router.put('/:id', async (req: AuthRequest, res) => {
               await tx.product.update({
                 where: { id: item.productId },
                 data: { quantity: { increment: item.quantity } },
+              })
+            }
+          }
+          if (original.clientId && original.status === 'COMPLETED') {
+            const pointsToReverse = calculateLoyaltyPoints(original.amount)
+            if (pointsToReverse > 0) {
+              await tx.client.update({
+                where: { id: original.clientId, businessId },
+                data: { loyaltyPoints: { decrement: pointsToReverse } },
               })
             }
           }
@@ -391,6 +412,16 @@ router.post('/return/:txId', async (req: AuthRequest, res) => {
           await tx.product.update({
             where: { id: item.productId },
             data: { quantity: { increment: item.quantity } },
+          })
+        }
+      }
+
+      if (original.clientId && original.status === 'COMPLETED') {
+        const pointsToReverse = calculateLoyaltyPoints(original.amount)
+        if (pointsToReverse > 0) {
+          await tx.client.update({
+            where: { id: original.clientId, businessId },
+            data: { loyaltyPoints: { decrement: pointsToReverse } },
           })
         }
       }

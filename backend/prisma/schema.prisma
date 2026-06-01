@@ -47,6 +47,10 @@ model Business {
   subscriptionEndsAt   DateTime?
   ncfType              String?
   ncfSequence          Int           @default(1)
+  invoicePrefix        String        @default("FAC")
+  invoiceSequence      Int           @default(1)
+  invoiceTemplate      String        @default("classic")
+  logoUrl              String?
   whatsappEnabled      Boolean       @default(false)
   autoBackupEnabled    Boolean       @default(false)
   autoBackupInterval   Int           @default(7)
@@ -66,6 +70,8 @@ model Business {
   payrollPayments      PayrollPayment[]
   attendanceRecords    AttendanceRecord[]
   purchaseOrders       PurchaseOrder[]
+  clientNotes          ClientNote[]
+  loyaltyRedemptions   LoyaltyRedemption[]
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 }
@@ -130,11 +136,17 @@ model Client {
   address      String?
   isVip        Boolean       @default(false)
   discountRate Float         @default(0)
+  loyaltyPoints Int          @default(0)
   businessId   String
   business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   quotes       Quote[]
+  notes        ClientNote[]
+  loyaltyRedemptions LoyaltyRedemption[]
   createdAt    DateTime      @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([businessId, loyaltyPoints])
 }
 
 model Supplier {
@@ -363,4 +375,38 @@ model PurchaseOrderItem {
   quantity        Int
   receivedQty     Int           @default(0)
   cost            Float         @default(0)
+}
+
+model ClientNote {
+  id          String    @id @default(cuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type        String    @default("NOTE")
+  content     String
+  dueAt       DateTime?
+  completedAt DateTime?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId, dueAt])
+  @@index([clientId, createdAt])
+}
+
+model LoyaltyRedemption {
+  id             String    @id @default(cuid())
+  clientId       String
+  client         Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  businessId     String
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  points         Int
+  discountAmount Float
+  notes          String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([clientId, createdAt])
 }

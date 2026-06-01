@@ -15,6 +15,10 @@ interface Business {
   name: string
   currency: string
   lowStockThreshold?: number
+  invoiceTemplate?: string
+  invoicePrefix?: string
+  invoiceSequence?: number
+  logoUrl?: string
   type?: string
   city?: string
 }

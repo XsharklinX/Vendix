@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/utils'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle,
   CreditCard, Banknote, ArrowLeftRight, Printer, Tag, Star,
-  Barcode, X, ChevronUp, FileText, Globe, Zap, WifiOff,
+  Barcode, X, ChevronUp, FileText, Globe, Zap, WifiOff, Mail,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { generateInvoicePdf } from '@/lib/generateInvoicePdf'
@@ -59,6 +59,7 @@ function getVolumePrice(product: Product, qty: number): number {
 }
 
 function printReceipt(data: {
+  transactionId?: string
   businessName: string; currency: string; items: CartItem[]
   subtotal: number; discountLabel: string; discountAmt: number
   taxName: string; taxAmount: number; total: number
@@ -272,7 +273,7 @@ export function Vender() {
 
   const sellMutation = useMutation({
     mutationFn: (data: unknown) => api.post(`/businesses/${bid}/transactions`, data as Record<string, unknown>),
-    onSuccess: (_, vars) => {
+    onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['products', bid] })
       qc.invalidateQueries({ queryKey: ['recent-tx', bid] })
       qc.invalidateQueries({ queryKey: ['stats-summary-today', bid] })
@@ -282,6 +283,7 @@ export function Vender() {
         _snapshot: { items: CartItem[]; subtotal: number; discountAmt: number; discountLabel: string; clientName?: string }
       }
       setLastSaleData({
+        transactionId: res.data.id,
         businessName: business!.name,
         currency: cur,
         items: v._snapshot.items,
@@ -817,6 +819,25 @@ export function Vender() {
             )}
             {lastSaleData && (
               <button
+                onClick={async () => {
+                  if (!lastSaleData.transactionId) return
+                  try {
+                    const res = await api.post(`/businesses/${bid}/invoicing/transactions/${lastSaleData.transactionId}/email`, {
+                      template: bizData?.invoiceTemplate,
+                    })
+                    toast.success(`Factura enviada a ${res.data.to}`)
+                  } catch (e: unknown) {
+                    const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+                    toast.error(msg || 'No se pudo enviar la factura')
+                  }
+                }}
+                className="flex-1 btn-secondary justify-center py-3 gap-2"
+              >
+                <Mail size={16} /> Email
+              </button>
+            )}
+            {lastSaleData && (
+              <button
                 onClick={() => {
                   const txNum = Date.now().toString().slice(-6)
                   generateInvoicePdf({
@@ -827,6 +848,8 @@ export function Vender() {
                     businessPhone: bizData?.phone,
                     businessEmail: bizData?.email,
                     businessTaxId: bizData?.taxId,
+                    logoUrl: bizData?.logoUrl,
+                    template: bizData?.invoiceTemplate,
                     currency: cur,
                     clientName: lastSaleData!.clientName,
                     ncfNumber: lastSaleData!.ncfNumber,

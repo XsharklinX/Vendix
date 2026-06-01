@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/auth'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
-import { CreditCard, Phone, CheckCircle, AlertCircle, Users, DollarSign, MessageCircle } from 'lucide-react'
+import { CreditCard, Phone, CheckCircle, AlertCircle, Users, DollarSign, MessageCircle, FileText, Mail } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { differenceInCalendarDays } from 'date-fns'
 
@@ -39,7 +39,7 @@ export function CuentasCobrar() {
     queryFn: async () => {
       const [clientsRes, txRes] = await Promise.all([
         api.get(`/businesses/${bid}/clients`).then(r => r.data),
-        api.get(`/businesses/${bid}/transactions`, { params: { type: 'SALE' } }).then(r => r.data),
+        api.get(`/businesses/${bid}/transactions`, { params: { type: 'SALE', limit: 200 } }).then(r => r.data.data ?? r.data),
       ])
       const pendingByClient: Record<string, PendingTx[]> = {}
       for (const tx of txRes) {
@@ -72,6 +72,26 @@ export function CuentasCobrar() {
     },
     onError: () => toast.error('No se pudo actualizar'),
   })
+
+  const sendStatementMutation = useMutation({
+    mutationFn: (clientId: string) => api.post(`/businesses/${bid}/invoicing/clients/${clientId}/statement/email`),
+    onSuccess: (res) => toast.success(`Estado de cuenta enviado a ${res.data.to}`),
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'No se pudo enviar el estado de cuenta')
+    },
+  })
+
+  const openStatement = async (clientId: string) => {
+    try {
+      const res = await api.get(`/businesses/${bid}/invoicing/clients/${clientId}/statement/html`, { responseType: 'text' })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }))
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch {
+      toast.error('No se pudo generar el estado de cuenta')
+    }
+  }
 
   const totalDebt = clients.reduce((s, c) => s + c.pendingDebt, 0)
   const agingBuckets = clients.reduce((acc, client) => {
@@ -194,6 +214,22 @@ export function CuentasCobrar() {
                       >
                         <MessageCircle size={15} />
                       </a>
+                    )}
+                    <button
+                      onClick={() => openStatement(client.id)}
+                      className="btn-secondary px-2.5 py-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                      title="Estado de cuenta PDF"
+                    >
+                      <FileText size={15} />
+                    </button>
+                    {client.email && (
+                      <button
+                        onClick={() => sendStatementMutation.mutate(client.id)}
+                        className="btn-secondary px-2.5 py-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        title="Enviar estado de cuenta por email"
+                      >
+                        <Mail size={15} />
+                      </button>
                     )}
                     <button
                       onClick={async () => {

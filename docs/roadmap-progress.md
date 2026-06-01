@@ -115,3 +115,51 @@ Verificacion v1.2/v1.3:
 - `npx prisma db push`: pasa.
 - `npm run build:backend`: pasa.
 - `npm run build:frontend`: pasa con warnings no bloqueantes.
+
+## v1.4 - Facturacion profesional
+
+Aplicado el 2026-05-28:
+- Se extendio `Business` con `invoicePrefix`, `invoiceSequence`, `invoiceTemplate` y `logoUrl`.
+- Se agrego configuracion de facturacion en la pantalla `Configuraciones`.
+- Se agregaron plantillas de factura `classic`, `modern` y `thermal`.
+- Se agrego generador backend de factura/estado de cuenta en HTML imprimible.
+- Se agregaron endpoints para obtener siguiente numero, ver factura de una venta, enviar factura por email, enviar cotizacion por email, ver estado de cuenta y enviar estado de cuenta por email.
+- El envio por email reutiliza `sendEmail` y soporta adjuntos HTML codificados para Resend.
+- En `Vender`, despues de una venta exitosa, se puede imprimir factura o enviarla por email al cliente.
+- En `Cuentas por cobrar`, se puede abrir o enviar por email el estado de cuenta de un cliente.
+
+Riesgos:
+- El backend genera HTML imprimible y lo adjunta por email; no genera todavia un PDF binario server-side.
+- La numeracion de factura avanza cuando se envia desde backend; la impresion local del POS aun no consume la secuencia persistida.
+- El envio real depende de tener proveedor de email configurado y email valido en el cliente.
+
+Verificacion v1.4:
+- `npx prisma generate`: pasa.
+- `npx prisma db push`: pasa.
+- `npm run build:backend`: pasa.
+- `npm run build:frontend`: pasa con warnings no bloqueantes de Vite/chunk size.
+
+## v2.0 - CRM y fidelizacion
+
+Aplicado el 2026-05-28:
+- Se agrego `Client.loyaltyPoints`.
+- Se agregaron modelos `ClientNote` y `LoyaltyRedemption`.
+- La lista de clientes ahora devuelve deuda, ventas acumuladas, ultima compra, puntos y segmentos automaticos.
+- Se agregaron notas y recordatorios por cliente.
+- Se agrego timeline de cliente con ventas, deudas, notas, recordatorios y canjes.
+- Las ventas completadas con cliente acumulan puntos automaticamente.
+- Las cancelaciones/devoluciones revierten puntos calculados.
+- Se agrego canje manual de puntos como descuento registrado en historial.
+- La pantalla `Clientes` ahora incluye KPIs CRM, segmentos, puntos y panel CRM por cliente.
+
+Riesgos:
+- El canje queda registrado, pero todavia no se aplica automaticamente como descuento dentro del POS.
+- La tasa de puntos esta fija en `floor(monto / 100)`.
+- Los recordatorios no aparecen aun en `Planner`.
+- Las etiquetas son calculadas, no editables manualmente.
+
+Verificacion v2.0:
+- `npx prisma generate`: pasa.
+- `npx prisma db push`: pasa.
+- `npm run build:backend`: pasa.
+- `npm run build:frontend`: pasa con warnings no bloqueantes de Vite/chunk size.

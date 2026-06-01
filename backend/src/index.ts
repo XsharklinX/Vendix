@@ -18,6 +18,7 @@ import statsRouter from './routes/stats'
 import notificationsRouter from './routes/notifications'
 import auditRouter from './routes/audit'
 import aiRouter from './routes/ai'
+import invoicingRouter from './routes/invoicing'
 import { authLimiter, apiLimiter } from './middleware/rateLimiter'
 import { swaggerSpec } from './lib/swagger'
 import { startBackupScheduler } from './lib/backupScheduler'
@@ -60,6 +61,7 @@ bizRoutes.use('/quotes', quotesRouter)
 bizRoutes.use('/stats', statsRouter)
 bizRoutes.use('/audit', auditRouter)
 bizRoutes.use('/ai', aiRouter)
+bizRoutes.use('/invoicing', invoicingRouter)
 
 app.use('/api/businesses/:businessId', bizRoutes)
 

@@ -32,7 +32,7 @@ const NCF_TYPES = [
   { code: 'B15', label: 'B15 — Gubernamental' },
 ]
 
-type Tab = 'general' | 'impuestos' | 'ncf' | 'staff' | 'negocios' | 'backup'
+type Tab = 'general' | 'impuestos' | 'ncf' | 'facturacion' | 'staff' | 'negocios' | 'backup'
 
 interface StaffUser { id: string; name: string; email: string; role: string }
 
@@ -41,6 +41,7 @@ interface BusinessData {
   city?: string; phone?: string; address?: string; email?: string; taxId?: string
   lowStockThreshold?: number; taxRate?: number; taxName?: string; taxIncluded?: boolean
   ncfType?: string; ncfSequence?: number; plan?: string
+  invoicePrefix?: string; invoiceSequence?: number; invoiceTemplate?: string; logoUrl?: string
   autoBackupEnabled?: boolean; autoBackupInterval?: number; lastBackupAt?: string
 }
 
@@ -48,6 +49,7 @@ const tabItems: { key: Tab; label: string; icon: React.ElementType; desc: string
   { key: 'general', label: 'General', icon: Store, desc: 'Datos básicos del negocio' },
   { key: 'impuestos', label: 'Impuestos', icon: Percent, desc: 'ITBIS, IVA, configuración fiscal' },
   { key: 'ncf', label: 'NCF / DGII', icon: FileText, desc: 'Comprobantes fiscales RD' },
+  { key: 'facturacion', label: 'Facturación', icon: Hash, desc: 'Facturas, logo y plantillas' },
   { key: 'staff', label: 'Usuarios', icon: Users, desc: 'Cajeros y operadores' },
   { key: 'negocios', label: 'Mis negocios', icon: Briefcase, desc: 'Gestionar negocios' },
   { key: 'backup', label: 'Respaldo', icon: Database, desc: 'Exportar datos' },
@@ -72,6 +74,7 @@ export function Configuraciones() {
 
   // NCF form state
   const [ncfForm, setNcfForm] = useState({ ncfType: '', ncfSequence: 1 })
+  const [invoiceForm, setInvoiceForm] = useState({ invoicePrefix: 'FAC', invoiceSequence: 1, invoiceTemplate: 'classic', logoUrl: '' })
 
   // Backup form state
   const [backupForm, setBackupForm] = useState({ autoBackupEnabled: false, autoBackupInterval: 7 })
@@ -79,6 +82,10 @@ export function Configuraciones() {
   // Staff
   const [staffModal, setStaffModal] = useState(false)
   const [staffForm, setStaffForm] = useState({ name: '', email: '', password: '' })
+
+  // Reset data
+  const [resetModal, setResetModal] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState('')
 
   // Other
   const [newBizName, setNewBizName] = useState('')
@@ -118,6 +125,12 @@ export function Configuraciones() {
     setNcfForm({
       ncfType: bizData.ncfType ?? '',
       ncfSequence: bizData.ncfSequence ?? 1,
+    })
+    setInvoiceForm({
+      invoicePrefix: bizData.invoicePrefix ?? 'FAC',
+      invoiceSequence: bizData.invoiceSequence ?? 1,
+      invoiceTemplate: bizData.invoiceTemplate ?? 'classic',
+      logoUrl: bizData.logoUrl ?? '',
     })
     setBackupForm({
       autoBackupEnabled: bizData.autoBackupEnabled ?? false,
@@ -169,6 +182,20 @@ export function Configuraciones() {
     }
   }
 
+  const handleSaveInvoice = async () => {
+    setSaving(true)
+    try {
+      await updateMutation.mutateAsync({
+        invoicePrefix: invoiceForm.invoicePrefix,
+        invoiceSequence: invoiceForm.invoiceSequence,
+        invoiceTemplate: invoiceForm.invoiceTemplate,
+        logoUrl: invoiceForm.logoUrl || '',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleSaveBackup = async () => {
     setSaving(true)
     try {
@@ -205,6 +232,17 @@ export function Configuraciones() {
     mutationFn: (id: string) => api.delete(`/auth/staff/${id}`),
     onSuccess: () => { refetchStaff(); toast.success('Cajero eliminado') },
     onError: () => toast.error('No se pudo eliminar'),
+  })
+
+  const resetMutation = useMutation({
+    mutationFn: () => api.delete(`/businesses/${bid}/reset`, { data: { confirm: business!.name } }),
+    onSuccess: () => {
+      qc.clear()
+      setResetModal(false)
+      setResetConfirm('')
+      toast.success('Todos los datos han sido eliminados')
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
   })
 
   const handleExport = async () => {
@@ -504,6 +542,57 @@ export function Configuraciones() {
           )}
 
           {/* ── Staff ────────────────────────────────────────────────────────── */}
+          {tab === 'facturacion' && (
+            <div className="space-y-5 max-w-xl">
+              <div className="card p-5 space-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Hash size={16} className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Facturación profesional</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Configura numeración interna, logo y diseño de factura.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Prefijo de factura</label>
+                    <input value={invoiceForm.invoicePrefix} onChange={e => setInvoiceForm(f => ({ ...f, invoicePrefix: e.target.value.toUpperCase() }))} className="input" placeholder="FAC" />
+                  </div>
+                  <div>
+                    <label className="label">Próxima secuencia</label>
+                    <input type="number" min={1} value={invoiceForm.invoiceSequence} onChange={e => setInvoiceForm(f => ({ ...f, invoiceSequence: parseInt(e.target.value) || 1 }))} className="input" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Plantilla predeterminada</label>
+                  <select value={invoiceForm.invoiceTemplate} onChange={e => setInvoiceForm(f => ({ ...f, invoiceTemplate: e.target.value }))} className="input">
+                    <option value="classic">Clásica A4</option>
+                    <option value="modern">Moderna</option>
+                    <option value="thermal">Térmica / recibo ancho</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">URL del logo</label>
+                  <input value={invoiceForm.logoUrl} onChange={e => setInvoiceForm(f => ({ ...f, logoUrl: e.target.value }))} className="input" placeholder="https://..." />
+                  <p className="text-xs text-gray-400 mt-1">Debe ser una URL pública para que también aparezca en emails.</p>
+                </div>
+
+                <div className="bg-indigo-50 rounded-xl p-4">
+                  <p className="text-xs text-indigo-600 font-semibold">Próxima factura</p>
+                  <p className="text-xl font-black text-indigo-700">{invoiceForm.invoicePrefix || 'FAC'}-{String(invoiceForm.invoiceSequence).padStart(6, '0')}</p>
+                </div>
+              </div>
+
+              <button onClick={handleSaveInvoice} disabled={saving} className="btn-primary">
+                {saving ? 'Guardando...' : 'Guardar configuración de factura'}
+              </button>
+            </div>
+          )}
+
           {tab === 'staff' && (
             <div className="space-y-5 max-w-xl">
               <div className="flex items-center justify-between">
@@ -687,10 +776,69 @@ export function Configuraciones() {
                   <p className="text-sm text-amber-700 mt-0.5">Realiza un respaldo al menos una vez por semana. Los datos se almacenan en este servidor.</p>
                 </div>
               </div>
+
+              {/* Zona de peligro */}
+              {user?.role !== 'CASHIER' && (
+                <div className="card p-5 border border-red-200 bg-red-50/40 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Trash2 size={16} className="text-red-500" />
+                    <h3 className="font-semibold text-red-700 text-sm">Zona de peligro</h3>
+                  </div>
+                  <p className="text-sm text-red-600">
+                    Elimina permanentemente <strong>todos los datos operativos</strong>: productos, clientes, proveedores,
+                    empleados, ventas, cotizaciones y movimientos. Tu cuenta y configuración del negocio se conservan.
+                  </p>
+                  <p className="text-xs text-red-500 font-medium">Esta acción no se puede deshacer. Descarga un respaldo antes.</p>
+                  <button
+                    onClick={() => { setResetModal(true); setResetConfirm('') }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 border border-red-300 rounded-xl hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={14} /> Eliminar todos los datos
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal eliminar todos los datos */}
+      <Modal open={resetModal} onClose={() => { setResetModal(false); setResetConfirm('') }} title="Eliminar todos los datos" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-200">
+            <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700 space-y-1">
+              <p className="font-semibold">Esta acción es irreversible.</p>
+              <p>Se eliminarán todos los productos, clientes, proveedores, empleados, ventas, cotizaciones y movimientos del negocio <strong>{business?.name}</strong>.</p>
+            </div>
+          </div>
+          <div>
+            <label className="label">
+              Escribe <span className="font-mono font-bold text-gray-800">{business?.name}</span> para confirmar
+            </label>
+            <input
+              value={resetConfirm}
+              onChange={e => setResetConfirm(e.target.value)}
+              className="input"
+              placeholder={business?.name}
+              autoComplete="off"
+            />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button onClick={() => { setResetModal(false); setResetConfirm('') }} className="btn-secondary flex-1">
+              Cancelar
+            </button>
+            <button
+              disabled={resetConfirm !== business?.name || resetMutation.isPending}
+              onClick={() => resetMutation.mutate()}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Trash2 size={14} />
+              {resetMutation.isPending ? 'Eliminando...' : 'Sí, eliminar todo'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal crear cajero */}
       <Modal open={staffModal} onClose={() => setStaffModal(false)} title="Nuevo cajero" size="sm">

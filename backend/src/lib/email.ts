@@ -43,6 +43,10 @@ async function send(to: string, subject: string, html: string, attachments?: Att
       to,
       subject,
       html,
+      attachments: attachments?.map(a => ({
+        filename: a.filename,
+        content: a.content.toString('base64'),
+      })),
     })
     return
   }
@@ -68,6 +72,7 @@ async function send(to: string, subject: string, html: string, attachments?: Att
   console.log(`📧  EMAIL (modo dev — configura RESEND_API_KEY o SMTP_USER)`)
   console.log(`  Para : ${to}`)
   console.log(`  Asunto: ${subject}`)
+  if (attachments?.length) console.log(`  Adjuntos: ${attachments.map(a => a.filename).join(', ')}`)
   console.log(`─`.repeat(60))
   console.log(plain)
   console.log(`${'─'.repeat(60)}\n`)

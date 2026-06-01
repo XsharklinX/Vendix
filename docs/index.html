@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Vendix es una plataforma de punto de venta, inventario, facturacion y CRM para pequenos negocios.">
+    <meta name="theme-color" content="#073b3a">
+    <meta property="og:title" content="Vendix | Gestion comercial sin friccion">
+    <meta property="og:description" content="POS, inventario, caja, facturacion y CRM en un solo lugar.">
+    <meta property="og:type" content="website">
+    <title>Vendix | Gestion comercial sin friccion</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="grain"></div>
+    <header class="site-header">
+      <a class="brand" href="#inicio" aria-label="Vendix inicio"><span class="brand-mark">V</span><span>Vendix</span></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span><span class="sr-only">Abrir menu</span>
+      </button>
+      <nav class="main-nav" id="main-nav">
+        <a href="#producto">Producto</a><a href="#modulos">Modulos</a><a href="#despliegue">Despliegue</a><a href="#faq">FAQ</a>
+        <a class="nav-cta" href="https://github.com/XsharklinX/Vendix">Ver repositorio</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero section-shell" id="inicio">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span></span> Gestion comercial para negocios reales</p>
+          <h1>Todo tu negocio.<br><em>Una sola vista.</em></h1>
+          <p class="hero-text">Vendix conecta ventas, inventario, caja, facturacion y clientes para que cada decision tenga contexto. Menos hojas de calculo. Mas control operativo.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/XsharklinX/Vendix">Explorar en GitHub <span>↗</span></a>
+            <a class="button button-ghost" href="#modulos">Conocer los modulos <span>↓</span></a>
+          </div>
+          <div class="hero-proof"><span>React + TypeScript</span><span>Electron Desktop</span><span>SQLite local-first</span></div>
+        </div>
+
+        <div class="hero-visual reveal delay-1" aria-label="Vista previa conceptual del dashboard Vendix">
+          <div class="visual-glow"></div>
+          <div class="app-window">
+            <div class="window-top"><div class="window-dots"><i></i><i></i><i></i></div><span>Panel principal</span><b>VDX</b></div>
+            <div class="app-body">
+              <aside class="mini-sidebar"><div class="side-logo">V</div><i class="active"></i><i></i><i></i><i></i><i></i><i></i></aside>
+              <div class="dashboard">
+                <div class="dash-heading"><div><small>Resumen de hoy</small><strong>Buenos dias, equipo.</strong></div><button>Nueva venta</button></div>
+                <div class="metric-row">
+                  <article><small>Ventas hoy</small><b>$48,520</b><em>+18.4%</em></article>
+                  <article><small>Inventario</small><b>1,248</b><em>12 alertas</em></article>
+                  <article><small>Por cobrar</small><b>$16,900</b><em>7 clientes</em></article>
+                </div>
+                <div class="dash-grid">
+                  <article class="chart-card">
+                    <div><small>Ventas y gastos</small><b>Ultimos 7 dias</b></div>
+                    <svg viewBox="0 0 420 150" role="img" aria-label="Grafica conceptual de ventas">
+                      <defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#35c7a4" stop-opacity=".42"/><stop offset="100%" stop-color="#35c7a4" stop-opacity="0"/></linearGradient></defs>
+                      <path d="M0,120 C45,98 58,106 95,84 C132,62 157,77 194,52 C231,27 260,56 300,40 C340,24 370,36 420,8 L420,150 L0,150Z" fill="url(#area)"/>
+                      <path d="M0,120 C45,98 58,106 95,84 C132,62 157,77 194,52 C231,27 260,56 300,40 C340,24 370,36 420,8" fill="none" stroke="#20a886" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                  </article>
+                  <article class="stock-card">
+                    <small>Atencion requerida</small>
+                    <div><span>CA</span><p><b>Cafe premium</b><small>3 unidades</small></p></div>
+                    <div><span>AR</span><p><b>Arroz selecto</b><small>5 unidades</small></p></div>
+                    <div><span>JU</span><p><b>Jugo natural</b><small>4 unidades</small></p></div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="floating-chip chip-top"><span>✓</span> Venta sincronizada</div>
+          <div class="floating-chip chip-bottom"><span>!</span> Stock bajo detectado</div>
+        </div>
+      </section>
+
+      <section class="trust-strip"><div class="section-shell trust-inner"><p>Una operacion conectada de principio a fin</p><div><span>VENTAS</span><i></i><span>INVENTARIO</span><i></i><span>CAJA</span><i></i><span>CRM</span><i></i><span>REPORTES</span></div></div></section>
+
+      <section class="intro section-shell" id="producto">
+        <div class="section-kicker reveal">01 / EL PRODUCTO</div>
+        <div class="intro-grid">
+          <h2 class="reveal">Un sistema ligero.<br><span>Sin puntos ciegos.</span></h2>
+          <div class="intro-copy reveal delay-1"><p>Vendix reemplaza herramientas dispersas por un flujo operativo coherente. Cada venta actualiza stock, alimenta reportes y construye el historial del cliente.</p><p>Puede funcionar como app web, en una red local o como aplicacion de escritorio para Windows.</p></div>
+        </div>
+        <div class="stat-grid">
+          <article class="reveal"><strong>01</strong><span>Base unificada</span><p>Ventas, costos, clientes y equipo comparten el mismo contexto.</p></article>
+          <article class="reveal delay-1"><strong>02</strong><span>Operacion diaria</span><p>Disenado para vender rapido y revisar lo importante sin friccion.</p></article>
+          <article class="reveal delay-2"><strong>03</strong><span>Local-first</span><p>SQLite y Electron permiten una experiencia simple en escritorio.</p></article>
+        </div>
+      </section>
+
+      <section class="modules" id="modulos"><div class="section-shell">
+        <div class="section-kicker reveal">02 / MODULOS</div>
+        <div class="section-head reveal"><h2>De la venta al analisis.<br><span>Todo conectado.</span></h2><p>Filtra por area y explora las capacidades que ya forman parte del sistema.</p></div>
+        <div class="module-filters reveal" role="tablist" aria-label="Filtrar modulos"><button class="active" data-filter="all" role="tab">Todos</button><button data-filter="operacion" role="tab">Operacion</button><button data-filter="gestion" role="tab">Gestion</button><button data-filter="crecimiento" role="tab">Crecimiento</button></div>
+        <div class="module-grid">
+          <article class="module-card featured reveal" data-category="operacion"><span class="module-number">01</span><div class="module-icon">↗</div><h3>Punto de venta</h3><p>Carrito agil, descuentos, credito, metodos de pago, impresion y sincronizacion de ventas offline.</p><ul><li>Recibos listos para imprimir</li><li>Caja diaria integrada</li><li>Ventas a credito</li></ul></article>
+          <article class="module-card reveal delay-1" data-category="operacion"><span class="module-number">02</span><div class="module-icon">◇</div><h3>Inventario y compras</h3><p>Productos, costos, margenes, alertas de reposicion y ordenes de compra con recepcion parcial.</p></article>
+          <article class="module-card reveal delay-2" data-category="gestion"><span class="module-number">03</span><div class="module-icon">◎</div><h3>Finanzas y caja</h3><p>Movimientos, gastos, ingresos, cuentas por cobrar, aging de deuda y reportes del periodo.</p></article>
+          <article class="module-card reveal" data-category="crecimiento"><span class="module-number">04</span><div class="module-icon">✦</div><h3>CRM y fidelizacion</h3><p>Timeline por cliente, notas, recordatorios, puntos, canjes y segmentos automaticos.</p></article>
+          <article class="module-card reveal delay-1" data-category="gestion"><span class="module-number">05</span><div class="module-icon">▤</div><h3>Facturacion</h3><p>Logo, datos fiscales, NCF, numeracion propia, tres plantillas y envio de documentos por email.</p></article>
+          <article class="module-card reveal delay-2" data-category="gestion"><span class="module-number">06</span><div class="module-icon">⌁</div><h3>Nomina y equipo</h3><p>Empleados, salarios, pagos, asistencia, ventas por cajero y comisiones configurables.</p></article>
+          <article class="module-card reveal" data-category="crecimiento"><span class="module-number">07</span><div class="module-icon">⌗</div><h3>Analitica</h3><p>Dashboard, tendencias, productos destacados, alertas y lectura del rendimiento comercial.</p></article>
+          <article class="module-card reveal delay-1" data-category="gestion"><span class="module-number">08</span><div class="module-icon">◈</div><h3>Control y seguridad</h3><p>Roles, multi-negocio, auditoria, backups, notificaciones y limites operativos.</p></article>
+        </div>
+      </div></section>
+
+      <section class="workflow section-shell">
+        <div class="section-kicker reveal">03 / FLUJO OPERATIVO</div>
+        <div class="workflow-layout">
+          <div class="reveal"><h2>Una venta.<br><span>Multiples efectos.</span></h2><p>Vendix reduce trabajo repetido porque una operacion alimenta automaticamente las areas relacionadas.</p></div>
+          <div class="workflow-list">
+            <article class="reveal"><b>01</b><div><h3>Registra la venta</h3><p>Selecciona productos, cliente, descuento y metodo de pago.</p></div></article>
+            <article class="reveal delay-1"><b>02</b><div><h3>Actualiza inventario</h3><p>El stock se descuenta y las alertas aparecen cuando hace falta reponer.</p></div></article>
+            <article class="reveal delay-2"><b>03</b><div><h3>Ordena la operacion</h3><p>Caja, deuda, puntos del cliente y reportes reciben el contexto correcto.</p></div></article>
+            <article class="reveal delay-3"><b>04</b><div><h3>Decide con datos</h3><p>El dashboard muestra ventas, gastos, productos destacados y riesgos.</p></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="deployment" id="despliegue"><div class="section-shell">
+        <div class="section-kicker reveal">04 / DESPLIEGUE</div>
+        <div class="section-head reveal"><h2>Empieza local.<br><span>Escala cuando haga falta.</span></h2><p>La arquitectura admite distintos escenarios. Elige el que corresponda al nivel de operacion.</p></div>
+        <div class="deployment-grid">
+          <article class="deploy-card reveal"><span>01</span><h3>Escritorio Windows</h3><p>Instalador Electron para una computadora. La base permanece local y el flujo es directo.</p><b>Ideal para comenzar</b></article>
+          <article class="deploy-card reveal delay-1"><span>02</span><h3>Red local</h3><p>Acceso desde computadoras o tablets conectadas a la misma red Wi-Fi del negocio.</p><b>Ideal para equipos pequenos</b></article>
+          <article class="deploy-card reveal delay-2"><span>03</span><h3>Cloud</h3><p>Acceso remoto desde diferentes ubicaciones con backend publicado y almacenamiento persistente.</p><b>Ideal para operacion distribuida</b></article>
+        </div>
+        <div class="deploy-note reveal"><strong>Nota tecnica</strong><p>SQLite es una opcion practica para escritorio y red local. Para produccion cloud con concurrencia real, conviene planificar almacenamiento persistente o migracion a PostgreSQL.</p></div>
+      </div></section>
+
+      <section class="roadmap section-shell">
+        <div class="section-kicker reveal">05 / EVOLUCION</div>
+        <div class="roadmap-layout">
+          <div class="reveal"><h2>Construido por etapas.<br><span>Sin perder estabilidad.</span></h2><p>El roadmap prioriza mejoras incrementales sobre los flujos que ya funcionan.</p><a href="roadmap-progress.md">Ver roadmap tecnico <span>↗</span></a></div>
+          <div class="roadmap-list">
+            <article class="done reveal"><span>v1.2</span><div><h3>Nomina y equipo</h3><p>Pagos, asistencia, comisiones y ventas por empleado.</p></div><b>Base lista</b></article>
+            <article class="done reveal delay-1"><span>v1.3</span><div><h3>Ordenes de compra</h3><p>Recepcion parcial, estados y alertas de reorden.</p></div><b>Base lista</b></article>
+            <article class="done reveal delay-2"><span>v1.4</span><div><h3>Facturacion profesional</h3><p>Plantillas, numeracion, NCF y envio por email.</p></div><b>Base lista</b></article>
+            <article class="active reveal delay-3"><span>v2.0</span><div><h3>CRM y fidelizacion</h3><p>Timeline, recordatorios, puntos y segmentos.</p></div><b>En mejora</b></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq" id="faq"><div class="section-shell faq-layout">
+        <div><div class="section-kicker reveal">06 / PREGUNTAS FRECUENTES</div><h2 class="reveal">Antes de empezar.</h2><p class="reveal">Respuestas directas para entender el alcance actual y tomar una decision informada.</p></div>
+        <div class="faq-list">
+          <details class="reveal"><summary>Vendix funciona sin internet?<span>+</span></summary><p>La modalidad de escritorio puede operar localmente. El POS tambien incluye una cola de ventas offline para sincronizar al recuperar conexion. Algunas integraciones, como email o IA, requieren internet.</p></details>
+          <details class="reveal delay-1"><summary>Puedo usarlo desde un movil o tablet?<span>+</span></summary><p>Puede abrirse desde el navegador si el backend esta disponible en red local o cloud. La optimizacion PWA y la experiencia movil dedicada forman parte de las mejoras planificadas.</p></details>
+          <details class="reveal delay-2"><summary>Incluye facturacion fiscal para Republica Dominicana?<span>+</span></summary><p>Incluye datos fiscales, NCF, numeracion propia y documentos imprimibles. Antes de usarlo como sistema fiscal definitivo, valida el flujo requerido por tu negocio y la normativa aplicable.</p></details>
+          <details class="reveal"><summary>Sirve para varios negocios?<span>+</span></summary><p>Si. Un propietario puede gestionar multiples negocios desde la misma cuenta y mantener inventario, clientes y configuracion separados.</p></details>
+          <details class="reveal delay-1"><summary>Donde se guardan los datos?<span>+</span></summary><p>En la modalidad local, Vendix usa SQLite. Para cloud se recomienda almacenamiento persistente o una migracion planificada a PostgreSQL.</p></details>
+          <details class="reveal delay-2"><summary>Esta listo para produccion?<span>+</span></summary><p>Las bases operativas estan implementadas y el proyecto sigue en desarrollo activo. Revisa el roadmap, configura secretos seguros, prueba backups y valida tu escenario antes de usar datos criticos.</p></details>
+        </div>
+      </div></section>
+
+      <section class="final-cta section-shell reveal">
+        <p class="eyebrow"><span></span> Proyecto abierto</p><h2>Gestion clara.<br><em>Decisiones mejores.</em></h2>
+        <p>Explora el codigo, revisa la arquitectura y adapta Vendix a la operacion que necesitas.</p>
+        <div class="hero-actions"><a class="button button-primary" href="https://github.com/XsharklinX/Vendix">Ver repositorio <span>↗</span></a><a class="button button-ghost" href="README.md">Leer documentacion <span>→</span></a></div>
+      </section>
+    </main>
+
+    <footer><div class="section-shell footer-inner"><a class="brand" href="#inicio"><span class="brand-mark">V</span><span>Vendix</span></a><p>POS, inventario y CRM para pequenos negocios.</p><div><a href="https://github.com/XsharklinX/Vendix">GitHub</a><a href="README.md">Docs</a><a href="#faq">FAQ</a></div></div></footer>
+    <script src="script.js"></script>
+  </body>
+</html>
