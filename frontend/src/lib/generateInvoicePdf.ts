@@ -32,9 +32,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia',
 }
 
-export function generateInvoicePdf(data: InvoiceData) {
-  const win = window.open('', '_blank', 'width=800,height=900')
-  if (!win) return
+export function buildInvoiceHtml(data: InvoiceData): string {
   const template = data.template ?? 'classic'
 
   const rows = data.items.map(i => `
@@ -46,7 +44,7 @@ export function generateInvoicePdf(data: InvoiceData) {
     </tr>
   `).join('')
 
-  win.document.write(`<!DOCTYPE html><html lang="es"><head>
+  return `<!DOCTYPE html><html lang="es"><head>
     <meta charset="utf-8">
     <title>Factura ${data.invoiceNumber}</title>
     <style>
@@ -149,9 +147,5 @@ export function generateInvoicePdf(data: InvoiceData) {
       </div>
       <span class="powered">Powered by Vendix</span>
     </div>
-  </body></html>`)
-
-  win.document.close()
-  win.focus()
-  setTimeout(() => { win.print() }, 400)
+  </body></html>`
 }

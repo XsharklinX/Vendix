@@ -10,7 +10,7 @@ const http_1 = __importDefault(require("http"));
 const crypto_1 = __importDefault(require("crypto"));
 const electron_updater_1 = __importDefault(require("electron-updater"));
 // ── Constantes ──────────────────────────────────────────────────────────────
-const PORT = 3001;
+const PORT = 3100;
 const isDev = !electron_1.app.isPackaged;
 let mainWindow = null;
 let tray = null;

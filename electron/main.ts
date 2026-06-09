@@ -6,7 +6,7 @@ import crypto from 'crypto'
 import electronUpdater, { type AppUpdater } from 'electron-updater'
 
 // ── Constantes ──────────────────────────────────────────────────────────────
-const PORT = 3001
+const PORT = 3100
 const isDev = !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null

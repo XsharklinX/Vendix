@@ -18,7 +18,8 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import {
   Plus, ArrowLeftRight, Filter, Download,
   TrendingUp, TrendingDown, Scale, RotateCcw,
-  ArrowUpRight, ArrowDownRight, ShoppingCart, Receipt, Wallet, Package
+  ArrowUpRight, ArrowDownRight, ShoppingCart, Receipt, Wallet, Package,
+  Eye
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -45,6 +46,15 @@ const METHOD_TO_API: Record<string, string> = {
   EFECTIVO: 'CASH', TARJETA: 'CARD', TRANSFERENCIA: 'TRANSFER',
 }
 
+interface TransactionItem {
+  id: string
+  name: string
+  quantity: number
+  price: number
+  cost: number
+  productId?: string
+}
+
 interface Transaction {
   id: string
   type: string
@@ -54,6 +64,14 @@ interface Transaction {
   status: string
   client?: { id: string; name: string }
   supplier?: { id: string; name: string }
+  items?: TransactionItem[]
+  discountValue?: number
+  discountType?: string
+  taxAmount?: number
+  ncfNumber?: string
+  originalCurrency?: string
+  exchangeRate?: number
+  originalAmount?: number
   createdAt: string
 }
 
@@ -64,6 +82,7 @@ export function Movimientos() {
   const qc = useQueryClient()
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null)
   const [typeFilter, setTypeFilter] = useState('')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 50
@@ -315,19 +334,28 @@ export function Movimientos() {
                       </div>
                     </div>
 
-                    {/* Acción devolución */}
-                    {tx.type === 'SALE' && tx.status === 'COMPLETED' && (
+                    {/* Acciones */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <button
-                        onClick={async () => {
-                          const ok = await confirm('Devolver venta', `¿Devolver esta venta de ${formatCurrency(tx.amount, cur)}? Se restaurará el stock.`, true)
-                          if (ok) returnMutation.mutate(tx.id)
-                        }}
-                        className="btn-ghost text-xs px-2 py-1.5 text-orange-500 hover:bg-orange-50 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
-                        title="Devolver venta"
+                        onClick={() => setDetailTx(tx)}
+                        className="btn-ghost text-xs px-2 py-1.5 text-blue-500 hover:bg-blue-50 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+                        title="Ver detalles"
                       >
-                        <RotateCcw size={13} />
+                        <Eye size={13} />
                       </button>
-                    )}
+                      {tx.type === 'SALE' && tx.status === 'COMPLETED' && (
+                        <button
+                          onClick={async () => {
+                            const ok = await confirm('Devolver venta', `¿Devolver esta venta de ${formatCurrency(tx.amount, cur)}? Se restaurará el stock.`, true)
+                            if (ok) returnMutation.mutate(tx.id)
+                          }}
+                          className="btn-ghost text-xs px-2 py-1.5 text-orange-500 hover:bg-orange-50 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+                          title="Devolver venta"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )
               })}
@@ -446,6 +474,158 @@ export function Movimientos() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal detalle de movimiento */}
+      <Modal open={!!detailTx} onClose={() => setDetailTx(null)} title={`Detalle de Movimiento`} size="lg">
+        {detailTx && (() => {
+          const isIncome = detailTx.type === 'SALE' || detailTx.type === 'INCOME'
+          const typeInfo = TX_TYPE_LABELS[detailTx.type]
+          const showItems = detailTx.items && detailTx.items.length > 0
+          const subtotal = detailTx.items?.reduce((s, i) => s + i.price * i.quantity, 0) ?? detailTx.amount
+
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                <div>
+                  <p className="text-gray-400 font-medium text-xs">Tipo</p>
+                  <span className={`inline-block mt-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    detailTx.type === 'SALE' ? 'bg-green-100 text-green-700'
+                    : detailTx.type === 'INCOME' ? 'bg-blue-100 text-blue-700'
+                    : detailTx.type === 'EXPENSE' ? 'bg-red-100 text-red-700'
+                    : detailTx.type === 'PURCHASE' ? 'bg-orange-100 text-orange-700'
+                    : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {typeInfo?.label || detailTx.type}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-medium text-xs">Estado</p>
+                  <span className={`inline-block mt-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    detailTx.status === 'COMPLETED' ? 'bg-green-100 text-green-700'
+                    : detailTx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {detailTx.status === 'COMPLETED' ? '✓ Completado' : detailTx.status === 'PENDING' ? 'Pendiente' : detailTx.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-medium text-xs">Fecha</p>
+                  <p className="font-semibold text-gray-800 mt-0.5">{formatDateTime(detailTx.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-medium text-xs">Forma de pago</p>
+                  <p className="font-semibold text-gray-800 mt-0.5">
+                    {PAYMENT_METHOD_LABELS[detailTx.paymentMethod] || detailTx.paymentMethod || '—'}
+                  </p>
+                </div>
+                {detailTx.ncfNumber && (
+                  <div>
+                    <p className="text-gray-400 font-medium text-xs">NCF</p>
+                    <p className="font-mono font-semibold text-gray-800 mt-0.5">{detailTx.ncfNumber}</p>
+                  </div>
+                )}
+                {detailTx.client && (
+                  <div>
+                    <p className="text-gray-400 font-medium text-xs">Cliente</p>
+                    <p className="font-semibold text-gray-800 mt-0.5">{detailTx.client.name}</p>
+                  </div>
+                )}
+                {detailTx.supplier && (
+                  <div>
+                    <p className="text-gray-400 font-medium text-xs">Proveedor</p>
+                    <p className="font-semibold text-gray-800 mt-0.5">{detailTx.supplier.name}</p>
+                  </div>
+                )}
+                {detailTx.originalCurrency && detailTx.originalCurrency !== cur && (
+                  <div>
+                    <p className="text-gray-400 font-medium text-xs">Moneda de Pago</p>
+                    <p className="font-semibold text-gray-800 mt-0.5">
+                      {detailTx.originalCurrency} (Tasa: {detailTx.exchangeRate})
+                    </p>
+                  </div>
+                )}
+                {detailTx.originalAmount !== undefined && detailTx.originalCurrency && detailTx.originalCurrency !== cur && (
+                  <div>
+                    <p className="text-gray-400 font-medium text-xs">Monto Original</p>
+                    <p className="font-semibold text-gray-800 mt-0.5">
+                      {formatCurrency(detailTx.originalAmount, detailTx.originalCurrency)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {detailTx.description && (
+                <div className="text-sm bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-gray-400 font-medium text-xs mb-1">Descripción</p>
+                  <p className="text-gray-700 font-medium">{detailTx.description}</p>
+                </div>
+              )}
+
+              {showItems && (
+                <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Producto</th>
+                        <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Cant.</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Precio Unit.</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {detailTx.items!.map(item => (
+                        <tr key={item.id} className="hover:bg-gray-50/30">
+                          <td className="px-4 py-3 text-gray-900 font-medium">{item.name}</td>
+                          <td className="px-4 py-3 text-center text-gray-500 font-semibold">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right text-gray-500 font-mono">{formatCurrency(item.price, cur)}</td>
+                          <td className="px-4 py-3 text-right text-gray-900 font-semibold font-mono">{formatCurrency(item.price * item.quantity, cur)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-sm border border-gray-100">
+                {showItems && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Subtotal</span>
+                    <span className="font-mono">{formatCurrency(subtotal, cur)}</span>
+                  </div>
+                )}
+                {detailTx.discountValue !== undefined && detailTx.discountValue > 0 && (
+                  <div className="flex justify-between text-orange-600">
+                    <span>Descuento {detailTx.discountType === 'PERCENT' ? `(%)` : ''}</span>
+                    <span className="font-mono">-{formatCurrency(detailTx.discountValue, cur)}</span>
+                  </div>
+                )}
+                {detailTx.taxAmount !== undefined && detailTx.taxAmount > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Impuestos</span>
+                    <span className="font-mono">{formatCurrency(detailTx.taxAmount, cur)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="font-bold text-gray-800 text-base">Total</span>
+                  <span className={`text-xl font-black font-mono ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                    {formatCurrency(detailTx.amount, cur)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setDetailTx(null)}
+                  className="btn-secondary w-full sm:w-auto px-6"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          )
+        })()}
       </Modal>
 
       {confirmDialog}

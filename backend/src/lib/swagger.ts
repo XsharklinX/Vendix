@@ -10,7 +10,7 @@ export const swaggerSpec = swaggerJsdoc({
       contact: { name: 'Vendix Support', email: 'support@vendix.app' },
     },
     servers: [
-      { url: 'http://localhost:3001/api', description: 'Desarrollo local' },
+      { url: 'http://localhost:3100/api', description: 'Desarrollo local' },
       { url: 'https://api.vendix.app/api', description: 'Producción' },
     ],
     components: {
