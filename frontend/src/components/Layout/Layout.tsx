@@ -4,6 +4,7 @@ import { Menu, TrendingUp } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { useAuthStore } from '@/store/auth'
 import { NotificationBell } from '@/components/ui/NotificationBell'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PlanLimitModal } from '@/components/ui/PlanLimitModal'
 import { usePlanLimit } from '@/hooks/usePlanLimit'
 
@@ -44,6 +45,7 @@ export function Layout() {
           </div>
           <span className="text-gray-300 text-sm">·</span>
           <span className="text-sm text-gray-500 truncate flex-1">{business.name}</span>
+          <ThemeToggle />
           <NotificationBell />
         </div>
 

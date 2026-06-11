@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { logAudit } from '../lib/audit'
+import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -204,7 +205,7 @@ router.post('/:id/payroll', async (req: AuthRequest, res) => {
     return res.status(201).json(result)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
-    console.error('[employees] payroll error', e)
+    logger.error({ err: e }, '[employees] payroll error')
     return res.status(500).json({ error: 'Error interno' })
   }
 })

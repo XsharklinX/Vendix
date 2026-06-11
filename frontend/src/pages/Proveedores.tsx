@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { TableRowSkeleton } from '@/components/ui/Skeleton'
 import { Plus, Truck, Search, Edit2, Trash2, Phone, Mail, Download } from 'lucide-react'
 
 const schema = z.object({
@@ -121,10 +122,7 @@ export function Proveedores() {
 
         <div className="card overflow-hidden">
           {isLoading ? (
-            <div className="py-20 text-center text-gray-400">
-              <div className="inline-block w-6 h-6 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
-              <p className="text-sm">Cargando proveedores...</p>
-            </div>
+            <TableRowSkeleton rows={6} cols={5} />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Truck}

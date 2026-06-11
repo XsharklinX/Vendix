@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
+import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -42,7 +43,7 @@ router.get('/', async (req: AuthRequest, res) => {
     const result = suppliers.map(s => ({ ...s, pendingDebt: debtBySupplier[s.id] ?? 0 }))
     return res.json(result)
   } catch (e) {
-    console.error('[suppliers] GET /', e)
+    logger.error({ err: e }, '[suppliers] GET /')
     return res.status(500).json({ error: 'Error interno' })
   }
 })

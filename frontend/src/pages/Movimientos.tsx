@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { ListRowSkeleton } from '@/components/ui/Skeleton'
 import {
   Plus, ArrowLeftRight, Filter, Download,
   TrendingUp, TrendingDown, Scale, RotateCcw,
@@ -256,10 +257,7 @@ export function Movimientos() {
         {/* Lista de movimientos */}
         <div className="card overflow-hidden">
           {isLoading ? (
-            <div className="py-20 text-center text-gray-400">
-              <div className="inline-block w-6 h-6 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
-              <p className="text-sm">Cargando movimientos...</p>
-            </div>
+            <ListRowSkeleton rows={8} />
           ) : transactions.length === 0 ? (
             <EmptyState icon={ArrowLeftRight} title="Sin movimientos" description="No hay movimientos en el período seleccionado" />
           ) : (

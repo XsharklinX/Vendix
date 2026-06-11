@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useState } from 'react'
 import { NotificationBell } from '@/components/ui/NotificationBell'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 interface SidebarProps {
   isOpen: boolean
@@ -105,7 +106,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
         <div className="flex items-center gap-1">
           <div className="hidden lg:block"><NotificationBell /></div>
-          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100">
+          <ThemeToggle />
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
             <X size={16} className="text-gray-500" />
           </button>
         </div>

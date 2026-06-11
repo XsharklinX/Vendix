@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { logAudit } from '../lib/audit'
+import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -139,7 +140,7 @@ router.get('/', async (req: AuthRequest, res) => {
     })
     return res.json(result)
   } catch (e) {
-    console.error('[clients] GET /', e)
+    logger.error({ err: e }, '[clients] GET /')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -248,7 +249,7 @@ router.get('/:id/timeline', async (req: AuthRequest, res) => {
 
     return res.json({ client, events })
   } catch (e) {
-    console.error('[clients] GET /:id/timeline', e)
+    logger.error({ err: e }, '[clients] GET /:id/timeline')
     return res.status(500).json({ error: 'Error interno' })
   }
 })

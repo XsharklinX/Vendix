@@ -11,6 +11,7 @@ import {
   sendWelcomeEmail,
 } from '../lib/email'
 import { logAudit } from '../lib/audit'
+import { logger } from '../lib/logger'
 
 const router = Router()
 
@@ -149,7 +150,7 @@ router.post('/verify-email', async (req, res) => {
       data: { emailVerified: true, emailVerifyToken: null },
     })
 
-    sendWelcomeEmail(user.email, user.name).catch(console.error)
+    sendWelcomeEmail(user.email, user.name).catch(err => logger.error({ err }, '[auth] sendWelcomeEmail failed'))
     return res.json({ ok: true, message: '¡Correo verificado correctamente!' })
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })

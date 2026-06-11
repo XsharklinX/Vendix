@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -7,6 +7,7 @@ import { Bot, Send, Settings, ChevronDown, ChevronUp, Sparkles, User, Loader2, A
 import toast from 'react-hot-toast'
 
 interface Message { role: 'user' | 'assistant'; content: string }
+interface AiSettings { provider: string; model: string; hasApiKey: boolean }
 
 const PROVIDERS = [
   { value: 'groq', label: 'Groq (Llama 3)', placeholder: 'gsk_...' },
@@ -26,35 +27,60 @@ const DEFAULT_PROMPTS = [
 export function AiAssistant() {
   const { business } = useAuthStore()
   const bid = business!.id
+  const queryClient = useQueryClient()
 
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('ai_api_key') || '')
-  const [provider, setProvider] = useState(() => localStorage.getItem('ai_provider') || 'groq')
-  const [model, setModel] = useState(() => localStorage.getItem('ai_model') || '')
-  const [settingsOpen, setSettingsOpen] = useState(!localStorage.getItem('ai_api_key'))
+  const { data: settings } = useQuery<AiSettings>({
+    queryKey: ['ai-settings', bid],
+    queryFn: () => api.get(`/businesses/${bid}/ai/settings`).then(r => r.data),
+  })
+
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [provider, setProvider] = useState('groq')
+  const [model, setModel] = useState('')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Sincroniza el formulario con la configuración del backend cuando llega/cambia.
+  useEffect(() => {
+    if (!settings) return
+    setProvider(settings.provider)
+    setModel(settings.model)
+    setSettingsOpen(!settings.hasApiKey)
+  }, [settings])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const saveSettingsMutation = useMutation({
+    mutationFn: (data: { apiKey?: string; provider: string; model: string }) =>
+      api.put(`/businesses/${bid}/ai/settings`, data),
+    onSuccess: () => {
+      setApiKeyInput('')
+      queryClient.invalidateQueries({ queryKey: ['ai-settings', bid] })
+      setSettingsOpen(false)
+      toast.success('Configuración guardada')
+    },
+    onError: () => toast.error('No se pudo guardar la configuración'),
+  })
+
   const saveSettings = () => {
-    localStorage.setItem('ai_api_key', apiKey)
-    localStorage.setItem('ai_provider', provider)
-    localStorage.setItem('ai_model', model)
-    setSettingsOpen(false)
-    toast.success('Configuración guardada')
+    saveSettingsMutation.mutate({
+      ...(apiKeyInput.trim() ? { apiKey: apiKeyInput.trim() } : {}),
+      provider,
+      model: model.trim(),
+    })
+  }
+
+  const removeApiKey = () => {
+    saveSettingsMutation.mutate({ apiKey: '', provider, model: model.trim() })
   }
 
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
-      api.post(`/businesses/${bid}/ai/chat`, {
-        message,
-        apiKey,
-        provider,
-        model: model.trim() || undefined,
-      }).then(r => r.data as { reply: string }),
+      api.post(`/businesses/${bid}/ai/chat`, { message }).then(r => r.data as { reply: string }),
     onSuccess: ({ reply }) => {
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
     },
@@ -64,10 +90,12 @@ export function AiAssistant() {
     },
   })
 
+  const hasApiKey = !!settings?.hasApiKey
+
   const sendMessage = (text?: string) => {
     const msg = (text ?? input).trim()
     if (!msg) return
-    if (!apiKey.trim()) {
+    if (!hasApiKey) {
       setSettingsOpen(true)
       toast.error('Configura tu API key primero')
       return
@@ -104,7 +132,7 @@ export function AiAssistant() {
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Settings size={15} className="text-gray-400" />
               Configuración del proveedor de IA
-              {apiKey && <span className="badge text-green-700 bg-green-50 ml-2">Configurado</span>}
+              {hasApiKey && <span className="badge text-green-700 bg-green-50 ml-2">Configurado</span>}
             </div>
             {settingsOpen ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
           </button>
@@ -113,7 +141,7 @@ export function AiAssistant() {
             <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex gap-2">
                 <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
-                <span>Tu API key se guarda en este navegador y se envía al backend local de Vendix solo para completar cada consulta.</span>
+                <span>Tu API key se guarda cifrada en el servidor local de Vendix y nunca se muestra de nuevo en pantalla.</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -135,9 +163,9 @@ export function AiAssistant() {
                   </label>
                   <input
                     type="password"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder={selectedProvider?.placeholder}
+                    value={apiKeyInput}
+                    onChange={e => setApiKeyInput(e.target.value)}
+                    placeholder={hasApiKey ? '••••••••••••••••••• (sin cambios)' : selectedProvider?.placeholder}
                     className="input w-full font-mono text-xs"
                   />
                 </div>
@@ -154,9 +182,16 @@ export function AiAssistant() {
                 </div>
               </div>
 
-              <button onClick={saveSettings} className="btn-primary">
-                Guardar configuración
-              </button>
+              <div className="flex gap-2">
+                <button onClick={saveSettings} disabled={saveSettingsMutation.isPending} className="btn-primary disabled:opacity-50">
+                  Guardar configuración
+                </button>
+                {hasApiKey && (
+                  <button onClick={removeApiKey} disabled={saveSettingsMutation.isPending} className="btn-ghost text-red-500 hover:bg-red-50 disabled:opacity-50">
+                    Quitar API key
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -178,7 +213,7 @@ export function AiAssistant() {
                     <button
                       key={p}
                       onClick={() => sendMessage(p)}
-                      disabled={!apiKey || chatMutation.isPending}
+                      disabled={!hasApiKey || chatMutation.isPending}
                       className="px-3 py-1.5 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-sm hover:bg-violet-100 transition-colors disabled:opacity-50"
                     >
                       {p}
@@ -228,15 +263,15 @@ export function AiAssistant() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={apiKey ? 'Pregúntame algo sobre tu negocio… (Enter para enviar)' : 'Configura tu API key arriba para empezar'}
-              disabled={!apiKey || chatMutation.isPending}
+              placeholder={hasApiKey ? 'Pregúntame algo sobre tu negocio… (Enter para enviar)' : 'Configura tu API key arriba para empezar'}
+              disabled={!hasApiKey || chatMutation.isPending}
               rows={1}
               className="flex-1 input resize-none leading-relaxed disabled:opacity-50"
               style={{ minHeight: '42px', maxHeight: '120px' }}
             />
             <button
               onClick={() => sendMessage()}
-              disabled={!input.trim() || !apiKey || chatMutation.isPending}
+              disabled={!input.trim() || !hasApiKey || chatMutation.isPending}
               className="btn-primary px-3 flex-shrink-0 disabled:opacity-50"
             >
               <Send size={15} />

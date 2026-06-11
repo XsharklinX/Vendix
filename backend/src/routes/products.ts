@@ -5,6 +5,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { checkProductLimit } from '../middleware/planLimits'
 import { logAudit } from '../lib/audit'
+import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -115,7 +116,7 @@ router.post('/', checkProductLimit, async (req: AuthRequest, res) => {
     return res.status(201).json(product)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
-    console.error('Error creating product:', e)
+    logger.error({ err: e }, '[products] POST /')
     return res.status(500).json({ error: 'Error interno al crear el producto' })
   }
 })
@@ -146,7 +147,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
     return res.json(product)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
-    console.error('Error updating product:', e)
+    logger.error({ err: e }, '[products] PUT /:id')
     return res.status(500).json({ error: 'Error interno al actualizar el producto' })
   }
 })
@@ -161,7 +162,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
     logAudit(req, businessId, 'DELETE', 'PRODUCT', id)
     return res.json({ ok: true })
   } catch (e) {
-    console.error('Error deleting product:', e)
+    logger.error({ err: e }, '[products] DELETE /:id')
     return res.status(500).json({ error: 'No se puede eliminar el producto (puede tener ventas asociadas)' })
   }
 })

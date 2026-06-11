@@ -6,10 +6,10 @@ import { formatCurrency } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend
+  Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts'
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns'
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Clock, Repeat, RotateCcw, Receipt } from 'lucide-react'
 
 type Period = 'today' | 'week' | '30days' | 'month' | 'custom'
 
@@ -58,6 +58,40 @@ export function Estadisticas() {
     }).then(r => r.data),
   })
 
+  const { data: byHour } = useQuery({
+    queryKey: ['stats-by-hour', bid, dates.days],
+    queryFn: () => api.get(`/businesses/${bid}/stats/by-hour`, {
+      params: { days: dates.days }
+    }).then(r => r.data),
+  })
+
+  const { data: avgTicketByWeekday } = useQuery({
+    queryKey: ['stats-avg-ticket-weekday', bid, dates.from, dates.to],
+    queryFn: () => api.get(`/businesses/${bid}/stats/avg-ticket-by-weekday`, {
+      params: { from: dates.from, to: dates.to }
+    }).then(r => r.data),
+  })
+
+  const { data: topReturns } = useQuery({
+    queryKey: ['stats-top-returns', bid, dates.from, dates.to],
+    queryFn: () => api.get(`/businesses/${bid}/stats/top-returns`, {
+      params: { from: dates.from, to: dates.to }
+    }).then(r => r.data),
+  })
+
+  const { data: retention } = useQuery({
+    queryKey: ['stats-retention', bid, dates.from, dates.to],
+    queryFn: () => api.get(`/businesses/${bid}/stats/customer-retention`, {
+      params: { from: dates.from, to: dates.to }
+    }).then(r => r.data),
+  })
+
+  const peakHour = byHour && byHour.length > 0
+    ? byHour.reduce((max: { hour: number; total: number; count: number }, h: { hour: number; total: number; count: number }) => h.total > max.total ? h : max, byHour[0])
+    : null
+
+  const avgTicket = (summary?.salesCount ?? 0) > 0 ? (summary?.totalSales ?? 0) / summary.salesCount : 0
+
   const periods: { value: Period; label: string }[] = [
     { value: 'today', label: 'Hoy' },
     { value: 'week', label: '7 días' },
@@ -95,12 +129,13 @@ export function Estadisticas() {
         </div>
 
         {/* KPI cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
             { label: 'Total ventas', value: formatCurrency(summary?.totalSales ?? 0, cur), icon: ShoppingCart, color: 'text-green-600 bg-green-50', sub: `${summary?.salesCount ?? 0} transacciones` },
             { label: 'Total gastos', value: formatCurrency(summary?.totalExpenses ?? 0, cur), icon: TrendingDown, color: 'text-red-600 bg-red-50', sub: `${summary?.expensesCount ?? 0} gastos` },
             { label: 'Ganancia bruta', value: formatCurrency(summary?.grossProfit ?? 0, cur), icon: TrendingUp, color: 'text-blue-600 bg-blue-50', sub: 'Ventas - costo productos' },
             { label: 'Ganancia neta', value: formatCurrency(summary?.netProfit ?? 0, cur), icon: DollarSign, color: (summary?.netProfit ?? 0) >= 0 ? 'text-indigo-600 bg-indigo-50' : 'text-red-600 bg-red-50', sub: 'Ganancia bruta - gastos' },
+            { label: 'Ticket promedio', value: formatCurrency(avgTicket, cur), icon: Receipt, color: 'text-purple-600 bg-purple-50', sub: 'Por venta' },
           ].map(card => {
             const Icon = card.icon
             return (
@@ -164,6 +199,119 @@ export function Estadisticas() {
           ) : (
             <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin ventas en el período</div>
           )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Horarios de mayor venta */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-gray-900">Horarios de mayor venta</h2>
+              {peakHour && peakHour.count > 0 && (
+                <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                  <Clock size={12} /> Pico: {String(peakHour.hour).padStart(2, '0')}:00
+                </span>
+              )}
+            </div>
+            {byHour && byHour.some((h: { count: number }) => h.count > 0) ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={byHour}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={h => `${h}h`} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <Tooltip formatter={(v: number, name: string) => name === 'total' ? formatCurrency(v, cur) : v} labelFormatter={h => `${h}:00`} />
+                  <Bar dataKey="total" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Ventas" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin ventas en el período</div>
+            )}
+          </div>
+
+          {/* Ticket promedio por día de la semana */}
+          <div className="card p-5">
+            <h2 className="font-semibold text-gray-900 mb-4">Ticket promedio por día</h2>
+            {avgTicketByWeekday && avgTicketByWeekday.some((d: { count: number }) => d.count > 0) ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={avgTicketByWeekday}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={d => d.slice(0, 3)} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v, cur)} />
+                  <Bar dataKey="avgTicket" fill="#0ea5e9" radius={[4, 4, 0, 0]} name="Ticket promedio" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin ventas en el período</div>
+            )}
+          </div>
+
+          {/* Productos más devueltos */}
+          <div className="card p-5">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <RotateCcw size={15} className="text-rose-500" /> Productos más devueltos
+            </h2>
+            {topReturns && topReturns.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={topReturns.slice(0, 8)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} width={120} />
+                  <Tooltip formatter={(v: number) => [v, 'Unidades devueltas']} />
+                  <Bar dataKey="totalQty" fill="#f43f5e" radius={[0, 4, 4, 0]} name="Unidades" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin devoluciones en el período</div>
+            )}
+          </div>
+
+          {/* Clientes nuevos vs recurrentes */}
+          <div className="card p-5">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Repeat size={15} className="text-teal-500" /> Clientes nuevos vs. recurrentes
+            </h2>
+            {retention && retention.total > 0 ? (
+              <div className="flex items-center gap-6">
+                <ResponsiveContainer width="50%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Nuevos', value: retention.newClients },
+                        { name: 'Recurrentes', value: retention.returningClients },
+                      ]}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={2}
+                    >
+                      <Cell fill="#22c55e" />
+                      <Cell fill="#3b82f6" />
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="text-sm text-gray-700">Nuevos</span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 ml-5">{retention.newClients}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-blue-500" />
+                      <span className="text-sm text-gray-700">Recurrentes</span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 ml-5">{retention.returningClients}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin clientes con compras en el período</div>
+            )}
+          </div>
         </div>
       </div>
     </div>

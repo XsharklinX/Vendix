@@ -6,6 +6,7 @@ export const authLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
 })
 
 export const apiLimiter = rateLimit({

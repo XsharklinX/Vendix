@@ -1,6 +1,7 @@
 import { prisma } from './prisma'
 import { sendEmail } from './email'
 import { checkPendingDebts } from './notifications'
+import { logger } from './logger'
 
 async function buildBackupPayload(businessId: string) {
   const [business, products, clients, suppliers, employees, transactions, quotes] = await Promise.all([
@@ -50,13 +51,13 @@ export async function runBackupScheduler() {
           data: { lastBackupAt: now },
         })
 
-        console.log(`[Backup] Sent to ${biz.user.email} for business "${biz.name}"`)
+        logger.info(`[Backup] Sent to ${biz.user.email} for business "${biz.name}"`)
       } catch (err) {
-        console.error(`[Backup] Failed for business ${biz.id}:`, err)
+        logger.error({ err, businessId: biz.id }, '[Backup] Failed')
       }
     }
   } catch (err) {
-    console.error('[Backup] Scheduler error:', err)
+    logger.error({ err }, '[Backup] Scheduler error')
   }
 }
 
@@ -80,5 +81,5 @@ export function startBackupScheduler() {
   runBackupScheduler()
   setInterval(runBackupScheduler, SIX_HOURS)
   setInterval(runDailyNotifications, ONE_DAY)
-  console.log('[Backup] Scheduler started (checks every 6h)')
+  logger.info('[Backup] Scheduler started (checks every 6h)')
 }

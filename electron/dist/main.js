@@ -168,6 +168,7 @@ async function createWindow() {
             preload: path_1.default.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
+            webSecurity: true,
         },
         show: false,
         backgroundColor: '#f8fafc',
@@ -178,6 +179,22 @@ async function createWindow() {
         electron_1.shell.openExternal(url);
         return { action: 'deny' };
     });
+    // CSP de respaldo a nivel Electron (defensa en profundidad además de helmet en Express).
+    // En dev se omite: el servidor de Vite usa scripts inline/eval para HMR.
+    if (!isDev) {
+        electron_1.session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+            callback({
+                responseHeaders: {
+                    ...details.responseHeaders,
+                    'Content-Security-Policy': [
+                        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+                            "img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; " +
+                            "object-src 'none'; frame-src 'self'; base-uri 'self'",
+                    ],
+                },
+            });
+        });
+    }
     if (isDev) {
         await mainWindow.loadURL('http://localhost:5173');
         mainWindow.webContents.openDevTools();

@@ -30,3 +30,10 @@ export const getErrorMessage = (err: unknown): string => {
   }
   return 'Error desconocido'
 }
+
+export const getErrorField = (err: unknown): string | undefined => {
+  if (axios.isAxiosError(err)) {
+    return err.response?.data?.field
+  }
+  return undefined
+}

@@ -6,6 +6,7 @@ import { verifyBusiness } from '../lib/verifyBusiness'
 import { checkTransactionLimit } from '../middleware/planLimits'
 import { logAudit } from '../lib/audit'
 import { checkLowStock } from '../lib/notifications'
+import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -86,7 +87,7 @@ router.get('/', async (req: AuthRequest, res) => {
       limit: pageSize,
     })
   } catch (e) {
-    console.error('[transactions] GET /', e)
+    logger.error({ err: e }, '[transactions] GET /')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -253,7 +254,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
     return res.json(updated)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
-    console.error('[transactions] PUT /:id', e)
+    logger.error({ err: e }, '[transactions] PUT /:id')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -332,7 +333,7 @@ router.get('/cash-session/current', async (req: AuthRequest, res) => {
     })
     return res.json(session)
   } catch (e) {
-    console.error('[transactions] GET /cash-session/current', e)
+    logger.error({ err: e }, '[transactions] GET /cash-session/current')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -356,7 +357,7 @@ router.get('/cash-session/history', async (req: AuthRequest, res) => {
     })
     return res.json(sessions)
   } catch (e) {
-    console.error('[transactions] GET /cash-session/history', e)
+    logger.error({ err: e }, '[transactions] GET /cash-session/history')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -432,7 +433,7 @@ router.post('/return/:txId', async (req: AuthRequest, res) => {
     logAudit(req, businessId, 'DELETE', 'TRANSACTION', txId, { type: 'RETURN', amount: original.amount })
     return res.status(201).json(returned)
   } catch (e) {
-    console.error('[transactions] POST /return/:txId', e)
+    logger.error({ err: e }, '[transactions] POST /return/:txId')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -450,7 +451,7 @@ router.post('/mark-paid/:clientId', async (req: AuthRequest, res) => {
     logAudit(req, businessId, 'UPDATE', 'TRANSACTION', clientId, { action: 'MARK_CLIENT_DEBT_PAID', updated: result.count })
     return res.json({ ok: true })
   } catch (e) {
-    console.error('[transactions] POST /mark-paid/:clientId', e)
+    logger.error({ err: e }, '[transactions] POST /mark-paid/:clientId')
     return res.status(500).json({ error: 'Error interno' })
   }
 })

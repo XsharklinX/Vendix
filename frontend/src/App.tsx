@@ -99,7 +99,7 @@ export default function App() {
       </BrowserRouter>
 
       <Toaster
-        position="top-right"
+        position="top-center"
         gutter={8}
         toastOptions={{
           duration: 3500,

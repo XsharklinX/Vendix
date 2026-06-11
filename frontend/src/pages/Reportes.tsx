@@ -110,7 +110,7 @@ export function Reportes() {
 
   const { data: transactions = [] } = useQuery<Record<string, unknown>[]>({
     queryKey: ['report-tx', bid, fromDate, toDate],
-    queryFn: () => api.get(`/businesses/${bid}/transactions`, { params: { from: fromDate, to: toDate } }).then(r => r.data),
+    queryFn: () => api.get(`/businesses/${bid}/transactions`, { params: { from: fromDate, to: toDate, limit: 200 } }).then(r => r.data.data ?? []),
     enabled: reportType === 'daily' || reportType === 'monthly',
   })
 

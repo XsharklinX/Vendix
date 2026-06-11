@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, session } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import http from 'http'
@@ -174,6 +174,7 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: true,
     },
     show: false,
     backgroundColor: '#f8fafc',
@@ -185,6 +186,23 @@ async function createWindow() {
     shell.openExternal(url)
     return { action: 'deny' }
   })
+
+  // CSP de respaldo a nivel Electron (defensa en profundidad además de helmet en Express).
+  // En dev se omite: el servidor de Vite usa scripts inline/eval para HMR.
+  if (!isDev) {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; " +
+            "object-src 'none'; frame-src 'self'; base-uri 'self'",
+          ],
+        },
+      })
+    })
+  }
 
   if (isDev) {
     await mainWindow.loadURL('http://localhost:5173')
@@ -265,32 +283,10 @@ function createTray() {
 }
 
 // ── Lifecycle ────────────────────────────────────────────────────────────────
-app.whenReady().then(async () => {
-  const dbPath = ensureDatabase()
-  const jwtSecret = getOrCreateJwtSecret()
-
-  if (!isDev) {
-    startServer(dbPath, jwtSecret)
-  }
-
-  await createWindow()
-  createTray()
-  configureAutoUpdates()
-})
-
-app.on('window-all-closed', () => {
-  // No salir al cerrar ventana — app vive en la bandeja
-})
-
-app.on('activate', () => {
-  mainWindow?.show()
-})
-
-app.on('before-quit', () => {
-  app.isQuitting = true
-})
-
-// Evitar múltiples instancias
+// Evitar múltiples instancias. Esto debe ir ANTES de registrar app.whenReady():
+// si una segunda instancia llega a registrar el handler de "ready", podría
+// intentar levantar el backend en el puerto 3100 antes de que app.quit()
+// surta efecto, provocando un EADDRINUSE.
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
@@ -298,6 +294,31 @@ if (!gotLock) {
   app.on('second-instance', () => {
     mainWindow?.show()
     mainWindow?.focus()
+  })
+
+  app.whenReady().then(async () => {
+    const dbPath = ensureDatabase()
+    const jwtSecret = getOrCreateJwtSecret()
+
+    if (!isDev) {
+      startServer(dbPath, jwtSecret)
+    }
+
+    await createWindow()
+    createTray()
+    configureAutoUpdates()
+  })
+
+  app.on('window-all-closed', () => {
+    // No salir al cerrar ventana — app vive en la bandeja
+  })
+
+  app.on('activate', () => {
+    mainWindow?.show()
+  })
+
+  app.on('before-quit', () => {
+    app.isQuitting = true
   })
 }
 

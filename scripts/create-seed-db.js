@@ -18,14 +18,14 @@ try {
   fs.closeSync(fs.openSync(tempDb, 'w'))
 
   // Prisma resolves relative file: URLs from prisma/schema.prisma.
-  execSync('npx prisma db push --force-reset', {
+  execSync('npx prisma migrate deploy', {
     cwd: backendDir,
     stdio: 'inherit',
     env: { ...process.env, DATABASE_URL: 'file:./seed-build.db' },
   })
 
   if (!fs.existsSync(tempDb)) {
-    console.error('seed-build.db was not created after prisma db push')
+    console.error('seed-build.db was not created after prisma migrate deploy')
     process.exit(1)
   }
 

@@ -10,6 +10,7 @@ import { formatCurrency, formatDate, QUOTE_STATUS_LABELS } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { CardRowSkeleton } from '@/components/ui/Skeleton'
 import { Plus, FileText, Trash2, PlusCircle, AlertTriangle, ShoppingBag, Search } from 'lucide-react'
 
 const itemSchema = z.object({
@@ -177,7 +178,7 @@ export function Cotizaciones() {
 
         <div className="card overflow-hidden">
           {isLoading ? (
-            <div className="py-16 text-center text-gray-400">Cargando...</div>
+            <CardRowSkeleton rows={5} />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={FileText}

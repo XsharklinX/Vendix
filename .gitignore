@@ -4,6 +4,8 @@ frontend/node_modules/
 backend/dist/
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
+backend/prisma/test.db
+backend/prisma/test.db-journal
 backend/.env
 frontend/dist/
 release/

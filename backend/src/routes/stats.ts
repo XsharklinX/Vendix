@@ -206,6 +206,127 @@ router.get('/top-products', async (req: AuthRequest, res) => {
   })))
 })
 
+// ── Ticket promedio por día de la semana ─────────────────────────────────────
+
+router.get('/avg-ticket-by-weekday', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const { from, to } = req.query
+  const dateFilter: Record<string, unknown> = {}
+  if (from || to) {
+    dateFilter.createdAt = {}
+    if (from) (dateFilter.createdAt as Record<string, unknown>).gte = new Date(from as string)
+    if (to) {
+      const toDate = new Date(to as string)
+      toDate.setHours(23, 59, 59, 999)
+      ;(dateFilter.createdAt as Record<string, unknown>).lte = toDate
+    }
+  }
+
+  const sales = await prisma.transaction.findMany({
+    where: { businessId, type: 'SALE', status: 'COMPLETED', ...dateFilter },
+    select: { amount: true, createdAt: true },
+  })
+
+  const labels = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+  const byDow = Array.from({ length: 7 }, () => ({ total: 0, count: 0 }))
+  for (const s of sales) {
+    const d = byDow[s.createdAt.getDay()]
+    d.total += s.amount
+    d.count++
+  }
+
+  return res.json(byDow.map((d, i) => ({
+    day: labels[i],
+    avgTicket: d.count > 0 ? d.total / d.count : 0,
+    count: d.count,
+  })))
+})
+
+// ── Productos más devueltos ──────────────────────────────────────────────────
+
+router.get('/top-returns', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const { from, to } = req.query
+  const dateFilter: Record<string, unknown> = {}
+  if (from || to) {
+    dateFilter.createdAt = {}
+    if (from) (dateFilter.createdAt as Record<string, unknown>).gte = new Date(from as string)
+    if (to) {
+      const toDate = new Date(to as string)
+      toDate.setHours(23, 59, 59, 999)
+      ;(dateFilter.createdAt as Record<string, unknown>).lte = toDate
+    }
+  }
+
+  const items = await prisma.transactionItem.groupBy({
+    by: ['name', 'productId'],
+    where: { transaction: { businessId, type: 'RETURN', ...dateFilter } },
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: 'desc' } },
+    take: 10,
+  })
+
+  return res.json(items.map(i => ({
+    name: i.name,
+    productId: i.productId,
+    totalQty: i._sum.quantity ?? 0,
+  })))
+})
+
+// ── Clientes nuevos vs recurrentes ───────────────────────────────────────────
+
+router.get('/customer-retention', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const { from, to } = req.query
+  const dateFilter: Record<string, unknown> = {}
+  if (from || to) {
+    dateFilter.createdAt = {}
+    if (from) (dateFilter.createdAt as Record<string, unknown>).gte = new Date(from as string)
+    if (to) {
+      const toDate = new Date(to as string)
+      toDate.setHours(23, 59, 59, 999)
+      ;(dateFilter.createdAt as Record<string, unknown>).lte = toDate
+    }
+  }
+
+  const salesInPeriod = await prisma.transaction.findMany({
+    where: { businessId, type: 'SALE', status: 'COMPLETED', clientId: { not: null }, ...dateFilter },
+    select: { clientId: true },
+    distinct: ['clientId'],
+  })
+  const clientIds = salesInPeriod.map(s => s.clientId!).filter(Boolean)
+
+  if (clientIds.length === 0) {
+    return res.json({ newClients: 0, returningClients: 0, total: 0 })
+  }
+
+  const firstSales = await prisma.transaction.groupBy({
+    by: ['clientId'],
+    where: { businessId, type: 'SALE', status: 'COMPLETED', clientId: { in: clientIds } },
+    _min: { createdAt: true },
+  })
+
+  const periodFrom = from ? new Date(from as string) : null
+  let newClients = 0
+  let returningClients = 0
+  for (const f of firstSales) {
+    const firstDate = f._min.createdAt
+    if (periodFrom && firstDate && firstDate >= periodFrom) newClients++
+    else returningClients++
+  }
+
+  return res.json({ newClients, returningClients, total: clientIds.length })
+})
+
 // ── Margen por categoría ─────────────────────────────────────────────────────
 
 router.get('/margin-by-category', async (req: AuthRequest, res) => {

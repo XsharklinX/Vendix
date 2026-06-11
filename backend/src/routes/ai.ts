@@ -1,7 +1,10 @@
 import { Router } from 'express'
+import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
+import { logger } from '../lib/logger'
+import { encrypt, decrypt } from '../lib/crypto'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -20,16 +23,80 @@ const DEFAULT_MODELS: Record<string, string> = {
   xai: 'grok-3-mini',
 }
 
+const settingsSchema = z.object({
+  apiKey: z.string().optional(),
+  provider: z.enum(['groq', 'openai', 'openrouter', 'xai']).optional(),
+  model: z.string().max(100).optional().nullable(),
+})
+
+// Devuelve la configuración guardada SIN exponer la API key (solo si hay una configurada).
+router.get('/settings', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { aiProvider: true, aiModel: true, aiApiKeyEnc: true },
+  })
+
+  return res.json({
+    provider: business?.aiProvider ?? 'groq',
+    model: business?.aiModel ?? '',
+    hasApiKey: !!business?.aiApiKeyEnc,
+  })
+})
+
+// Guarda la configuración del proveedor de IA. La API key se cifra antes de
+// persistirse; nunca se devuelve en texto plano.
+router.put('/settings', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  try {
+    const parsed = settingsSchema.parse(req.body)
+    const data: { aiProvider?: string; aiModel?: string | null; aiApiKeyEnc?: string | null } = {}
+
+    if (parsed.provider !== undefined) data.aiProvider = parsed.provider
+    if (parsed.model !== undefined) data.aiModel = parsed.model
+    if (parsed.apiKey !== undefined) {
+      data.aiApiKeyEnc = parsed.apiKey.trim() ? encrypt(parsed.apiKey.trim()) : null
+    }
+
+    await prisma.business.update({ where: { id: businessId }, data })
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
+    logger.error({ err: e }, '[ai] PUT /settings')
+    return res.status(500).json({ error: 'Error interno' })
+  }
+})
+
 router.post('/chat', async (req: AuthRequest, res) => {
   const { businessId } = req.params
   if (!await verifyBusiness(businessId, req.userId!))
     return res.status(403).json({ error: 'Acceso denegado' })
 
-  const { message, apiKey, provider = 'groq', model } = req.body
+  const { message } = req.body
 
   if (!message?.trim()) return res.status(400).json({ error: 'Mensaje requerido' })
   if (message.length > 1000) return res.status(400).json({ error: 'El mensaje es demasiado largo' })
-  if (!apiKey?.trim()) return res.status(400).json({ error: 'API key requerida' })
+
+  const aiSettings = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { aiApiKeyEnc: true, aiProvider: true, aiModel: true },
+  })
+
+  if (!aiSettings?.aiApiKeyEnc) {
+    return res.status(400).json({ error: 'Configura tu API key del asistente de IA primero' })
+  }
+
+  const apiKey = decrypt(aiSettings.aiApiKeyEnc)
+  if (!apiKey) return res.status(500).json({ error: 'No se pudo leer la API key configurada' })
+
+  const provider = aiSettings.aiProvider || 'groq'
+  const model = aiSettings.aiModel || undefined
 
   const apiUrl = PROVIDER_URLS[provider]
   if (!apiUrl) return res.status(400).json({ error: 'Proveedor no soportado' })
@@ -133,7 +200,7 @@ Responde de forma directa. Si te preguntan algo que no está en estos datos, ind
 
     return res.json({ reply })
   } catch (err) {
-    console.error('[AI chat error]', err)
+    logger.error({ err }, '[AI chat error]')
     return res.status(500).json({ error: 'Error al conectar con el proveedor de IA' })
   }
 })

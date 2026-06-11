@@ -2,9 +2,16 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
+import { logger } from '../lib/logger'
 
 const router = Router()
 router.use(authMiddleware)
+
+// Nunca exponer el blob cifrado de la API key de IA en respuestas al frontend.
+function omitAiKey<T extends { aiApiKeyEnc?: string | null }>(business: T): Omit<T, 'aiApiKeyEnc'> {
+  const { aiApiKeyEnc: _aiApiKeyEnc, ...rest } = business
+  return rest
+}
 
 const updateSchema = z.object({
   name: z.string().min(2).optional().nullable(),
@@ -34,9 +41,9 @@ router.get('/', async (req: AuthRequest, res) => {
     const businesses = await prisma.business.findMany({
       where: { userId: req.userId },
     })
-    return res.json(businesses)
+    return res.json(businesses.map(omitAiKey))
   } catch (e) {
-    console.error('[business] GET /', e)
+    logger.error({ err: e }, '[business] GET /')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -60,9 +67,9 @@ router.get('/:id', async (req: AuthRequest, res) => {
       where: { id: req.params.id, userId: req.userId },
     })
     if (!business) return res.status(404).json({ error: 'Negocio no encontrado' })
-    return res.json(business)
+    return res.json(omitAiKey(business))
   } catch (e) {
-    console.error('[business] GET /:id', e)
+    logger.error({ err: e }, '[business] GET /:id')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -84,10 +91,12 @@ router.put('/:id', async (req: AuthRequest, res) => {
       where: { id: req.params.id },
       data,
     })
-    return res.json(updated)
+    return res.json(omitAiKey(updated))
   } catch (e) {
-    if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
-    console.error('[business] PUT /:id', e)
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: e.errors[0].message, field: e.errors[0].path[0] })
+    }
+    logger.error({ err: e }, '[business] PUT /:id')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -120,7 +129,7 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
 
     const payload = {
       exportedAt: new Date().toISOString(),
-      business,
+      business: omitAiKey(business),
       products,
       clients,
       suppliers,
@@ -137,7 +146,7 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
     )
     return res.json(payload)
   } catch (e) {
-    console.error('[business] GET /:id/export', e)
+    logger.error({ err: e }, '[business] GET /:id/export')
     return res.status(500).json({ error: 'Error al exportar' })
   }
 })
@@ -169,7 +178,7 @@ router.delete('/:id/reset', async (req: AuthRequest, res) => {
     return res.json({ ok: true })
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'El nombre del negocio no coincide' })
-    console.error('[business] DELETE /:id/reset', e)
+    logger.error({ err: e }, '[business] DELETE /:id/reset')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -193,7 +202,7 @@ router.post('/:id/next-ncf', async (req: AuthRequest, res) => {
 
     return res.json({ ncf, next: seq + 1 })
   } catch (e) {
-    console.error('[business] POST /:id/next-ncf', e)
+    logger.error({ err: e }, '[business] POST /:id/next-ncf')
     return res.status(500).json({ error: 'Error interno' })
   }
 })

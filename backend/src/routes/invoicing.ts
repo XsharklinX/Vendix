@@ -6,6 +6,7 @@ import { verifyBusiness } from '../lib/verifyBusiness'
 import { sendEmail } from '../lib/email'
 import { buildInvoiceHtml } from '../lib/invoiceHtml'
 import { logAudit } from '../lib/audit'
+import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -75,7 +76,7 @@ router.get('/transactions/:transactionId/html', async (req: AuthRequest, res) =>
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     return res.send(html)
   } catch (e) {
-    console.error('[invoicing] transaction html', e)
+    logger.error({ err: e }, '[invoicing] transaction html')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -129,7 +130,7 @@ router.post('/transactions/:transactionId/email', async (req: AuthRequest, res) 
     return res.json({ ok: true, invoiceNumber: number, to: recipient })
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
-    console.error('[invoicing] transaction email', e)
+    logger.error({ err: e }, '[invoicing] transaction email')
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -206,7 +207,7 @@ router.get('/clients/:clientId/statement/html', async (req: AuthRequest, res) =>
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     return res.send(html)
   } catch (e) {
-    console.error('[invoicing] statement html', e)
+    logger.error({ err: e }, '[invoicing] statement html')
     return res.status(500).json({ error: 'Error interno' })
   }
 })

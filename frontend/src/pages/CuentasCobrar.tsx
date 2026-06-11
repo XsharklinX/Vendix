@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
@@ -5,6 +6,7 @@ import { useAuthStore } from '@/store/auth'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { DocumentPreviewModal } from '@/components/ui/DocumentPreviewModal'
 import { CreditCard, Phone, CheckCircle, AlertCircle, Users, DollarSign, MessageCircle, FileText, Mail } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { differenceInCalendarDays } from 'date-fns'
@@ -33,6 +35,7 @@ export function CuentasCobrar() {
   const cur = business?.currency || 'DOP'
   const qc = useQueryClient()
   const { confirm, dialog } = useConfirm()
+  const [statementDoc, setStatementDoc] = useState<{ title: string; html: string; filename: string } | null>(null)
 
   const { data: clients = [], isLoading } = useQuery<ClientWithDebt[]>({
     queryKey: ['clients-debt', bid],
@@ -82,12 +85,24 @@ export function CuentasCobrar() {
     },
   })
 
-  const openStatement = async (clientId: string) => {
+  const markTxPaidMutation = useMutation({
+    mutationFn: (txId: string) => api.put(`/businesses/${bid}/transactions/${txId}`, { status: 'COMPLETED' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clients-debt', bid] })
+      qc.invalidateQueries({ queryKey: ['transactions', bid] })
+      toast.success('Venta marcada como pagada')
+    },
+    onError: () => toast.error('No se pudo actualizar la venta'),
+  })
+
+  const openStatement = async (client: ClientWithDebt) => {
     try {
-      const res = await api.get(`/businesses/${bid}/invoicing/clients/${clientId}/statement/html`, { responseType: 'text' })
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }))
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      const res = await api.get(`/businesses/${bid}/invoicing/clients/${client.id}/statement/html`, { responseType: 'text' })
+      setStatementDoc({
+        title: `Estado de cuenta — ${client.name}`,
+        html: res.data,
+        filename: `estado-cuenta-${client.name.toLowerCase().replace(/\s+/g, '-')}.html`,
+      })
     } catch {
       toast.error('No se pudo generar el estado de cuenta')
     }
@@ -216,9 +231,9 @@ export function CuentasCobrar() {
                       </a>
                     )}
                     <button
-                      onClick={() => openStatement(client.id)}
+                      onClick={() => openStatement(client)}
                       className="btn-secondary px-2.5 py-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                      title="Estado de cuenta PDF"
+                      title="Estado de cuenta"
                     >
                       <FileText size={15} />
                     </button>
@@ -258,7 +273,23 @@ export function CuentasCobrar() {
                           <span className="text-gray-700">{tx.description || 'Venta'}</span>
                           <span className="text-gray-400 text-xs ml-2">{formatDate(tx.createdAt, 'dd MMM, HH:mm')}</span>
                         </div>
-                        <span className="font-semibold text-red-500">{formatCurrency(tx.amount, cur)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-red-500">{formatCurrency(tx.amount, cur)}</span>
+                          <button
+                            onClick={async () => {
+                              const ok = await confirm(
+                                'Marcar como pagada',
+                                `¿Marcar esta venta de ${formatCurrency(tx.amount, cur)} como pagada?`,
+                                false
+                              )
+                              if (ok) markTxPaidMutation.mutate(tx.id)
+                            }}
+                            disabled={markTxPaidMutation.isPending}
+                            className="text-xs font-medium text-green-600 hover:text-green-700 hover:underline disabled:opacity-50"
+                          >
+                            Marcar pagada
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -270,6 +301,13 @@ export function CuentasCobrar() {
       </div>
 
       {dialog}
+      <DocumentPreviewModal
+        open={!!statementDoc}
+        onClose={() => setStatementDoc(null)}
+        title={statementDoc?.title ?? ''}
+        html={statementDoc?.html ?? ''}
+        filename={statementDoc?.filename ?? 'estado-cuenta.html'}
+      />
     </div>
   )
 }

@@ -6,7 +6,7 @@ Todos los comandos se ejecutan desde la raíz del monorepo (`e:/Programacion/Fin
 
 | Comando | Descripción |
 |---|---|
-| `npm run setup` | Instalación completa: deps + Prisma generate + db push |
+| `npm run setup` | Instalación completa: deps + Prisma generate + migrate deploy |
 | `npm run dev` | Backend + Frontend en paralelo |
 | `npm run dev:electron` | Backend + Frontend + ventana Electron |
 | `npm run dev:backend` | Solo el backend (Express + tsx watch) |
@@ -24,7 +24,7 @@ npm run setup
 ```
 
 Este comando ejecuta en secuencia:
-1. `cd backend && npm install && npx prisma generate && npx prisma db push`
+1. `cd backend && npm install && npx prisma generate && npx prisma migrate deploy`
 2. `cd frontend && npm install`
 3. `npm install` (raíz — instala electron, concurrently, electron-builder)
 
@@ -179,7 +179,10 @@ release/
 | Instalaciones posteriores | Usa la BD existente en `%APPDATA%/Vendix/data.db` |
 | Actualización de la app | La BD no se toca; solo se actualiza el código |
 
-Si hay cambios de esquema en una actualización, el proceso Electron ejecuta `prisma db push` al arrancar para aplicar las migraciones.
+> ⚠️ **Pendiente**: si un futuro release agrega migraciones nuevas (`backend/prisma/migrations/`),
+> las instalaciones existentes con una BD antigua en `%APPDATA%/Vendix/data.db` no las recibirán
+> automáticamente — el proceso Electron actualmente no ejecuta `prisma migrate deploy` al arrancar.
+> Aplicar esto requiere empaquetar el motor de migraciones de Prisma en el runtime del backend.
 
 ---
 

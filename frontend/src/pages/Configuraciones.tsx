@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { api, getErrorMessage } from '@/lib/api'
+import { api, getErrorMessage, getErrorField } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Modal } from '@/components/ui/Modal'
 import {
@@ -33,6 +33,14 @@ const NCF_TYPES = [
 ]
 
 type Tab = 'general' | 'impuestos' | 'ncf' | 'facturacion' | 'staff' | 'negocios' | 'backup'
+
+const FIELD_TABS: Record<string, Tab> = {
+  name: 'general', email: 'general', lowStockThreshold: 'general',
+  taxName: 'impuestos', taxRate: 'impuestos',
+  ncfType: 'ncf', ncfSequence: 'ncf',
+  invoicePrefix: 'facturacion', invoiceSequence: 'facturacion', logoUrl: 'facturacion', invoiceTemplate: 'facturacion',
+  autoBackupEnabled: 'backup', autoBackupInterval: 'backup',
+}
 
 interface StaffUser { id: string; name: string; email: string; role: string }
 
@@ -145,7 +153,21 @@ export function Configuraciones() {
       setBusiness(res.data)
       toast.success('Cambios guardados')
     },
-    onError: (e) => toast.error(getErrorMessage(e)),
+    onError: (e) => {
+      toast.error(getErrorMessage(e))
+      const field = getErrorField(e)
+      if (!field) return
+      const targetTab = FIELD_TABS[field]
+      if (targetTab) setTab(targetTab)
+      setTimeout(() => {
+        const el = document.getElementById(`field-${field}`)
+        if (!el) return
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.focus()
+        el.classList.add('ring-2', 'ring-red-500')
+        setTimeout(() => el.classList.remove('ring-2', 'ring-red-500'), 2000)
+      }, targetTab ? 100 : 0)
+    },
   })
 
   const handleSaveGeneral = async () => {
@@ -338,7 +360,7 @@ export function Configuraciones() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="label">Nombre del negocio *</label>
-                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input" placeholder="Mi Tienda" />
+                    <input id="field-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input" placeholder="Mi Tienda" />
                   </div>
                   <div>
                     <label className="label">Tipo de negocio</label>
@@ -375,7 +397,7 @@ export function Configuraciones() {
                   </div>
                   <div>
                     <label className="label"><Mail size={11} className="inline mr-1" />Email del negocio</label>
-                    <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="input" placeholder="negocio@ejemplo.com" />
+                    <input id="field-email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="input" placeholder="negocio@ejemplo.com" />
                   </div>
                   <div>
                     <label className="label"><Hash size={11} className="inline mr-1" />RNC / Cédula fiscal</label>
@@ -390,6 +412,7 @@ export function Configuraciones() {
                 </h3>
                 <label className="label">Alerta stock bajo (unidades)</label>
                 <input
+                  id="field-lowStockThreshold"
                   type="number" min={0}
                   value={form.lowStockThreshold}
                   onChange={e => setForm(f => ({ ...f, lowStockThreshold: parseInt(e.target.value) || 0 }))}
@@ -416,6 +439,7 @@ export function Configuraciones() {
                   <div>
                     <label className="label">Nombre del impuesto</label>
                     <input
+                      id="field-taxName"
                       value={taxForm.taxName}
                       onChange={e => setTaxForm(f => ({ ...f, taxName: e.target.value }))}
                       className="input"
@@ -426,6 +450,7 @@ export function Configuraciones() {
                     <label className="label">Tasa (%)</label>
                     <div className="relative">
                       <input
+                        id="field-taxRate"
                         type="number" min={0} max={100} step={0.1}
                         value={taxForm.taxRate}
                         onChange={e => setTaxForm(f => ({ ...f, taxRate: parseFloat(e.target.value) || 0 }))}
@@ -500,7 +525,7 @@ export function Configuraciones() {
 
                 <div>
                   <label className="label">Tipo de comprobante predeterminado</label>
-                  <select value={ncfForm.ncfType} onChange={e => setNcfForm(f => ({ ...f, ncfType: e.target.value }))} className="input">
+                  <select id="field-ncfType" value={ncfForm.ncfType} onChange={e => setNcfForm(f => ({ ...f, ncfType: e.target.value }))} className="input">
                     <option value="">Sin NCF (desactivado)</option>
                     {NCF_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
                   </select>
@@ -513,6 +538,7 @@ export function Configuraciones() {
                   <div>
                     <label className="label">Próxima secuencia</label>
                     <input
+                      id="field-ncfSequence"
                       type="number" min={1}
                       value={ncfForm.ncfSequence}
                       onChange={e => setNcfForm(f => ({ ...f, ncfSequence: parseInt(e.target.value) || 1 }))}
@@ -558,11 +584,11 @@ export function Configuraciones() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="label">Prefijo de factura</label>
-                    <input value={invoiceForm.invoicePrefix} onChange={e => setInvoiceForm(f => ({ ...f, invoicePrefix: e.target.value.toUpperCase() }))} className="input" placeholder="FAC" />
+                    <input id="field-invoicePrefix" value={invoiceForm.invoicePrefix} onChange={e => setInvoiceForm(f => ({ ...f, invoicePrefix: e.target.value.toUpperCase() }))} className="input" placeholder="FAC" />
                   </div>
                   <div>
                     <label className="label">Próxima secuencia</label>
-                    <input type="number" min={1} value={invoiceForm.invoiceSequence} onChange={e => setInvoiceForm(f => ({ ...f, invoiceSequence: parseInt(e.target.value) || 1 }))} className="input" />
+                    <input id="field-invoiceSequence" type="number" min={1} value={invoiceForm.invoiceSequence} onChange={e => setInvoiceForm(f => ({ ...f, invoiceSequence: parseInt(e.target.value) || 1 }))} className="input" />
                   </div>
                 </div>
 
@@ -577,7 +603,7 @@ export function Configuraciones() {
 
                 <div>
                   <label className="label">URL del logo</label>
-                  <input value={invoiceForm.logoUrl} onChange={e => setInvoiceForm(f => ({ ...f, logoUrl: e.target.value }))} className="input" placeholder="https://..." />
+                  <input id="field-logoUrl" value={invoiceForm.logoUrl} onChange={e => setInvoiceForm(f => ({ ...f, logoUrl: e.target.value }))} className="input" placeholder="https://..." />
                   <p className="text-xs text-gray-400 mt-1">Debe ser una URL pública para que también aparezca en emails.</p>
                 </div>
 

@@ -59,8 +59,9 @@ function getVolumePrice(product: Product, qty: number): number {
   return applicable[0]?.price ?? product.price
 }
 
-interface ReceiptData {
+export interface ReceiptData {
   transactionId?: string
+  receiptNo?: string
   businessName: string; businessAddress?: string; businessPhone?: string
   businessEmail?: string; businessTaxId?: string
   currency: string; items: CartItem[]
@@ -70,11 +71,12 @@ interface ReceiptData {
   cashReceived?: number; change?: number; cashierName?: string
 }
 
-function buildReceiptHtml(data: ReceiptData): string {
+export function buildReceiptHtml(data: ReceiptData): string {
   const fmt = (n: number) => formatCurrency(n, data.currency)
-  const receiptNo = data.transactionId
-    ? data.transactionId.slice(-8).toUpperCase()
-    : Date.now().toString().slice(-8)
+  const receiptNo = data.receiptNo
+    || (data.transactionId
+      ? data.transactionId.slice(-8).toUpperCase()
+      : Date.now().toString().slice(-8))
   const rows = data.items.map(i => `
     <tr>
       <td class="item-name">${i.product.name}</td>
@@ -339,7 +341,7 @@ export function Vender() {
 
   const sellMutation = useMutation({
     mutationFn: (data: unknown) => api.post(`/businesses/${bid}/transactions`, data as Record<string, unknown>),
-    onSuccess: (res, vars) => {
+    onSuccess: async (res, vars) => {
       qc.invalidateQueries({ queryKey: ['products', bid] })
       qc.invalidateQueries({ queryKey: ['recent-tx', bid] })
       qc.invalidateQueries({ queryKey: ['stats-summary-today', bid] })
@@ -348,8 +350,14 @@ export function Vender() {
         paymentMethod: string; status: string; clientId?: string; ncfNumber?: string
         _snapshot: { items: CartItem[]; subtotal: number; discountAmt: number; discountLabel: string; clientName?: string }
       }
+      let receiptNo: string | undefined
+      try {
+        const numRes = await api.post(`/businesses/${bid}/invoicing/next-number`)
+        receiptNo = numRes.data.invoiceNumber
+      } catch { /* receipt falls back to transaction id / timestamp */ }
       setLastSaleData({
         transactionId: res.data.id,
+        receiptNo,
         businessName: business!.name,
         businessAddress: bizData?.address,
         businessPhone: bizData?.phone,
@@ -935,9 +943,10 @@ export function Vender() {
             {lastSaleData && (
               <button
                 onClick={() => {
-                  const receiptNo = lastSaleData!.transactionId
-                    ? lastSaleData!.transactionId.slice(-8).toUpperCase()
-                    : Date.now().toString().slice(-8)
+                  const receiptNo = lastSaleData!.receiptNo
+                    || (lastSaleData!.transactionId
+                      ? lastSaleData!.transactionId.slice(-8).toUpperCase()
+                      : Date.now().toString().slice(-8))
                   setPreviewDoc({
                     title: 'Recibo de venta',
                     html: buildReceiptHtml(lastSaleData!),
@@ -971,12 +980,12 @@ export function Vender() {
             {lastSaleData && (
               <button
                 onClick={() => {
-                  const txNum = Date.now().toString().slice(-6)
+                  const invoiceNumber = lastSaleData!.receiptNo || Date.now().toString().slice(-6)
                   setPreviewDoc({
                     title: 'Factura',
-                    filename: `factura-${txNum}.html`,
+                    filename: `factura-${invoiceNumber}.html`,
                     html: buildInvoiceHtml({
-                      invoiceNumber: txNum,
+                      invoiceNumber,
                       date: new Date().toLocaleDateString('es-DO'),
                       businessName: business!.name,
                       businessAddress: bizData?.address,

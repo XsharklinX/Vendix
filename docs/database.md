@@ -15,10 +15,11 @@ Comandos Prisma:
 
 ```bash
 cd backend
-npx prisma db push          # Aplica cambios del schema a la BD sin migraciones
-npx prisma generate         # Regenera el cliente tipado de Prisma
-npx prisma studio           # UI visual para explorar la BD
-npx prisma db push --accept-data-loss   # Para cambios destructivos en dev
+npx prisma migrate dev --name <descripcion>   # Crea y aplica una migración versionada
+npx prisma migrate deploy                     # Aplica migraciones pendientes (setup, CI, seed)
+npx prisma migrate status                     # Verifica si la BD está al día
+npx prisma generate                           # Regenera el cliente tipado de Prisma
+npx prisma studio                             # UI visual para explorar la BD
 ```
 
 ---
@@ -385,4 +386,12 @@ Prisma crea automáticamente índices en todos los campos `@unique` y las FKs. P
 
 ## Migraciones
 
-El proyecto usa `prisma db push` en lugar de `prisma migrate` para mayor agilidad en desarrollo. Al pasar a producción en PostgreSQL, se recomienda cambiar a `prisma migrate deploy` para mantener un historial de migraciones.
+El proyecto usa migraciones versionadas de Prisma (`backend/prisma/migrations/`), con `20260610000000_init`
+como baseline generado desde el esquema existente.
+
+- En desarrollo: `npx prisma migrate dev --name <descripcion>` crea una nueva migración a partir de los
+  cambios en `schema.prisma` y la aplica a `dev.db`.
+- En setup/CI/seed: `npx prisma migrate deploy` aplica todas las migraciones pendientes sin generar nuevas
+  (usado por `npm run setup` y por `scripts/create-seed-db.js`).
+- Para producción en PostgreSQL (`schema.production.prisma`), generar un set de migraciones equivalente
+  con `prisma migrate dev` apuntando a ese schema antes del primer deploy.

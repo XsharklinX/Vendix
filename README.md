@@ -93,6 +93,24 @@ npx prisma generate
 npx prisma db push
 ```
 
+## Solucion de problemas
+
+### El instalador de Windows no abre o falla con error 0xc0000005
+
+El instalador (`Vendix-Setup-x.x.x.exe`) y el ejecutable portable no estan firmados digitalmente. Windows Defender u otro antivirus puede poner en cuarentena o modificar el archivo despues de generarlo, lo que corrompe el binario y provoca el error `0xc0000005` al abrirlo.
+
+Para evitarlo:
+
+1. Revisa el historial de protección de Windows Defender (`Seguridad de Windows > Protección antivirus y contra amenazas > Historial de protección`) y restaura el archivo si fue puesto en cuarentena.
+2. Agrega una exclusion para la carpeta de salida antes de generar el build:
+
+```powershell
+Add-MpPreference -ExclusionPath "E:\Programacion\Vendix\release"
+```
+
+3. Vuelve a ejecutar `npm run dist` o `npm run dist:portable`.
+4. Verifica que el hash del instalador coincida con el registrado en `release/latest.yml` antes de distribuirlo.
+
 ## Arquitectura
 
 ```text
