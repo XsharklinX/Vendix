@@ -16,8 +16,9 @@ import toast from 'react-hot-toast'
 interface Client { id: string; name: string; phone?: string; pendingDebt: number }
 interface Supplier { id: string; name: string; phone?: string; pendingDebt: number }
 interface Product { id: string; name: string; quantity: number; price: number }
-interface Quote { id: string; clientName?: string; total: number; status: string; createdAt: string }
+interface Quote { id: string; clientName?: string; total: number; status: string; createdAt: string; validUntil?: string | null; client?: { name: string; phone?: string } }
 interface CashSession { status: string; openedAt?: string }
+interface CrmReminder { id: string; content: string; dueAt: string; status: string; client: { id: string; name: string; phone?: string } }
 
 function SectionHeader({ icon, title, count, color }: {
   icon: React.ReactNode; title: string; count?: number; color: string
@@ -77,6 +78,12 @@ export function Planner() {
     enabled: !!bid, staleTime: 60_000,
   })
 
+  const { data: crmReminders = [] } = useQuery<CrmReminder[]>({
+    queryKey: ['crm-reminders', bid],
+    queryFn: () => api.get(`/businesses/${bid}/clients/crm/reminders`).then(r => r.data),
+    enabled: !!bid, staleTime: 60_000,
+  })
+
   const { data: cashSession } = useQuery<CashSession | null>({
     queryKey: ['cash-session', bid],
     queryFn: () => api.get(`/businesses/${bid}/transactions/cash-session/current`).then(r => r.data),
@@ -98,11 +105,16 @@ export function Planner() {
   const outOfStock = lowStock.filter(p => p.quantity === 0)
   const almostOut = lowStock.filter(p => p.quantity > 0)
   const pendingQuotes = quotes.filter(q => q.status === 'PENDING')
+  const expiringQuotes = pendingQuotes.filter(q => {
+    if (!q.validUntil) return false
+    const diffDays = Math.ceil((new Date(q.validUntil).getTime() - today.getTime()) / 86_400_000)
+    return diffDays <= 7
+  })
 
   const totalPendingDebt = debtClients.reduce((s, c) => s + c.pendingDebt, 0)
   const totalSupplierDebt = debtSuppliers.reduce((s, c) => s + c.pendingDebt, 0)
 
-  const allClear = debtClients.length === 0 && debtSuppliers.length === 0 && lowStock.length === 0 && pendingQuotes.length === 0
+  const allClear = debtClients.length === 0 && debtSuppliers.length === 0 && lowStock.length === 0 && pendingQuotes.length === 0 && crmReminders.length === 0
 
   const dayName = format(today, "EEEE d 'de' MMMM", { locale: es })
   const dayCapitalized = dayName.charAt(0).toUpperCase() + dayName.slice(1)
@@ -165,6 +177,45 @@ export function Planner() {
               {cashSession?.status === 'OPEN' ? 'Ver caja' : 'Abrir caja'} <ArrowRight size={12} />
             </Link>
           </div>
+        </div>
+
+        <div className="card overflow-hidden">
+          <SectionHeader
+            icon={<CalendarCheck size={15} />}
+            title="Seguimientos CRM"
+            count={crmReminders.length}
+            color="text-pink-500"
+          />
+          {crmReminders.length === 0 ? (
+            <EmptySection text="No hay recordatorios CRM pendientes en los próximos 14 días." />
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {crmReminders.slice(0, 8).map(reminder => (
+                <div key={reminder.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${reminder.status === 'OVERDUE' ? 'bg-red-100' : 'bg-pink-100'}`}>
+                    <CalendarCheck size={15} className={reminder.status === 'OVERDUE' ? 'text-red-600' : 'text-pink-600'} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{reminder.client.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{reminder.content}</p>
+                    <p className={`text-[11px] font-semibold ${reminder.status === 'OVERDUE' ? 'text-red-500' : 'text-pink-500'}`}>
+                      {reminder.status === 'OVERDUE' ? 'Vencido' : 'Pendiente'} · {format(new Date(reminder.dueAt), 'dd MMM h:mm a', { locale: es })}
+                    </p>
+                  </div>
+                  {reminder.client.phone && (
+                    <a
+                      href={`https://wa.me/${reminder.client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${reminder.client.name}, queríamos dar seguimiento: ${reminder.content}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 transition-colors"
+                    >
+                      <MessageCircle size={13} className="text-green-700" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Lo que te deben */}
@@ -304,6 +355,37 @@ export function Planner() {
                   </Link>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {expiringQuotes.length > 0 && (
+          <div className="card overflow-hidden">
+            <SectionHeader
+              icon={<FileText size={15} />}
+              title="Cotizaciones por vencer"
+              count={expiringQuotes.length}
+              color="text-yellow-500"
+            />
+            <div className="divide-y divide-gray-50">
+              {expiringQuotes.slice(0, 6).map(q => {
+                const daysToExpire = q.validUntil ? Math.ceil((new Date(q.validUntil).getTime() - today.getTime()) / 86_400_000) : 0
+                return (
+                  <div key={q.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                      <FileText size={15} className="text-yellow-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">{q.client?.name || q.clientName || 'Sin cliente'}</p>
+                      <p className="text-xs text-yellow-600 font-medium">
+                        Vence {daysToExpire <= 0 ? 'hoy' : `en ${daysToExpire} día${daysToExpire !== 1 ? 's' : ''}`}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-gray-700 flex-shrink-0">{formatCurrency(q.total, cur)}</p>
+                    <Link to="/cotizaciones" className="text-xs text-blue-500 hover:underline flex-shrink-0">Ver →</Link>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

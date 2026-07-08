@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken'
 
-const SECRET = process.env.JWT_SECRET || 'fallback-secret'
+const envSecret = process.env.JWT_SECRET
+if (!envSecret) {
+  throw new Error('JWT_SECRET no está definido. Configúralo en el archivo .env antes de iniciar el servidor.')
+}
+const SECRET: string = envSecret
 
 export function signToken(payload: { userId: string; email: string; role?: string }) {
   return jwt.sign(payload, SECRET, { expiresIn: '30d' })

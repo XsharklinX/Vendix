@@ -1,6 +1,6 @@
 {
   "name": "vendix",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "author": "XsharklinX",
   "description": "Sistema de gestión de ventas para pequeños negocios",
   "private": true,
@@ -19,16 +19,27 @@
     "build:seed": "node scripts/create-seed-db.js",
     "build:runtime": "node scripts/prepare-backend-runtime.js",
     "build": "npm run build:backend && npm run build:frontend && npm run build:seed && npm run build:electron",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "cd backend && npm run typecheck",
+    "typecheck:frontend": "cd frontend && npm run typecheck",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "cloud:generate": "cd backend && npm run db:generate:postgres",
+    "cloud:push": "cd backend && npm run db:push:postgres",
+    "cloud:build": "npm run build:backend",
     "dist": "npm run build && npm run build:runtime && electron-builder --win --x64",
     "dist:portable": "npm run build && npm run build:runtime && electron-builder --win portable --x64",
-    "release:github": "npm run build && npm run build:runtime && electron-builder --win --x64 --publish always"
+    "release:github": "npm run release:github:stable",
+    "release:github:stable": "npm run build && npm run build:runtime && electron-builder --win --x64 --publish always -c.publish.channel=latest",
+    "release:github:beta": "npm run build && npm run build:runtime && electron-builder --win --x64 --publish always -c.publish.channel=beta"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.0.0",
     "wait-on": "^7.2.0"
   },
@@ -77,6 +88,11 @@
       ],
       "icon": "electron/assets/icon.ico",
       "requestedExecutionLevel": "asInvoker",
+      "verifyUpdateCodeSignature": true,
+      "signtoolOptions": {
+        "publisherName": "XsharklinX"
+      },
+      "signAndEditExecutable": true,
       "artifactName": "Vendix-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -96,11 +112,12 @@
         "provider": "github",
         "owner": "XsharklinX",
         "repo": "Vendix",
+        "channel": "latest",
         "releaseType": "release"
       }
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.9"
   }
 }

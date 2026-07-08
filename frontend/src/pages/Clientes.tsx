@@ -11,7 +11,12 @@ import { exportCSV, EXPORT_COLUMNS } from '@/lib/export'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { QueryError } from '@/components/ui/QueryError'
+import { Pagination } from '@/components/ui/Pagination'
+import { TableRowSkeleton } from '@/components/ui/Skeleton'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { TrashPanel } from '@/components/ui/TrashPanel'
+import { usePersistentState } from '@/lib/usePersistentState'
 import {
   Plus,
   Users,
@@ -27,6 +32,8 @@ import {
   Gift,
   Activity,
   CheckCircle2,
+  Tag,
+  X,
 } from 'lucide-react'
 
 const schema = z.object({
@@ -37,6 +44,7 @@ const schema = z.object({
   address: z.string().optional(),
   isVip: z.boolean().optional().default(false),
   discountRate: z.coerce.number().min(0).max(100).optional().default(0),
+  manualTagsText: z.string().optional(),
 })
 
 type Form = z.infer<typeof schema>
@@ -53,6 +61,7 @@ interface Client {
   lastSaleAt?: string | null
   loyaltyPoints: number
   segments: string[]
+  manualTags?: string[]
   isVip: boolean
   discountRate: number
   _count: { transactions: number }
@@ -74,6 +83,20 @@ interface TimelineResponse {
   events: TimelineEvent[]
 }
 
+interface ClientPriceEntry {
+  id: string
+  productId: string
+  price: number
+  product: { id: string; name: string; price: number; barcode?: string | null }
+}
+
+interface ProductLite {
+  id: string
+  name: string
+  price: number
+  barcode?: string | null
+}
+
 const segmentStyles: Record<string, string> = {
   VIP: 'bg-yellow-50 text-yellow-700 border-yellow-200',
   Nuevo: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -91,14 +114,20 @@ export function Clientes() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = usePersistentState(`vendix:${bid}:clientes:search`, '')
+  const [showTrash, setShowTrash] = useState(false)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 50
   const [noteContent, setNoteContent] = useState('')
   const [noteType, setNoteType] = useState<'NOTE' | 'REMINDER'>('NOTE')
   const [noteDueAt, setNoteDueAt] = useState('')
   const [redeemPoints, setRedeemPoints] = useState('')
   const [redeemAmount, setRedeemAmount] = useState('')
+  const [priceProductId, setPriceProductId] = useState('')
+  const [priceValue, setPriceValue] = useState('')
+  const [campaignDays, setCampaignDays] = useState(60)
 
-  const { data: clients = [], isLoading } = useQuery<Client[]>({
+  const { data: clients = [], isLoading, isError, refetch } = useQuery<Client[]>({
     queryKey: ['clients', bid],
     queryFn: () => api.get(`/businesses/${bid}/clients`).then(r => r.data),
   })
@@ -109,13 +138,35 @@ export function Clientes() {
     queryFn: () => api.get(`/businesses/${bid}/clients/${selectedClient!.id}/timeline`).then(r => r.data),
   })
 
+  const { data: priceList = [] } = useQuery<ClientPriceEntry[]>({
+    queryKey: ['client-price-list', bid, selectedClient?.id],
+    enabled: Boolean(selectedClient),
+    queryFn: () => api.get(`/businesses/${bid}/clients/${selectedClient!.id}/price-list`).then(r => r.data),
+  })
+
+  const { data: products = [] } = useQuery<ProductLite[]>({
+    queryKey: ['products', bid],
+    enabled: Boolean(selectedClient),
+    queryFn: () => api.get(`/businesses/${bid}/products`).then(r => r.data),
+  })
+
+  const { data: inactiveCampaign } = useQuery<{ days: number; count: number; clients: Array<{ id: string; name: string; phone?: string; daysSinceSale: number | null }> }>({
+    queryKey: ['inactive-campaign', bid, campaignDays],
+    queryFn: () => api.get(`/businesses/${bid}/clients/crm/inactive-campaign`, { params: { days: campaignDays } }).then(r => r.data),
+  })
+
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
   })
 
   const saveMutation = useMutation({
     mutationFn: (data: Form) => {
-      const payload = { ...data, discountRate: (data.discountRate ?? 0) / 100 }
+      const { manualTagsText, ...rest } = data
+      const payload = {
+        ...rest,
+        discountRate: (data.discountRate ?? 0) / 100,
+        manualTags: (manualTagsText ?? '').split(',').map(t => t.trim()).filter(Boolean),
+      }
       return editing
         ? api.put(`/businesses/${bid}/clients/${editing.id}`, payload)
         : api.post(`/businesses/${bid}/clients`, payload)
@@ -174,10 +225,33 @@ export function Clientes() {
     onError: (err) => toast.error(getErrorMessage(err)),
   })
 
+  const addPriceMutation = useMutation({
+    mutationFn: () => api.post(`/businesses/${bid}/clients/${selectedClient!.id}/price-list`, {
+      productId: priceProductId,
+      price: Number(priceValue),
+    }),
+    onSuccess: () => {
+      setPriceProductId('')
+      setPriceValue('')
+      qc.invalidateQueries({ queryKey: ['client-price-list', bid, selectedClient?.id] })
+      toast.success('Precio especial guardado')
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  })
+
+  const deletePriceMutation = useMutation({
+    mutationFn: (entryId: string) => api.delete(`/businesses/${bid}/clients/${selectedClient!.id}/price-list/${entryId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['client-price-list', bid, selectedClient?.id] })
+      toast.success('Precio especial eliminado')
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  })
+
   const openCreate = () => { setEditing(null); reset({}); setModalOpen(true) }
   const openEdit = (c: Client) => {
     setEditing(c)
-    reset({ ...c, discountRate: Math.round(c.discountRate * 100) })
+    reset({ ...c, discountRate: Math.round(c.discountRate * 100), manualTagsText: (c.manualTags ?? []).join(', ') })
     setModalOpen(true)
   }
   const closeModal = () => { setModalOpen(false); setEditing(null); reset({}) }
@@ -198,6 +272,8 @@ export function Clientes() {
     setNoteDueAt('')
     setRedeemPoints('')
     setRedeemAmount('')
+    setPriceProductId('')
+    setPriceValue('')
   }
 
   const closeCrm = () => setSelectedClient(null)
@@ -208,6 +284,8 @@ export function Clientes() {
     c.document?.includes(search) ||
     c.segments.some(s => s.toLowerCase().includes(search.toLowerCase()))
   )
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const totalDebt = clients.reduce((s, c) => s + c.pendingDebt, 0)
   const totalPoints = clients.reduce((s, c) => s + c.loyaltyPoints, 0)
@@ -221,12 +299,15 @@ export function Clientes() {
         action={
           <div className="flex gap-2">
             <button onClick={handleExport} className="btn-secondary"><Download size={15} /> Exportar</button>
+            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 border-rose-200 text-rose-700' : ''}`}><Trash2 size={15} /> Papelera</button>
             <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Crear cliente</button>
           </div>
         }
       />
 
       <div className="p-6 space-y-4">
+        {showTrash && <TrashPanel businessId={bid} queryKey="clients" endpoint="clients" label="Cliente" />}
+
         <div className="grid gap-3 md:grid-cols-3">
           <div className="card p-4">
             <p className="text-xs font-semibold uppercase text-gray-400">Deuda pendiente</p>
@@ -242,22 +323,62 @@ export function Clientes() {
           </div>
         </div>
 
+        <div className="card p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-bold text-gray-900">Campaña de reactivación</p>
+              <p className="text-xs text-gray-500">
+                {inactiveCampaign?.count ?? 0} cliente{(inactiveCampaign?.count ?? 0) !== 1 ? 's' : ''} sin comprar hace {campaignDays}+ días.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select value={campaignDays} onChange={e => setCampaignDays(Number(e.target.value))} className="input w-32 text-sm">
+                <option value={30}>30 días</option>
+                <option value={60}>60 días</option>
+                <option value={90}>90 días</option>
+                <option value={120}>120 días</option>
+              </select>
+              {inactiveCampaign && inactiveCampaign.clients.length > 0 && (
+                <button
+                  onClick={() => {
+                    const text = inactiveCampaign.clients.slice(0, 30).map(c => `${c.name}${c.phone ? ` - ${c.phone}` : ''}`).join('\n')
+                    navigator.clipboard.writeText(text)
+                    toast.success('Lista de campaña copiada')
+                  }}
+                  className="btn-secondary text-sm"
+                >
+                  Copiar lista
+                </button>
+              )}
+            </div>
+          </div>
+          {inactiveCampaign && inactiveCampaign.clients.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {inactiveCampaign.clients.slice(0, 8).map(c => (
+                <span key={c.id} className="rounded-full bg-orange-50 border border-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                  {c.name}{c.daysSinceSale ? ` · ${c.daysSinceSale}d` : ' · nunca compró'}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="relative">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre, telefono, documento o segmento..." className="input pl-10" />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Buscar por nombre, telefono, documento o segmento..." className="input pl-10" />
         </div>
 
         <div className="card overflow-hidden">
           {isLoading ? (
-            <div className="py-20 text-center text-gray-400">
-              <div className="inline-block w-6 h-6 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
-              <p className="text-sm">Cargando clientes...</p>
-            </div>
+            <TableRowSkeleton rows={6} cols={5} />
+          ) : isError ? (
+            <QueryError onRetry={() => refetch()} />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Users}
-              title={search ? 'No se encontro ese cliente' : 'No hay clientes registrados'}
-              description={search ? 'Intenta con otro nombre, numero o segmento' : 'Agrega clientes para hacer seguimiento de sus compras, deudas y fidelizacion'}
+              tone="rose"
+              title={search ? 'No se encontró ese cliente' : 'Aún no tienes clientes registrados'}
+              description={search ? 'Intenta con otro nombre, número o segmento' : 'Registra a tus clientes para llevar el control de sus compras, deudas y fidelización'}
               action={!search ? <button onClick={openCreate} className="btn-primary">Crear primer cliente</button> : undefined}
             />
           ) : (
@@ -266,16 +387,16 @@ export function Clientes() {
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
                     <th className="table-header">Cliente</th>
-                    <th className="table-header">Contacto</th>
-                    <th className="table-header">Segmentos</th>
-                    <th className="table-header text-right">Total comprado</th>
-                    <th className="table-header text-center">Puntos</th>
+                    <th className="table-header hidden md:table-cell">Contacto</th>
+                    <th className="table-header hidden lg:table-cell">Segmentos</th>
+                    <th className="table-header text-right hidden md:table-cell">Total comprado</th>
+                    <th className="table-header text-center hidden lg:table-cell">Puntos</th>
                     <th className="table-header text-right">Deuda</th>
                     <th className="table-header text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filtered.map(c => (
+                  {paged.map(c => (
                     <tr key={c.id} className="table-row">
                       <td className="table-cell">
                         <div className="flex items-center gap-3">
@@ -291,22 +412,22 @@ export function Clientes() {
                           </div>
                         </div>
                       </td>
-                      <td className="table-cell">
+                      <td className="table-cell hidden md:table-cell">
                         <div className="space-y-0.5">
                           {c.phone && <div className="flex items-center gap-1.5 text-sm text-gray-600"><Phone size={12} className="text-gray-400" />{c.phone}</div>}
                           {c.email && <div className="flex items-center gap-1.5 text-xs text-gray-400"><Mail size={11} />{c.email}</div>}
                           {!c.phone && !c.email && <span className="text-gray-400 text-sm">-</span>}
                         </div>
                       </td>
-                      <td className="table-cell">
+                      <td className="table-cell hidden lg:table-cell">
                         <div className="flex flex-wrap gap-1">
                           {c.segments.length === 0 ? <span className="text-xs text-gray-400">Sin etiqueta</span> : c.segments.map(segment => (
                             <span key={segment} className={`text-xs px-2 py-1 rounded-full border font-semibold ${segmentStyles[segment] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>{segment}</span>
                           ))}
                         </div>
                       </td>
-                      <td className="table-cell text-right font-semibold">{formatCurrency(c.totalSales || 0, cur)}</td>
-                      <td className="table-cell text-center">
+                      <td className="table-cell text-right font-semibold hidden md:table-cell">{formatCurrency(c.totalSales || 0, cur)}</td>
+                      <td className="table-cell text-center hidden lg:table-cell">
                         <span className="badge bg-emerald-50 text-emerald-700">{c.loyaltyPoints}</span>
                       </td>
                       <td className="table-cell text-right">
@@ -333,6 +454,7 @@ export function Clientes() {
               </table>
             </div>
           )}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={filtered.length} label="clientes" />
         </div>
       </div>
 
@@ -373,6 +495,11 @@ export function Clientes() {
               <label className="label">Descuento VIP (%)</label>
               <input type="number" min={0} max={100} step={1} {...register('discountRate')} className="input" placeholder="Ej: 10" />
             </div>
+          </div>
+          <div>
+            <label className="label">Etiquetas manuales</label>
+            <input {...register('manualTagsText')} className="input" placeholder="Ej: mayorista, cumple abril, preferente" />
+            <p className="text-xs text-gray-400 mt-1">Separalas por coma. Se muestran junto a los segmentos automáticos.</p>
           </div>
           <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
             <button type="button" onClick={closeModal} className="btn-secondary">Cancelar</button>
@@ -433,6 +560,46 @@ export function Clientes() {
               >
                 Registrar canje
               </button>
+            </div>
+
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
+              <div className="flex items-center gap-2 font-bold text-indigo-800"><Tag size={16} /> Lista de precios especiales</div>
+              {priceList.length > 0 && (
+                <div className="space-y-1.5">
+                  {priceList.map(entry => (
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-gray-100 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{entry.product.name}</p>
+                        <p className="text-xs text-gray-400">
+                          Precio normal: {formatCurrency(entry.product.price, cur)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-indigo-700">{formatCurrency(entry.price, cur)}</span>
+                        <button onClick={() => deletePriceMutation.mutate(entry.id)} className="btn-ghost text-red-500 hover:bg-red-50 p-1.5">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                <select value={priceProductId} onChange={e => setPriceProductId(e.target.value)} className="input">
+                  <option value="">Seleccionar producto...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.price, cur)})</option>
+                  ))}
+                </select>
+                <input type="number" min={0} step="0.01" value={priceValue} onChange={e => setPriceValue(e.target.value)} className="input w-28" placeholder="Precio" />
+                <button
+                  onClick={() => addPriceMutation.mutate()}
+                  disabled={!priceProductId || !priceValue || addPriceMutation.isPending}
+                  className="btn-primary"
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">

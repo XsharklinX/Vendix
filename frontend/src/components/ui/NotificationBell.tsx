@@ -3,6 +3,7 @@ import { Bell, X, CheckCheck, Package, DollarSign, AlertTriangle, Info } from 'l
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Link } from 'react-router-dom'
+import { playSound } from '@/lib/sound'
 
 interface Notification {
   id: string
@@ -45,6 +46,13 @@ export function NotificationBell() {
 
   const unread = notifications.filter(n => !n.read).length
 
+  // Suena solo cuando aparecen notificaciones nuevas (no en el primer fetch)
+  const prevUnread = useRef<number | null>(null)
+  useEffect(() => {
+    if (prevUnread.current !== null && unread > prevUnread.current) playSound('notify')
+    prevUnread.current = unread
+  }, [unread])
+
   const markOne = useMutation({
     mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
@@ -79,7 +87,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+        <div role="dialog" aria-label="Notificaciones" className="absolute left-0 mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900 text-sm">Notificaciones</h3>
             <div className="flex items-center gap-1">
@@ -88,11 +96,12 @@ export function NotificationBell() {
                   onClick={() => markAll.mutate()}
                   className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                   title="Marcar todas como leídas"
+                  aria-label="Marcar todas como leídas"
                 >
                   <CheckCheck size={15} />
                 </button>
               )}
-              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" aria-label="Cerrar notificaciones">
                 <X size={15} />
               </button>
             </div>

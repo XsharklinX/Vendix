@@ -7,6 +7,9 @@ backend/prisma/dev.db-journal
 backend/prisma/test.db
 backend/prisma/test.db-journal
 backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.test
 frontend/dist/
 release/
 dist/

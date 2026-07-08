@@ -1,17 +1,18 @@
-import { useState } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { formatCurrency } from '@/lib/utils'
+import { exportCSV } from '@/lib/export'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
   FileText, Printer, TrendingUp, Package, Users, Calendar,
-  Receipt, ClipboardList, UserCheck, Download
+  Receipt, ClipboardList, UserCheck, Download, Copy, FileSpreadsheet
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-type ReportType = 'daily' | 'monthly' | 'inventory' | 'clients' | 'cierrez' | '606' | '607' | 'employees'
+type ReportType = 'daily' | 'monthly' | 'inventory' | 'clients' | 'cierrez' | '606' | '607' | 'employees' | 'profitProducts' | 'profitClients' | 'aging' | 'fiscal'
 
 interface CierreZData {
   date: string
@@ -40,52 +41,46 @@ interface EmployeeReportData {
   totals: { count: number; total: number }
 }
 
+interface ProfitabilityData {
+  groupBy: 'product' | 'client'
+  rows: Array<{ id: string; name: string; quantity?: number; sales: number; cost: number; profit: number; margin: number; count?: number }>
+  totals: { sales: number; cost: number; profit: number; quantity?: number; count?: number }
+}
+
+interface AgingData {
+  rows: Array<{ id: string; clientName: string; phone: string; document: string; invoiceNumber: string; date: string; amount: number; days: number; bucket: string }>
+  buckets: Record<string, { count: number; total: number }>
+  total: number
+  count: number
+}
+
+interface FiscalSummaryData {
+  month: string
+  rows: Array<{ date: string; status: string; invoiceNumber: string; ncf: string; clientName: string; document: string; amount: number; taxAmount: number; taxableAmount: number }>
+  totals: { sales: number; tax: number; taxable: number; ncfCount: number; invoiceCount: number; cancelledCount: number; cancelledAmount: number }
+}
+
+import { printDocument } from '@/lib/print'
+
 const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-const PRINT_CSS = `
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111827;padding:32px 40px;background:#fff}
-  .hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #1d4ed8;padding-bottom:14px;margin-bottom:20px}
-  .hdr h1{font-size:20px;font-weight:800;color:#1e3a8a}
-  .hdr .meta{font-size:11px;color:#6b7280;margin-top:3px}
-  .hdr-r{text-align:right}
-  .hdr-r .rtitle{font-size:14px;font-weight:700;color:#111}
-  .hdr-r .rdate{font-size:10px;color:#9ca3af;margin-top:2px}
+
+const REPORT_CSS = `
   h3{font-size:13px;font-weight:700;margin:16px 0 8px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:16px}
   .card{border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px}
   .card .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;font-weight:600}
   .card .val{font-size:17px;font-weight:800;color:#1d4ed8;margin-top:2px}
   .card .sub{font-size:10px;color:#9ca3af}
-  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px}
-  th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
-  td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+  th{background:#1e3a8a}
   tbody tr:nth-child(even) td{background:#f9fafb}
   tfoot td{background:#f3f4f6!important;font-weight:700;border-top:2px solid #e5e7eb}
-  .r{text-align:right}
-  .c{text-align:center}
-  .badge{display:inline-block;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:600}
   .bg{background:#dcfce7;color:#15803d}
   .br{background:#fee2e2;color:#b91c1c}
   .bb{background:#dbeafe;color:#1d4ed8}
-  .by{background:#fef9c3;color:#854d0e}
-  .ftr{margin-top:20px;text-align:center;font-size:10px;color:#d1d5db;border-top:1px solid #f3f4f6;padding-top:8px}
-  @media print{@page{margin:1.5cm;size:A4}}
 `
 
 function openPrintWindow(title: string, bizName: string, bizMeta: string, body: string) {
-  const win = window.open('', '_blank', 'width=900,height=700')
-  if (!win) return
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${PRINT_CSS}</style></head><body>
-    <div class="hdr">
-      <div><h1>${esc(bizName)}</h1>${bizMeta ? `<div class="meta">${esc(bizMeta)}</div>` : ''}</div>
-      <div class="hdr-r"><div class="rtitle">${esc(title)}</div><div class="rdate">Generado: ${new Date().toLocaleString('es-DO')}</div></div>
-    </div>
-    ${body}
-    <div class="ftr">Vendix — Sistema de gestión de ventas</div>
-  </body></html>`)
-  win.document.close()
-  win.focus()
-  setTimeout(() => { win.print(); win.close() }, 500)
+  printDocument({ title, businessName: bizName, subtitle: bizMeta, body, css: REPORT_CSS, autoClose: true })
 }
 
 export function Reportes() {
@@ -150,18 +145,109 @@ export function Reportes() {
     enabled: reportType === 'employees',
   })
 
-  const salesTx = transactions.filter(t => t.type === 'SALE' && t.status === 'COMPLETED')
-  const expenseTx = transactions.filter(t => (t.type === 'EXPENSE' || t.type === 'PURCHASE') && t.status === 'COMPLETED')
-  const returnTx = transactions.filter(t => t.type === 'RETURN')
-  const totalSales = salesTx.reduce((s, t) => s + (t.amount as number), 0)
-  const totalExpenses = expenseTx.reduce((s, t) => s + (t.amount as number), 0)
-  const totalReturns = returnTx.reduce((s, t) => s + (t.amount as number), 0)
-  const totalTax = salesTx.reduce((s, t) => s + ((t.taxAmount as number) || 0), 0)
+  const { data: profitReport } = useQuery<ProfitabilityData>({
+    queryKey: ['profitability', bid, reportType, fromDate, toDate],
+    queryFn: () => api.get(`/businesses/${bid}/stats/profitability`, {
+      params: { from: fromDate, to: toDate, groupBy: reportType === 'profitClients' ? 'client' : 'product' },
+    }).then(r => r.data),
+    enabled: reportType === 'profitProducts' || reportType === 'profitClients',
+  })
+
+  const { data: agingReport } = useQuery<AgingData>({
+    queryKey: ['aging-receivables', bid],
+    queryFn: () => api.get(`/businesses/${bid}/stats/aging-receivables`).then(r => r.data),
+    enabled: reportType === 'aging',
+  })
+
+  const { data: fiscalSummary } = useQuery<FiscalSummaryData>({
+    queryKey: ['fiscal-summary', bid, month],
+    queryFn: () => api.get(`/businesses/${bid}/stats/fiscal-summary`, { params: { month } }).then(r => r.data),
+    enabled: reportType === 'fiscal',
+  })
+
+  const salesTx = useMemo(() => transactions.filter(t => t.type === 'SALE' && t.status === 'COMPLETED'), [transactions])
+  const expenseTx = useMemo(() => transactions.filter(t => (t.type === 'EXPENSE' || t.type === 'PURCHASE') && t.status === 'COMPLETED'), [transactions])
+  const returnTx = useMemo(() => transactions.filter(t => t.type === 'RETURN'), [transactions])
+  const totalSales = useMemo(() => salesTx.reduce((s, t) => s + (t.amount as number), 0), [salesTx])
+  const totalExpenses = useMemo(() => expenseTx.reduce((s, t) => s + (t.amount as number), 0), [expenseTx])
+  const totalReturns = useMemo(() => returnTx.reduce((s, t) => s + (t.amount as number), 0), [returnTx])
+  const totalTax = useMemo(() => salesTx.reduce((s, t) => s + ((t.taxAmount as number) || 0), 0), [salesTx])
   const profit = totalSales - totalExpenses - totalReturns
 
   const fc = (n: number) => `${cur} ${(n || 0).toFixed(2)}`
-  const bizMeta = [(business as unknown as Record<string, unknown>)?.address, (business as unknown as Record<string, unknown>)?.city, (business as unknown as Record<string, unknown>)?.phone].filter(Boolean).join(' · ')
+  const bizMeta = [(business as unknown as Record<string, unknown>)?.address, (business as unknown as Record<string, unknown>)?.city, (business as unknown as Record<string, unknown>)?.phone].filter(Boolean).join(' Â· ')
   const bizName = business?.name ?? ''
+
+  function copyWhatsAppSummary() {
+    const lines = reportType === 'cierrez' && cierreZ ? [
+      `*${bizName} - Cierre ${cierreZ.date}*`,
+      `Ventas: ${formatCurrency(cierreZ.totalSales, cur)} (${cierreZ.salesCount})`,
+      `Gastos/compras: ${formatCurrency(cierreZ.totalExpenses, cur)}`,
+      `${taxName}: ${formatCurrency(cierreZ.totalTax, cur)}`,
+      `Utilidad: ${formatCurrency(cierreZ.profit, cur)}`,
+      cierreZ.cashSession ? `Caja esperada: ${formatCurrency(cierreZ.cashSession.expectedCash, cur)}` : '',
+      cierreZ.cashSession?.closeAmount != null ? `Caja declarada: ${formatCurrency(cierreZ.cashSession.closeAmount, cur)}` : '',
+      cierreZ.cashSession?.difference != null ? `Diferencia: ${formatCurrency(cierreZ.cashSession.difference, cur)}` : '',
+    ] : [
+      `*${bizName} - Resumen ${reportType === 'daily' ? date : month}*`,
+      `Ventas: ${formatCurrency(totalSales, cur)} (${salesTx.length})`,
+      `Gastos/compras: ${formatCurrency(totalExpenses, cur)}`,
+      `${taxName}: ${formatCurrency(totalTax, cur)}`,
+      `Utilidad neta: ${formatCurrency(profit, cur)}`,
+    ]
+    navigator.clipboard.writeText(lines.filter(Boolean).join('\n'))
+  }
+
+  function exportCurrentExcel() {
+    if (reportType === 'profitProducts' || reportType === 'profitClients') {
+      exportCSV(`reporte_utilidad_${reportType === 'profitClients' ? 'clientes' : 'productos'}`, profitReport?.rows ?? [], [
+        { key: 'name', label: reportType === 'profitClients' ? 'Cliente' : 'Producto' },
+        { key: 'quantity', label: 'Unidades' },
+        { key: 'count', label: 'Ventas' },
+        { key: 'sales', label: 'Ventas' },
+        { key: 'cost', label: 'Costo' },
+        { key: 'profit', label: 'Utilidad' },
+        { key: 'margin', label: 'Margen %' },
+      ])
+      return
+    }
+    if (reportType === 'aging') {
+      exportCSV('aging_cuentas_por_cobrar', agingReport?.rows ?? [], [
+        { key: 'clientName', label: 'Cliente' },
+        { key: 'phone', label: 'Telefono' },
+        { key: 'document', label: 'Documento' },
+        { key: 'invoiceNumber', label: 'Factura' },
+        { key: 'date', label: 'Fecha' },
+        { key: 'amount', label: 'Monto' },
+        { key: 'days', label: 'Dias' },
+        { key: 'bucket', label: 'Rango' },
+      ])
+      return
+    }
+    if (reportType === 'fiscal') {
+      exportCSV('resumen_fiscal', fiscalSummary?.rows ?? [], [
+        { key: 'date', label: 'Fecha' },
+        { key: 'status', label: 'Estado' },
+        { key: 'invoiceNumber', label: 'Factura' },
+        { key: 'ncf', label: 'NCF' },
+        { key: 'clientName', label: 'Cliente' },
+        { key: 'document', label: 'RNC/Cedula' },
+        { key: 'amount', label: 'Ventas' },
+        { key: 'taxAmount', label: taxName },
+        { key: 'taxableAmount', label: 'Base imponible' },
+      ])
+      return
+    }
+    exportCSV('movimientos_reporte', transactions, [
+      { key: 'createdAt', label: 'Fecha' },
+      { key: 'type', label: 'Tipo' },
+      { key: 'description', label: 'Descripcion' },
+      { key: 'paymentMethod', label: 'Metodo' },
+      { key: 'status', label: 'Estado' },
+      { key: 'amount', label: 'Monto' },
+      { key: 'taxAmount', label: taxName },
+    ])
+  }
 
   function buildAndPrint() {
     const methodLabels: Record<string, string> = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia' }
@@ -172,8 +258,8 @@ export function Reportes() {
         : `Resumen de ${format(new Date(month + '-01'), "MMMM yyyy", { locale: es })}`
       const rows = transactions.slice(0, 100).map(tx => `<tr>
         <td>${(tx.createdAt as string)?.slice(0, 10) ?? ''}</td>
-        <td><span class="badge ${tx.type === 'SALE' ? 'bg' : 'br'}">${tx.type === 'SALE' ? 'Venta' : tx.type === 'RETURN' ? 'Devolución' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type}</span></td>
-        <td>${esc(tx.description || '—')}</td>
+        <td><span class="badge ${tx.type === 'SALE' ? 'bg' : 'br'}">${tx.type === 'SALE' ? 'Venta' : tx.type === 'RETURN' ? 'DevoluciÃ³n' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type}</span></td>
+        <td>${esc(tx.description || 'â€”')}</td>
         <td>${methodLabels[tx.paymentMethod as string] || (tx.paymentMethod as string)}</td>
         <td class="r">${fc(tx.amount as number)}</td>
       </tr>`).join('')
@@ -184,7 +270,7 @@ export function Reportes() {
           ${totalTax > 0 ? `<div class="card"><div class="lbl">${taxName} recaudado</div><div class="val">${fc(totalTax)}</div></div>` : ''}
           <div class="card"><div class="lbl">Utilidad neta</div><div class="val" style="color:${profit >= 0 ? '#15803d' : '#b91c1c'}">${fc(profit)}</div></div>
         </div>
-        <h3>Métodos de pago</h3>
+        <h3>MÃ©todos de pago</h3>
         <div class="grid">
           ${['CASH', 'CARD', 'TRANSFER'].map(m => {
             const t = salesTx.filter(tx => tx.paymentMethod === m).reduce((s, tx) => s + (tx.amount as number), 0)
@@ -192,18 +278,18 @@ export function Reportes() {
           }).join('')}
         </div>
         <h3>Movimientos (${transactions.length})</h3>
-        <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Método</th><th class="r">Monto</th></tr></thead>
+        <table><thead><tr><th>Fecha</th><th>Tipo</th><th>DescripciÃ³n</th><th>MÃ©todo</th><th class="r">Monto</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="4" class="r">Total ventas</td><td class="r">${fc(totalSales)}</td></tr></tfoot></table>`
       openPrintWindow(title, bizName, bizMeta, body)
 
     } else if (reportType === 'cierrez' && cierreZ) {
-      const title = `Cierre Z — ${cierreZ.date}`
+      const title = `Cierre Z â€” ${cierreZ.date}`
       const rows = cierreZ.transactions.slice(0, 200).map(tx => `<tr>
         <td>${tx.createdAt?.slice(11, 16)}</td>
         <td><span class="badge ${tx.type === 'SALE' ? 'bg' : 'br'}">${tx.type === 'SALE' ? 'Venta' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type}</span></td>
-        <td>${esc(tx.client?.name || tx.description || '—')}</td>
-        <td>${esc(tx.createdBy?.name || '—')}</td>
+        <td>${esc(tx.client?.name || tx.description || 'â€”')}</td>
+        <td>${esc(tx.createdBy?.name || 'â€”')}</td>
         <td>${methodLabels[tx.paymentMethod] || tx.paymentMethod}</td>
         <td class="r">${fc(tx.amount)}</td>
       </tr>`).join('')
@@ -214,16 +300,16 @@ export function Reportes() {
           <div class="card"><div class="lbl">Devoluciones</div><div class="val" style="color:#b91c1c">-${fc(cierreZ.totalReturns)}</div></div>
           <div class="card"><div class="lbl">Gastos/Compras</div><div class="val" style="color:#b91c1c">-${fc(cierreZ.totalExpenses)}</div></div>
           <div class="card"><div class="lbl">${taxName} recaudado</div><div class="val">${fc(cierreZ.totalTax)}</div></div>
-          <div class="card"><div class="lbl">Utilidad del día</div><div class="val" style="color:${cierreZ.profit >= 0 ? '#15803d' : '#b91c1c'}">${fc(cierreZ.profit)}</div></div>
+          <div class="card"><div class="lbl">Utilidad del dÃ­a</div><div class="val" style="color:${cierreZ.profit >= 0 ? '#15803d' : '#b91c1c'}">${fc(cierreZ.profit)}</div></div>
         </div>
-        <h3>Desglose por método de pago</h3>
-        <table><thead><tr><th>Método</th><th class="r">Transacciones</th><th class="r">Total</th></tr></thead><tbody>
+        <h3>Desglose por mÃ©todo de pago</h3>
+        <table><thead><tr><th>MÃ©todo</th><th class="r">Transacciones</th><th class="r">Total</th></tr></thead><tbody>
           ${['CASH', 'CARD', 'TRANSFER'].map(m => {
             const d = cierreZ.byPaymentMethod[m]
             return d?.total > 0 ? `<tr><td>${methodLabels[m]}</td><td class="r">${d.count}</td><td class="r">${fc(d.total)}</td></tr>` : ''
           }).join('')}
         </tbody></table>
-        ${cs ? `<h3>Sesión de caja</h3>
+        ${cs ? `<h3>SesiÃ³n de caja</h3>
         <table><thead><tr><th>Concepto</th><th class="r">Monto</th></tr></thead><tbody>
           <tr><td>Apertura de caja</td><td class="r">${fc(cs.openAmount)}</td></tr>
           <tr><td>Ventas en efectivo</td><td class="r">${fc(cierreZ.byPaymentMethod['CASH']?.total ?? 0)}</td></tr>
@@ -232,14 +318,14 @@ export function Reportes() {
           ${cs.closeAmount != null ? `<tr><td>Cierre declarado</td><td class="r">${fc(cs.closeAmount)}</td></tr>
           <tr><td><strong>Diferencia</strong></td><td class="r" style="color:${(cs.difference ?? 0) === 0 ? '#15803d' : '#b91c1c'}"><strong>${fc(cs.difference ?? 0)}</strong></td></tr>` : ''}
         </tbody></table>` : ''}
-        <h3>Movimientos del día (${cierreZ.transactions.length})</h3>
-        <table><thead><tr><th>Hora</th><th>Tipo</th><th>Cliente/Desc.</th><th>Cajero</th><th>Método</th><th class="r">Monto</th></tr></thead>
+        <h3>Movimientos del dÃ­a (${cierreZ.transactions.length})</h3>
+        <table><thead><tr><th>Hora</th><th>Tipo</th><th>Cliente/Desc.</th><th>Cajero</th><th>MÃ©todo</th><th class="r">Monto</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="5" class="r">Total ventas netas</td><td class="r">${fc(cierreZ.netSales)}</td></tr></tfoot></table>`
       openPrintWindow(title, bizName, bizMeta, body)
 
     } else if (reportType === '606' && r606) {
-      const title = `Reporte 606 — Compras — ${r606.month}`
+      const title = `Reporte 606 â€” Compras â€” ${r606.month}`
       const rows = r606.rows.map(r => `<tr>
         <td>${r.fecha}</td><td>${esc(r.rnc_cedula)}</td><td>${esc(r.razon_social)}</td>
         <td class="c">${r.tipo_bienes === '01' ? 'Compra' : 'Gasto'}</td>
@@ -251,13 +337,13 @@ export function Reportes() {
           <div class="card"><div class="lbl">Monto total</div><div class="val">${fc(r606.totals.monto)}</div></div>
           <div class="card"><div class="lbl">${taxName} total</div><div class="val">${fc(r606.totals.itbis)}</div></div>
         </div>
-        <table><thead><tr><th>Fecha</th><th>RNC/Cédula</th><th>Razón Social</th><th class="c">Tipo</th><th>NCF</th><th class="r">Monto</th><th class="r">${taxName}</th></tr></thead>
+        <table><thead><tr><th>Fecha</th><th>RNC/CÃ©dula</th><th>RazÃ³n Social</th><th class="c">Tipo</th><th>NCF</th><th class="r">Monto</th><th class="r">${taxName}</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="5" class="r">Totales</td><td class="r">${fc(r606.totals.monto)}</td><td class="r">${fc(r606.totals.itbis)}</td></tr></tfoot></table>`
       openPrintWindow(title, bizName, bizMeta, body)
 
     } else if (reportType === '607' && r607) {
-      const title = `Reporte 607 — Ventas — ${r607.month}`
+      const title = `Reporte 607 â€” Ventas â€” ${r607.month}`
       const rows = r607.rows.map(r => `<tr>
         <td>${r.fecha}</td><td>${esc(r.ncf)}</td><td>${esc(r.rnc_cedula)}</td>
         <td>${esc(r.razon_social)}</td><td class="r">${fc(r.monto_facturado)}</td>
@@ -269,13 +355,13 @@ export function Reportes() {
           <div class="card"><div class="lbl">Ventas brutas</div><div class="val">${fc(r607.totals.monto)}</div></div>
           <div class="card"><div class="lbl">${taxName} recaudado</div><div class="val">${fc(r607.totals.itbis)}</div></div>
         </div>
-        <table><thead><tr><th>Fecha</th><th>NCF</th><th>RNC/Cédula</th><th>Razón Social</th><th class="r">Monto</th><th class="r">${taxName}</th><th class="r">Sin impuesto</th></tr></thead>
+        <table><thead><tr><th>Fecha</th><th>NCF</th><th>RNC/CÃ©dula</th><th>RazÃ³n Social</th><th class="r">Monto</th><th class="r">${taxName}</th><th class="r">Sin impuesto</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="4" class="r">Totales</td><td class="r">${fc(r607.totals.monto)}</td><td class="r">${fc(r607.totals.itbis)}</td><td class="r">${fc(r607.totals.monto - r607.totals.itbis)}</td></tr></tfoot></table>`
       openPrintWindow(title, bizName, bizMeta, body)
 
     } else if (reportType === 'inventory') {
-      const title = `Inventario — ${format(today, 'dd/MM/yyyy')}`
+      const title = `Inventario â€” ${format(today, 'dd/MM/yyyy')}`
       const rows = [...products].sort((a, b) => (a.name as string).localeCompare(b.name as string)).map(p => `<tr>
         <td>${esc(p.name as string)}</td>
         <td class="c"><span class="badge ${(p.quantity as number) === 0 ? 'br' : (p.quantity as number) <= 5 ? 'by' : 'bg'}">${p.quantity}</span></td>
@@ -296,11 +382,11 @@ export function Reportes() {
       openPrintWindow(title, bizName, bizMeta, body)
 
     } else if (reportType === 'clients') {
-      const title = `Listado de clientes — ${format(today, 'dd/MM/yyyy')}`
+      const title = `Listado de clientes â€” ${format(today, 'dd/MM/yyyy')}`
       const rows = (clients as Record<string, unknown>[]).map(c => `<tr>
         <td>${esc(c.name as string)}</td>
-        <td>${esc((c.phone as string) || '—')}</td>
-        <td>${esc((c.document as string) || '—')}</td>
+        <td>${esc((c.phone as string) || 'â€”')}</td>
+        <td>${esc((c.document as string) || 'â€”')}</td>
         <td class="c">${(c._count as Record<string, unknown>)?.transactions as number || 0}</td>
         <td class="r" style="color:${(c.pendingDebt as number) > 0 ? '#b91c1c' : '#15803d'}">${fc((c.pendingDebt as number) || 0)}</td>
       </tr>`).join('')
@@ -309,12 +395,12 @@ export function Reportes() {
           <div class="card"><div class="lbl">Total clientes</div><div class="val">${clients.length}</div></div>
           <div class="card"><div class="lbl">Deuda pendiente total</div><div class="val" style="color:#b91c1c">${fc(clients.reduce((s, c) => s + ((c.pendingDebt as number) || 0), 0))}</div></div>
         </div>
-        <table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Documento</th><th class="c">Compras</th><th class="r">Deuda pendiente</th></tr></thead>
+        <table><thead><tr><th>Cliente</th><th>TelÃ©fono</th><th>Documento</th><th class="c">Compras</th><th class="r">Deuda pendiente</th></tr></thead>
         <tbody>${rows}</tbody></table>`
       openPrintWindow(title, bizName, bizMeta, body)
 
     } else if (reportType === 'employees' && empReport) {
-      const title = `Reporte de empleados — ${empFrom} al ${empTo}`
+      const title = `Reporte de empleados â€” ${empFrom} al ${empTo}`
       const rows = empReport.employees.map(e => `<tr>
         <td>${esc(e.name)}</td>
         <td class="c"><span class="badge bb">${e.role}</span></td>
@@ -335,6 +421,57 @@ export function Reportes() {
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="2" class="r">Totales</td><td class="c">${empReport.totals.count}</td><td class="r">${fc(empReport.totals.total)}</td><td colspan="4"></td></tr></tfoot></table>`
       openPrintWindow(title, bizName, bizMeta, body)
+    } else if ((reportType === 'profitProducts' || reportType === 'profitClients') && profitReport) {
+      const isClient = reportType === 'profitClients'
+      const title = `Utilidad por ${isClient ? 'cliente' : 'producto'} - ${fromDate} al ${toDate}`
+      const rows = profitReport.rows.map(r => `<tr>
+        <td>${esc(r.name)}</td>
+        <td class="r">${isClient ? (r.count ?? 0) : (r.quantity ?? 0)}</td>
+        <td class="r">${fc(r.sales)}</td>
+        <td class="r">${fc(r.cost)}</td>
+        <td class="r" style="color:${r.profit >= 0 ? '#15803d' : '#b91c1c'}">${fc(r.profit)}</td>
+        <td class="r">${r.margin.toFixed(1)}%</td>
+      </tr>`).join('')
+      const body = `
+        <div class="grid">
+          <div class="card"><div class="lbl">Ventas</div><div class="val">${fc(profitReport.totals.sales)}</div></div>
+          <div class="card"><div class="lbl">Costo</div><div class="val">${fc(profitReport.totals.cost)}</div></div>
+          <div class="card"><div class="lbl">Utilidad</div><div class="val" style="color:${profitReport.totals.profit >= 0 ? '#15803d' : '#b91c1c'}">${fc(profitReport.totals.profit)}</div></div>
+        </div>
+        <table><thead><tr><th>${isClient ? 'Cliente' : 'Producto'}</th><th class="r">${isClient ? 'Ventas' : 'Unidades'}</th><th class="r">Ingresos</th><th class="r">Costo</th><th class="r">Utilidad</th><th class="r">Margen</th></tr></thead>
+        <tbody>${rows}</tbody></table>`
+      openPrintWindow(title, bizName, bizMeta, body)
+    } else if (reportType === 'aging' && agingReport) {
+      const title = 'Aging de cuentas por cobrar'
+      const rows = agingReport.rows.map(r => `<tr>
+        <td>${esc(r.clientName)}</td><td>${esc(r.phone)}</td><td>${esc(r.invoiceNumber || '-')}</td>
+        <td>${r.date}</td><td class="r">${r.days}</td><td class="c">${r.bucket}</td><td class="r">${fc(r.amount)}</td>
+      </tr>`).join('')
+      const body = `
+        <div class="grid">
+          <div class="card"><div class="lbl">Total pendiente</div><div class="val">${fc(agingReport.total)}</div></div>
+          <div class="card"><div class="lbl">Facturas pendientes</div><div class="val">${agingReport.count}</div></div>
+          ${Object.entries(agingReport.buckets).map(([bucket, v]) => `<div class="card"><div class="lbl">${bucket} dias</div><div class="val">${fc(v.total)}</div><div class="sub">${v.count} cuentas</div></div>`).join('')}
+        </div>
+        <table><thead><tr><th>Cliente</th><th>Telefono</th><th>Factura</th><th>Fecha</th><th class="r">Dias</th><th class="c">Rango</th><th class="r">Monto</th></tr></thead>
+        <tbody>${rows}</tbody><tfoot><tr><td colspan="6" class="r">Total</td><td class="r">${fc(agingReport.total)}</td></tr></tfoot></table>`
+      openPrintWindow(title, bizName, bizMeta, body)
+    } else if (reportType === 'fiscal' && fiscalSummary) {
+      const title = `Resumen fiscal - ${fiscalSummary.month}`
+      const rows = fiscalSummary.rows.map(r => `<tr>
+        <td>${r.date}</td><td>${esc(r.invoiceNumber || '-')}</td><td>${esc(r.ncf || '-')}</td>
+        <td>${esc(r.clientName)}</td><td class="c">${r.status}</td><td class="r">${fc(r.amount)}</td><td class="r">${fc(r.taxAmount)}</td>
+      </tr>`).join('')
+      const body = `
+        <div class="grid">
+          <div class="card"><div class="lbl">Ventas validas</div><div class="val">${fc(fiscalSummary.totals.sales)}</div></div>
+          <div class="card"><div class="lbl">${taxName}</div><div class="val">${fc(fiscalSummary.totals.tax)}</div></div>
+          <div class="card"><div class="lbl">NCF emitidos</div><div class="val">${fiscalSummary.totals.ncfCount}</div></div>
+          <div class="card"><div class="lbl">Anulaciones</div><div class="val" style="color:#b91c1c">${fiscalSummary.totals.cancelledCount}</div><div class="sub">${fc(fiscalSummary.totals.cancelledAmount)}</div></div>
+        </div>
+        <table><thead><tr><th>Fecha</th><th>Factura</th><th>NCF</th><th>Cliente</th><th class="c">Estado</th><th class="r">Monto</th><th class="r">${taxName}</th></tr></thead>
+        <tbody>${rows}</tbody></table>`
+      openPrintWindow(title, bizName, bizMeta, body)
     }
   }
 
@@ -342,8 +479,12 @@ export function Reportes() {
     { key: 'daily', label: 'Cierre diario', icon: Calendar, section: 'Ventas' },
     { key: 'monthly', label: 'Resumen mensual', icon: TrendingUp, section: 'Ventas' },
     { key: 'cierrez', label: 'Cierre Z', icon: Receipt, section: 'Ventas' },
+    { key: 'profitProducts', label: 'Utilidad productos', icon: TrendingUp, section: 'Ventas' },
+    { key: 'profitClients', label: 'Utilidad clientes', icon: Users, section: 'Ventas' },
     { key: '606', label: '606 Compras', icon: ClipboardList, section: 'Fiscal' },
     { key: '607', label: '607 Ventas', icon: ClipboardList, section: 'Fiscal' },
+    { key: 'fiscal', label: 'Fiscal claro', icon: Receipt, section: 'Fiscal' },
+    { key: 'aging', label: 'Aging CxC', icon: ClipboardList, section: 'Gestión' },
     { key: 'inventory', label: 'Inventario', icon: Package, section: 'Gestión' },
     { key: 'clients', label: 'Clientes', icon: Users, section: 'Gestión' },
     { key: 'employees', label: 'Empleados', icon: UserCheck, section: 'Gestión' },
@@ -358,9 +499,19 @@ export function Reportes() {
         subtitle="Genera e imprime reportes de tu negocio"
         icon={<FileText size={18} className="text-indigo-500" />}
         action={
-          <button onClick={buildAndPrint} className="btn-primary">
-            <Download size={15} /> Exportar PDF
-          </button>
+          <div className="flex items-center gap-2">
+            {(reportType === 'daily' || reportType === 'cierrez') && (
+              <button onClick={copyWhatsAppSummary} className="btn-secondary">
+                <Copy size={15} /> WhatsApp
+              </button>
+            )}
+            <button onClick={exportCurrentExcel} className="btn-secondary">
+              <FileSpreadsheet size={15} /> Excel
+            </button>
+            <button onClick={buildAndPrint} className="btn-primary">
+              <Download size={15} /> PDF
+            </button>
+          </div>
         }
       />
 
@@ -393,7 +544,7 @@ export function Reportes() {
             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input w-44" />
           </div>
         )}
-        {(reportType === 'monthly' || reportType === '606' || reportType === '607') && (
+        {(reportType === 'monthly' || reportType === '606' || reportType === '607' || reportType === 'fiscal' || reportType === 'profitProducts' || reportType === 'profitClients') && (
           <div className="flex items-center gap-3">
             <label className="text-sm text-gray-500 font-medium">Mes:</label>
             <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="input w-44" />
@@ -401,14 +552,14 @@ export function Reportes() {
         )}
         {reportType === 'employees' && (
           <div className="flex items-center gap-3 flex-wrap">
-            <label className="text-sm text-gray-500 font-medium">Período:</label>
+            <label className="text-sm text-gray-500 font-medium">PerÃ­odo:</label>
             <input type="date" value={empFrom} onChange={e => setEmpFrom(e.target.value)} className="input w-44" />
-            <span className="text-gray-400">—</span>
+            <span className="text-gray-400">â€”</span>
             <input type="date" value={empTo} onChange={e => setEmpTo(e.target.value)} className="input w-44" />
           </div>
         )}
 
-        {/* ── Reporte diario / mensual ─────────────────────────── */}
+        {/* â”€â”€ Reporte diario / mensual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {(reportType === 'daily' || reportType === 'monthly') && (
           <div className="space-y-4">
             <div className="card p-5">
@@ -479,7 +630,7 @@ export function Reportes() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="table-header">Tipo</th>
-                      <th className="table-header">Descripción</th>
+                      <th className="table-header">DescripciÃ³n</th>
                       <th className="table-header">Pago</th>
                       <th className="table-header text-right">Monto</th>
                     </tr>
@@ -489,13 +640,13 @@ export function Reportes() {
                       <tr key={tx.id as string} className="table-row">
                         <td className="table-cell">
                           <span className={`badge ${tx.type === 'SALE' ? 'text-green-700 bg-green-50' : tx.type === 'RETURN' ? 'text-orange-700 bg-orange-50' : 'text-red-700 bg-red-50'}`}>
-                            {tx.type === 'SALE' ? 'Venta' : tx.type === 'RETURN' ? 'Devolución' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type as string}
+                            {tx.type === 'SALE' ? 'Venta' : tx.type === 'RETURN' ? 'DevoluciÃ³n' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type as string}
                           </span>
                         </td>
-                        <td className="table-cell text-gray-600">{(tx.description as string) || '—'}</td>
+                        <td className="table-cell text-gray-600">{(tx.description as string) || 'â€”'}</td>
                         <td className="table-cell text-gray-500">{{ CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transfer' }[tx.paymentMethod as string] || (tx.paymentMethod as string)}</td>
                         <td className={`table-cell text-right font-semibold ${tx.type === 'SALE' ? 'text-green-600' : 'text-red-500'}`}>
-                          {tx.type === 'SALE' ? '+' : '−'}{formatCurrency(tx.amount as number, cur)}
+                          {tx.type === 'SALE' ? '+' : 'âˆ’'}{formatCurrency(tx.amount as number, cur)}
                         </td>
                       </tr>
                     ))}
@@ -509,7 +660,7 @@ export function Reportes() {
           </div>
         )}
 
-        {/* ── Cierre Z ────────────────────────────────────────── */}
+        {/* â”€â”€ Cierre Z â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === 'cierrez' && cierreZ && (
           <div className="space-y-4">
             <div className="card p-5">
@@ -534,7 +685,7 @@ export function Reportes() {
                   </div>
                 ))}
                 <div className={`bg-gray-900 rounded-xl p-3`}>
-                  <p className="text-xs text-gray-400 font-medium">Utilidad del día</p>
+                  <p className="text-xs text-gray-400 font-medium">Utilidad del dÃ­a</p>
                   <p className={`text-xl font-bold ${cierreZ.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {formatCurrency(cierreZ.profit, cur)}
                   </p>
@@ -544,7 +695,7 @@ export function Reportes() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="card p-5">
-                <h3 className="font-semibold text-gray-900 mb-3">Por método de pago</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">Por mÃ©todo de pago</h3>
                 {['CASH', 'CARD', 'TRANSFER'].map(m => {
                   const d = cierreZ.byPaymentMethod[m]
                   const label = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia' }[m]
@@ -563,7 +714,7 @@ export function Reportes() {
               {cierreZ.cashSession && (
                 <div className="card p-5">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    Sesión de caja
+                    SesiÃ³n de caja
                     <span className={`badge text-xs ${cierreZ.cashSession.status === 'OPEN' ? 'text-green-700 bg-green-100' : 'text-gray-600 bg-gray-100'}`}>
                       {cierreZ.cashSession.status === 'OPEN' ? 'Abierta' : 'Cerrada'}
                     </span>
@@ -613,8 +764,8 @@ export function Reportes() {
                           {tx.type === 'SALE' ? 'Venta' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type}
                         </span>
                       </td>
-                      <td className="table-cell text-gray-600">{tx.client?.name || tx.description || '—'}</td>
-                      <td className="table-cell text-gray-400 text-xs">{tx.createdBy?.name || '—'}</td>
+                      <td className="table-cell text-gray-600">{tx.client?.name || tx.description || 'â€”'}</td>
+                      <td className="table-cell text-gray-400 text-xs">{tx.createdBy?.name || 'â€”'}</td>
                       <td className={`table-cell text-right font-semibold ${tx.type === 'SALE' ? 'text-green-600' : 'text-red-500'}`}>
                         {formatCurrency(tx.amount, cur)}
                       </td>
@@ -632,7 +783,146 @@ export function Reportes() {
           </div>
         )}
 
-        {/* ── Reporte 606 ──────────────────────────────────────── */}
+        {(reportType === 'profitProducts' || reportType === 'profitClients') && profitReport && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { label: 'Ventas', val: formatCurrency(profitReport.totals.sales, cur) },
+                { label: 'Costo', val: formatCurrency(profitReport.totals.cost, cur) },
+                { label: 'Utilidad', val: formatCurrency(profitReport.totals.profit, cur) },
+              ].map(item => (
+                <div key={item.label} className="card p-4">
+                  <p className="text-xs text-gray-500 font-medium">{item.label}</p>
+                  <p className="text-2xl font-bold text-gray-900">{item.val}</p>
+                </div>
+              ))}
+            </div>
+            <div className="card overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+                <p className="font-semibold text-sm text-gray-700">
+                  Utilidad por {reportType === 'profitClients' ? 'cliente' : 'producto'}
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[760px]">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="table-header">{reportType === 'profitClients' ? 'Cliente' : 'Producto'}</th>
+                      <th className="table-header text-right">{reportType === 'profitClients' ? 'Ventas' : 'Unidades'}</th>
+                      <th className="table-header text-right">Ingresos</th>
+                      <th className="table-header text-right">Costo</th>
+                      <th className="table-header text-right">Utilidad</th>
+                      <th className="table-header text-right">Margen</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {profitReport.rows.slice(0, 80).map(row => (
+                      <tr key={row.id} className="table-row">
+                        <td className="table-cell font-medium text-gray-900">{row.name}</td>
+                        <td className="table-cell text-right">{reportType === 'profitClients' ? row.count ?? 0 : row.quantity ?? 0}</td>
+                        <td className="table-cell text-right">{formatCurrency(row.sales, cur)}</td>
+                        <td className="table-cell text-right">{formatCurrency(row.cost, cur)}</td>
+                        <td className={`table-cell text-right font-semibold ${row.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(row.profit, cur)}</td>
+                        <td className="table-cell text-right">{row.margin.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {reportType === 'aging' && agingReport && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="card p-4">
+                <p className="text-xs text-gray-500 font-medium">Total pendiente</p>
+                <p className="text-xl font-bold text-red-600">{formatCurrency(agingReport.total, cur)}</p>
+              </div>
+              {Object.entries(agingReport.buckets).map(([bucket, data]) => (
+                <div key={bucket} className="card p-4">
+                  <p className="text-xs text-gray-500 font-medium">{bucket} dias</p>
+                  <p className="text-xl font-bold text-gray-900">{formatCurrency(data.total, cur)}</p>
+                  <p className="text-xs text-gray-400">{data.count} cuenta(s)</p>
+                </div>
+              ))}
+            </div>
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[820px]">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="table-header">Cliente</th>
+                      <th className="table-header">Telefono</th>
+                      <th className="table-header">Factura</th>
+                      <th className="table-header">Fecha</th>
+                      <th className="table-header text-right">Dias</th>
+                      <th className="table-header">Rango</th>
+                      <th className="table-header text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {agingReport.rows.map(row => (
+                      <tr key={row.id} className="table-row">
+                        <td className="table-cell font-medium text-gray-900">{row.clientName}</td>
+                        <td className="table-cell text-gray-500">{row.phone || '-'}</td>
+                        <td className="table-cell text-gray-500">{row.invoiceNumber || '-'}</td>
+                        <td className="table-cell">{row.date}</td>
+                        <td className="table-cell text-right">{row.days}</td>
+                        <td className="table-cell"><span className="badge bg-amber-50 text-amber-700">{row.bucket}</span></td>
+                        <td className="table-cell text-right font-semibold text-red-600">{formatCurrency(row.amount, cur)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {reportType === 'fiscal' && fiscalSummary && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="card p-4"><p className="text-xs text-gray-500">Ventas validas</p><p className="text-xl font-bold">{formatCurrency(fiscalSummary.totals.sales, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500">{taxName}</p><p className="text-xl font-bold">{formatCurrency(fiscalSummary.totals.tax, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500">NCF emitidos</p><p className="text-xl font-bold">{fiscalSummary.totals.ncfCount}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500">Anulaciones</p><p className="text-xl font-bold text-red-600">{fiscalSummary.totals.cancelledCount}</p></div>
+            </div>
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[900px]">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="table-header">Fecha</th>
+                      <th className="table-header">Factura</th>
+                      <th className="table-header">NCF</th>
+                      <th className="table-header">Cliente</th>
+                      <th className="table-header">Estado</th>
+                      <th className="table-header text-right">Monto</th>
+                      <th className="table-header text-right">{taxName}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {fiscalSummary.rows.map((row, index) => (
+                      <tr key={`${row.invoiceNumber}-${index}`} className="table-row">
+                        <td className="table-cell">{row.date}</td>
+                        <td className="table-cell">{row.invoiceNumber || '-'}</td>
+                        <td className="table-cell">{row.ncf || '-'}</td>
+                        <td className="table-cell">{row.clientName}</td>
+                        <td className="table-cell"><span className={`badge ${row.status === 'CANCELLED' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{row.status}</span></td>
+                        <td className="table-cell text-right">{formatCurrency(row.amount, cur)}</td>
+                        <td className="table-cell text-right">{formatCurrency(row.taxAmount, cur)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* â”€â”€ Reporte 606 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === '606' && r606 && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -649,14 +939,14 @@ export function Reportes() {
             </div>
             <div className="card overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">606 — Compras ({r606.month})</p>
+                <p className="font-semibold text-sm text-gray-700">606 â€” Compras ({r606.month})</p>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="table-header">Fecha</th>
-                    <th className="table-header">RNC/Cédula</th>
-                    <th className="table-header">Razón Social</th>
+                    <th className="table-header">RNC/CÃ©dula</th>
+                    <th className="table-header">RazÃ³n Social</th>
                     <th className="table-header">Tipo</th>
                     <th className="table-header">NCF</th>
                     <th className="table-header text-right">Monto</th>
@@ -667,10 +957,10 @@ export function Reportes() {
                   {r606.rows.map((row, i) => (
                     <tr key={i} className="table-row">
                       <td className="table-cell text-gray-500 text-xs">{row.fecha}</td>
-                      <td className="table-cell text-gray-600">{row.rnc_cedula || '—'}</td>
+                      <td className="table-cell text-gray-600">{row.rnc_cedula || 'â€”'}</td>
                       <td className="table-cell font-medium">{row.razon_social}</td>
                       <td className="table-cell"><span className="badge text-purple-700 bg-purple-50">{row.tipo_bienes === '01' ? 'Compra' : 'Gasto'}</span></td>
-                      <td className="table-cell text-gray-500 text-xs">{row.ncf || '—'}</td>
+                      <td className="table-cell text-gray-500 text-xs">{row.ncf || 'â€”'}</td>
                       <td className="table-cell text-right font-semibold">{formatCurrency(row.monto_facturado, cur)}</td>
                       <td className="table-cell text-right text-blue-600">{formatCurrency(row.itbis_facturado, cur)}</td>
                     </tr>
@@ -688,7 +978,7 @@ export function Reportes() {
           </div>
         )}
 
-        {/* ── Reporte 607 ──────────────────────────────────────── */}
+        {/* â”€â”€ Reporte 607 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === '607' && r607 && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -705,15 +995,15 @@ export function Reportes() {
             </div>
             <div className="card overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">607 — Ventas ({r607.month})</p>
+                <p className="font-semibold text-sm text-gray-700">607 â€” Ventas ({r607.month})</p>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="table-header">Fecha</th>
                     <th className="table-header">NCF</th>
-                    <th className="table-header">RNC/Cédula</th>
-                    <th className="table-header">Razón Social</th>
+                    <th className="table-header">RNC/CÃ©dula</th>
+                    <th className="table-header">RazÃ³n Social</th>
                     <th className="table-header text-right">Monto</th>
                     <th className="table-header text-right">{taxName}</th>
                     <th className="table-header text-right">Sin imp.</th>
@@ -723,8 +1013,8 @@ export function Reportes() {
                   {r607.rows.map((row, i) => (
                     <tr key={i} className="table-row">
                       <td className="table-cell text-gray-500 text-xs">{row.fecha}</td>
-                      <td className="table-cell text-gray-500 text-xs">{row.ncf || '—'}</td>
-                      <td className="table-cell text-gray-600">{row.rnc_cedula || '—'}</td>
+                      <td className="table-cell text-gray-500 text-xs">{row.ncf || 'â€”'}</td>
+                      <td className="table-cell text-gray-600">{row.rnc_cedula || 'â€”'}</td>
                       <td className="table-cell font-medium">{row.razon_social}</td>
                       <td className="table-cell text-right font-semibold">{formatCurrency(row.monto_facturado, cur)}</td>
                       <td className="table-cell text-right text-blue-600">{formatCurrency(row.itbis_facturado, cur)}</td>
@@ -745,11 +1035,11 @@ export function Reportes() {
           </div>
         )}
 
-        {/* ── Inventario ───────────────────────────────────────── */}
+        {/* â”€â”€ Inventario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === 'inventory' && (
           <div className="card overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <p className="font-semibold text-gray-700">Inventario — {format(today, "dd/MM/yyyy")}</p>
+              <p className="font-semibold text-gray-700">Inventario â€” {format(today, "dd/MM/yyyy")}</p>
               <p className="text-sm text-gray-500">{products.length} productos</p>
             </div>
             <table className="w-full text-sm">
@@ -789,18 +1079,18 @@ export function Reportes() {
           </div>
         )}
 
-        {/* ── Clientes ─────────────────────────────────────────── */}
+        {/* â”€â”€ Clientes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === 'clients' && (
           <div className="card overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <p className="font-semibold text-gray-700">Clientes — {format(today, "dd/MM/yyyy")}</p>
+              <p className="font-semibold text-gray-700">Clientes â€” {format(today, "dd/MM/yyyy")}</p>
               <p className="text-sm text-gray-500">{clients.length} clientes</p>
             </div>
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="table-header">Cliente</th>
-                  <th className="table-header">Teléfono</th>
+                  <th className="table-header">TelÃ©fono</th>
                   <th className="table-header">Documento</th>
                   <th className="table-header text-center">Compras</th>
                   <th className="table-header text-right">Deuda pendiente</th>
@@ -810,10 +1100,10 @@ export function Reportes() {
                 {(clients as Record<string, unknown>[]).map(c => (
                   <tr key={c.id as string} className="table-row">
                     <td className="table-cell font-medium text-gray-900">
-                      {Boolean(c.isVip) && <span className="text-yellow-500 mr-1">★</span>}{c.name as string}
+                      {Boolean(c.isVip) && <span className="text-yellow-500 mr-1">â˜…</span>}{c.name as string}
                     </td>
-                    <td className="table-cell text-gray-500">{(c.phone as string) || '—'}</td>
-                    <td className="table-cell text-gray-500">{(c.document as string) || '—'}</td>
+                    <td className="table-cell text-gray-500">{(c.phone as string) || 'â€”'}</td>
+                    <td className="table-cell text-gray-500">{(c.document as string) || 'â€”'}</td>
                     <td className="table-cell text-center">{(c._count as Record<string, unknown>)?.transactions as number || 0}</td>
                     <td className={`table-cell text-right font-semibold ${(c.pendingDebt as number) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                       {formatCurrency((c.pendingDebt as number) || 0, cur)}
@@ -825,7 +1115,7 @@ export function Reportes() {
           </div>
         )}
 
-        {/* ── Empleados ────────────────────────────────────────── */}
+        {/* â”€â”€ Empleados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === 'employees' && empReport && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -842,7 +1132,7 @@ export function Reportes() {
             </div>
             <div className="card overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">Ventas por empleado — {empFrom} al {empTo}</p>
+                <p className="font-semibold text-sm text-gray-700">Ventas por empleado â€” {empFrom} al {empTo}</p>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -886,10 +1176,11 @@ export function Reportes() {
         {reportType === 'employees' && !empReport && (
           <div className="card p-12 text-center text-gray-400">
             <UserCheck size={36} className="mx-auto mb-3 opacity-30" />
-            <p>Selecciona un período para ver el reporte de empleados</p>
+            <p>Selecciona un perÃ­odo para ver el reporte de empleados</p>
           </div>
         )}
       </div>
     </div>
   )
 }
+

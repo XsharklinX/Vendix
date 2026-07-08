@@ -14,19 +14,18 @@ export async function checkLowStock(businessId: string, userId: string) {
       where: { id: businessId },
       select: { lowStockThreshold: true },
     })
-    const threshold = business?.lowStockThreshold ?? 5
+    const defaultThreshold = business?.lowStockThreshold ?? 5
 
-    const lowItems = await prisma.product.findMany({
-      where: { businessId, quantity: { lte: threshold, gt: 0 } },
-      select: { id: true, name: true, quantity: true },
-      take: 5,
+    const products = await prisma.product.findMany({
+      where: { businessId },
+      select: { id: true, name: true, quantity: true, lowStockThreshold: true },
     })
 
-    const outOfStock = await prisma.product.findMany({
-      where: { businessId, quantity: 0 },
-      select: { id: true, name: true },
-      take: 3,
-    })
+    const lowItems = products
+      .filter(p => p.quantity > 0 && p.quantity <= (p.lowStockThreshold ?? defaultThreshold))
+      .slice(0, 5)
+
+    const outOfStock = products.filter(p => p.quantity === 0).slice(0, 3)
 
     if (lowItems.length > 0) {
       const names = lowItems.map(p => `${p.name} (${p.quantity})`).join(', ')

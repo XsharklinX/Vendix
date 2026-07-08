@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -10,6 +10,9 @@ import {
   Settings2, X, ChevronUp, ChevronDown, Eye, EyeOff
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { OnboardingChecklist, type ChecklistStep } from '@/components/dashboard/OnboardingChecklist'
+import { QueryError } from '@/components/ui/QueryError'
+import { Skeleton } from '@/components/ui/Skeleton'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, ReferenceLine
@@ -18,7 +21,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface Product { id: string; name: string; quantity: number; category?: { name: string } }
+interface Product { id: string; name: string; quantity: number; lowStockThreshold?: number | null; category?: { name: string } }
 interface TopProduct { name: string; productId?: string; totalQty: number; totalRevenue: number }
 interface HourData { hour: number; total: number; count: number }
 interface CategoryMargin { category: string; revenue: number; cost: number; grossProfit: number; margin: number; units: number }
@@ -211,6 +214,7 @@ export function Dashboard() {
   const cur = business?.currency || 'DOP'
   const today = format(new Date(), 'yyyy-MM-dd')
   const firstName = user?.name?.split(' ')[0] ?? ''
+  const isOwner = user?.role !== 'CASHIER'
   const [chartDays, setChartDays] = useState<7 | 30 | 90>(30)
   const [customizeOpen, setCustomizeOpen] = useState(false)
 
@@ -221,89 +225,130 @@ export function Dashboard() {
   const lastMonthFrom = format(new Date(now.getFullYear(), now.getMonth() - 1, 1), 'yyyy-MM-dd')
   const lastMonthTo = format(new Date(now.getFullYear(), now.getMonth(), 0), 'yyyy-MM-dd')
 
-  const { data: summaryMonth } = useQuery({
+  const summaryMonthQuery = useQuery({
     queryKey: ['stats-summary', bid, 'month'],
     queryFn: () => api.get(`/businesses/${bid}/stats/summary`, { params: { from: monthFrom, to: today } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: summaryToday } = useQuery({
+  const summaryTodayQuery = useQuery({
     queryKey: ['stats-summary-today', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/summary`, { params: { from: today, to: today } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: summaryYesterday } = useQuery({
+  const summaryYesterdayQuery = useQuery({
     queryKey: ['stats-yesterday', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/yesterday`).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: summaryLastMonth } = useQuery({
+  const summaryLastMonthQuery = useQuery({
     queryKey: ['stats-summary', bid, 'last-month'],
     queryFn: () => api.get(`/businesses/${bid}/stats/summary`, { params: { from: lastMonthFrom, to: lastMonthTo } }).then(r => r.data),
     enabled: !!bid, staleTime: 5 * 60_000,
   })
-  const { data: chart } = useQuery({
+  const chartQuery = useQuery({
     queryKey: ['stats-chart', bid, chartDays],
     queryFn: () => api.get(`/businesses/${bid}/stats/chart`, { params: { days: chartDays } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: recentTx = [] } = useQuery<Record<string, unknown>[]>({
+  const recentTxQuery = useQuery<Record<string, unknown>[]>({
     queryKey: ['recent-tx', bid],
     queryFn: () => api.get(`/businesses/${bid}/transactions`, { params: { limit: 8 } }).then(r => r.data.data ?? r.data),
     enabled: !!bid,
   })
-  const { data: products = [] } = useQuery<Product[]>({
+  const productsQuery = useQuery<Product[]>({
     queryKey: ['products', bid],
     queryFn: () => api.get(`/businesses/${bid}/products`).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: topProducts = [] } = useQuery<TopProduct[]>({
+  const topProductsQuery = useQuery<TopProduct[]>({
     queryKey: ['top-products', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/top-products`, { params: { from: monthFrom, to: today } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: byHour = [] } = useQuery<HourData[]>({
+  const byHourQuery = useQuery<HourData[]>({
     queryKey: ['stats-hour', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/by-hour`, { params: { days: 30 } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: marginByCategory = [] } = useQuery<CategoryMargin[]>({
+  const marginByCategoryQuery = useQuery<CategoryMargin[]>({
     queryKey: ['margin-by-category', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/margin-by-category`, { params: { days: 30 } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: lossProducts = [] } = useQuery<LossProduct[]>({
+  const lossProductsQuery = useQuery<LossProduct[]>({
     queryKey: ['loss-products', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/loss-products`).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: salesGaps } = useQuery<SalesGaps>({
+  const salesGapsQuery = useQuery<SalesGaps>({
     queryKey: ['sales-gaps', bid],
     queryFn: () => api.get(`/businesses/${bid}/stats/sales-gaps`, { params: { days: 30 } }).then(r => r.data),
     enabled: !!bid,
   })
-  const { data: pendingTx = [] } = useQuery<PendingTx[]>({
+  const pendingTxQuery = useQuery<PendingTx[]>({
     queryKey: ['pending-tx', bid],
     queryFn: () => api.get(`/businesses/${bid}/transactions`, { params: { status: 'PENDING', limit: 500 } }).then(r => r.data.data ?? r.data),
     enabled: !!bid, staleTime: 60_000,
   })
+  const employeesQuery = useQuery<unknown[]>({
+    queryKey: ['employees', bid],
+    queryFn: () => api.get(`/businesses/${bid}/employees`).then(r => r.data),
+    enabled: !!bid && isOwner, staleTime: 5 * 60_000,
+  })
+
+  const summaryMonth = summaryMonthQuery.data
+  const summaryToday = summaryTodayQuery.data
+  const summaryYesterday = summaryYesterdayQuery.data
+  const summaryLastMonth = summaryLastMonthQuery.data
+  const chart = chartQuery.data
+  const recentTx = recentTxQuery.data ?? []
+  const products = productsQuery.data ?? []
+  const topProducts = topProductsQuery.data ?? []
+  const byHour = byHourQuery.data ?? []
+  const marginByCategory = marginByCategoryQuery.data ?? []
+  const lossProducts = lossProductsQuery.data ?? []
+  const salesGaps = salesGapsQuery.data
+  const pendingTx = pendingTxQuery.data ?? []
+  const employees = employeesQuery.data ?? []
+  const isDashboardLoading = summaryMonthQuery.isLoading || summaryTodayQuery.isLoading || productsQuery.isLoading || chartQuery.isLoading
+  const hasDashboardError = summaryMonthQuery.isError || summaryTodayQuery.isError || productsQuery.isError || chartQuery.isError
+  const retryDashboard = () => {
+    void summaryMonthQuery.refetch()
+    void summaryTodayQuery.refetch()
+    void productsQuery.refetch()
+    void chartQuery.refetch()
+  }
 
   // Derived data
-  const LOW_STOCK = 5
-  const lowStockProducts = products.filter(p => p.quantity >= 0 && p.quantity <= LOW_STOCK)
-  const outOfStock = products.filter(p => p.quantity === 0)
-  const bestHour = byHour.reduce((best, h) => h.total > (best?.total ?? 0) ? h : best, null as HourData | null)
+  const defaultLowStock = business?.lowStockThreshold ?? 5
+  const lowStockProducts = useMemo(
+    () => products.filter(p => p.quantity >= 0 && p.quantity <= (p.lowStockThreshold ?? defaultLowStock)),
+    [products, defaultLowStock]
+  )
+  const outOfStock = useMemo(() => products.filter(p => p.quantity === 0), [products])
+  const bestHour = useMemo(
+    () => byHour.reduce((best, h) => h.total > (best?.total ?? 0) ? h : best, null as HourData | null),
+    [byHour]
+  )
   const formatHour = (h: number) => { const ampm = h < 12 ? 'AM' : 'PM'; const d = h === 0 ? 12 : h > 12 ? h - 12 : h; return `${d}:00 ${ampm}` }
   const grossMarginPct = summaryMonth?.totalSales > 0 ? ((summaryMonth.grossProfit / summaryMonth.totalSales) * 100).toFixed(1) : null
-  const peakHourData = byHour.filter(h => h.count > 0).slice(6, 22)
-  const pendingSales = pendingTx.filter(t => t.type === 'SALE')
-  const pendingDebtTotal = pendingSales.reduce((s, t) => s + t.amount, 0)
-  const attentionItems = [
+  const peakHourData = useMemo(() => byHour.filter(h => h.count > 0).slice(6, 22), [byHour])
+  const pendingSales = useMemo(() => pendingTx.filter(t => t.type === 'SALE'), [pendingTx])
+  const pendingDebtTotal = useMemo(() => pendingSales.reduce((s, t) => s + t.amount, 0), [pendingSales])
+  const attentionItems = useMemo(() => [
     ...outOfStock.slice(0, 2).map(p => ({ text: `${p.name} — agotado`, to: '/inventario', color: 'red' as const })),
     ...lowStockProducts.filter(p => p.quantity > 0).slice(0, 2).map(p => ({ text: `${p.name} — solo ${p.quantity} en stock`, to: '/inventario', color: 'amber' as const })),
     ...(pendingSales.length > 0 ? [{ text: `${pendingSales.length} venta${pendingSales.length > 1 ? 's' : ''} pendiente${pendingSales.length > 1 ? 's' : ''} de cobro — ${formatCurrency(pendingDebtTotal, cur)}`, to: '/cuentas-cobrar', color: 'red' as const }] : []),
-  ]
+  ], [outOfStock, lowStockProducts, pendingSales, pendingDebtTotal, cur])
   const dateLabel = format(now, "EEEE, dd 'de' MMMM", { locale: es })
   const dateCapitalized = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)
+
+  const checklistSteps: ChecklistStep[] = [
+    { label: 'Agrega tu primer producto', done: products.length > 0, to: '/inventario' },
+    { label: 'Haz tu primera venta', done: (summaryMonth?.salesCount ?? 0) > 0 || (summaryLastMonth?.salesCount ?? 0) > 0, to: '/vender' },
+    { label: 'Personaliza tu negocio (logo y datos)', done: !!business?.logoUrl, to: '/configuraciones' },
+    { label: 'Invita a un empleado', done: employees.length > 0, to: '/empleados' },
+  ]
 
   // ── Widget render map ────────────────────────────────────────────────────────
   const renderWidget = (id: string) => {
@@ -741,6 +786,31 @@ export function Dashboard() {
       </div>
 
       <div className="p-6 space-y-5">
+        {isDashboardLoading && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="card p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-9 w-9 rounded-xl" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-7 w-32" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            ))}
+          </div>
+        )}
+        {hasDashboardError && (
+          <div className="card">
+            <QueryError
+              message="Algunos widgets del dashboard no pudieron cargar. Puedes reintentar sin perder el resto de la sesión."
+              onRetry={retryDashboard}
+              retrying={summaryMonthQuery.isFetching || summaryTodayQuery.isFetching || productsQuery.isFetching || chartQuery.isFetching}
+            />
+          </div>
+        )}
+        {isOwner && <OnboardingChecklist bid={bid} steps={checklistSteps} />}
         {layout
           .filter(w => w.visible)
           .map(w => renderWidget(w.id))

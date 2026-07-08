@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, Navigate } from 'react-router-dom'
 import { Menu, TrendingUp } from 'lucide-react'
 import { Sidebar } from './Sidebar'
@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PlanLimitModal } from '@/components/ui/PlanLimitModal'
+import { CommandPalette } from '@/components/ui/CommandPalette'
 import { usePlanLimit } from '@/hooks/usePlanLimit'
 
 export function Layout() {
@@ -18,6 +19,9 @@ export function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold">
+        Saltar al contenido
+      </a>
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
@@ -49,12 +53,26 @@ export function Layout() {
           <NotificationBell />
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <Outlet />
+        <div id="main-content" className="flex-1 overflow-y-auto">
+          <Suspense fallback={<ContentLoader />}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
 
       <PlanLimitModal open={planLimit.open} onClose={planLimit.close} message={planLimit.message} />
+      <CommandPalette />
+    </div>
+  )
+}
+
+// Indicador ligero para transiciones entre páginas: ocupa solo el área de
+// contenido (Sidebar y barra superior permanecen visibles), evitando el
+// "flash" de pantalla blanca completa.
+function ContentLoader() {
+  return (
+    <div className="flex h-full min-h-[60vh] items-center justify-center">
+      <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin dark:border-slate-700 dark:border-t-blue-400" />
     </div>
   )
 }

@@ -61,4 +61,26 @@ export const EXPORT_COLUMNS = {
     { key: 'contactName', label: 'Cliente / Proveedor' },
     { key: 'date', label: 'Fecha' },
   ],
+  cotizaciones: [
+    { key: 'number', label: '#' },
+    { key: 'concept', label: 'Concepto' },
+    { key: 'clientName', label: 'Cliente' },
+    { key: 'total', label: 'Total' },
+    { key: 'statusLabel', label: 'Estado' },
+    { key: 'date', label: 'Fecha' },
+  ],
+  cuentasCobrar: [
+    { key: 'name', label: 'Cliente' },
+    { key: 'phone', label: 'Teléfono' },
+    { key: 'pendingDebt', label: 'Deuda Pendiente' },
+    { key: 'pendingCount', label: 'Ventas Pendientes' },
+    { key: 'oldestDebtDays', label: 'Antigüedad (días)' },
+  ],
+  ordenesCompra: [
+    { key: 'orderNumber', label: 'Orden' },
+    { key: 'supplierName', label: 'Proveedor' },
+    { key: 'status', label: 'Estado' },
+    { key: 'total', label: 'Total' },
+    { key: 'date', label: 'Fecha' },
+  ],
 }

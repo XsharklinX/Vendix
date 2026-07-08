@@ -6,6 +6,7 @@ import { verifyBusiness } from '../lib/verifyBusiness'
 import { checkTransactionLimit } from '../middleware/planLimits'
 import { logAudit } from '../lib/audit'
 import { checkLowStock } from '../lib/notifications'
+import { recordStockMovement } from '../lib/stockMovement'
 import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
@@ -35,6 +36,8 @@ const txSchema = z.object({
   clientId: z.string().optional(),
   supplierId: z.string().optional(),
   cashSessionId: z.string().optional(),
+  loyaltyPointsRedeemed: z.number().int().min(0).optional().default(0),
+  loyaltyDiscountAmount: z.number().min(0).optional().default(0),
   items: z.array(itemSchema).optional().default([]),
 })
 
@@ -148,9 +151,14 @@ router.post('/', checkTransactionLimit, async (req: AuthRequest, res) => {
             if (product && product.quantity < item.quantity) {
               throw new Error(`Stock insuficiente para "${product.name}" (disponible: ${product.quantity}, solicitado: ${item.quantity})`)
             }
-            await tx.product.update({
+            const updatedProduct = await tx.product.update({
               where: { id: item.productId },
               data: { quantity: { decrement: item.quantity } },
+            })
+            await recordStockMovement(tx, {
+              businessId, productId: item.productId, type: 'SALE',
+              quantity: -item.quantity, balanceAfter: updatedProduct.quantity,
+              refType: 'TRANSACTION', refId: created.id, createdById: req.userId,
             })
           }
         }
@@ -160,15 +168,40 @@ router.post('/', checkTransactionLimit, async (req: AuthRequest, res) => {
       if (data.type === 'PURCHASE' && data.status === 'COMPLETED') {
         for (const item of data.items) {
           if (item.productId) {
-            await tx.product.update({
+            const updatedProduct = await tx.product.update({
               where: { id: item.productId },
               data: { quantity: { increment: item.quantity } },
+            })
+            await recordStockMovement(tx, {
+              businessId, productId: item.productId, type: 'PURCHASE',
+              quantity: item.quantity, balanceAfter: updatedProduct.quantity,
+              refType: 'TRANSACTION', refId: created.id, createdById: req.userId,
             })
           }
         }
       }
 
       if (data.type === 'SALE' && data.status === 'COMPLETED' && data.clientId) {
+        if (data.loyaltyPointsRedeemed > 0) {
+          const client = await tx.client.findFirst({ where: { id: data.clientId, businessId } })
+          if (!client) throw new Error('Cliente no encontrado')
+          if (client.loyaltyPoints < data.loyaltyPointsRedeemed) throw new Error('Puntos insuficientes')
+          await tx.client.update({
+            where: { id: data.clientId, businessId },
+            data: { loyaltyPoints: { decrement: data.loyaltyPointsRedeemed } },
+          })
+          await tx.loyaltyRedemption.create({
+            data: {
+              businessId,
+              clientId: data.clientId,
+              points: data.loyaltyPointsRedeemed,
+              discountAmount: data.loyaltyDiscountAmount,
+              notes: `Canje aplicado en venta ${created.id}`,
+              createdById: req.userId,
+            },
+          })
+        }
+
         const earnedPoints = calculateLoyaltyPoints(data.amount)
         if (earnedPoints > 0) {
           await tx.client.update({
@@ -176,6 +209,17 @@ router.post('/', checkTransactionLimit, async (req: AuthRequest, res) => {
             data: { loyaltyPoints: { increment: earnedPoints } },
           })
         }
+      }
+
+      if (data.type === 'SALE') {
+        const biz = await tx.business.update({
+          where: { id: businessId },
+          data: { invoiceSequence: { increment: 1 } },
+          select: { invoicePrefix: true, invoiceSequence: true },
+        })
+        const invoiceNumber = `${biz.invoicePrefix}-${String(biz.invoiceSequence).padStart(6, '0')}`
+        await tx.transaction.update({ where: { id: created.id }, data: { invoiceNumber } })
+        ;(created as Record<string, unknown>).invoiceNumber = invoiceNumber
       }
 
       return created
@@ -196,6 +240,8 @@ router.post('/', checkTransactionLimit, async (req: AuthRequest, res) => {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
     if (e instanceof Error && e.message.startsWith('Stock insuficiente'))
       return res.status(409).json({ error: e.message })
+    if (e instanceof Error && (e.message === 'Puntos insuficientes' || e.message === 'Cliente no encontrado'))
+      return res.status(400).json({ error: e.message })
     return res.status(500).json({ error: 'Error interno' })
   }
 })
@@ -218,9 +264,14 @@ router.put('/:id', async (req: AuthRequest, res) => {
         if (original && original.status !== 'CANCELLED') {
           for (const item of original.items) {
             if (item.productId) {
-              await tx.product.update({
+              const updatedProduct = await tx.product.update({
                 where: { id: item.productId },
                 data: { quantity: { increment: item.quantity } },
+              })
+              await recordStockMovement(tx, {
+                businessId, productId: item.productId, type: 'CANCEL',
+                quantity: item.quantity, balanceAfter: updatedProduct.quantity,
+                refType: 'TRANSACTION', refId: id, createdById: req.userId,
               })
             }
           }
@@ -277,7 +328,7 @@ router.post('/cash-session/open', async (req: AuthRequest, res) => {
     if (existing) return res.status(400).json({ error: 'Ya hay una caja abierta' })
 
     const session = await prisma.cashSession.create({
-      data: { openAmount, notes, businessId },
+      data: { openAmount, notes, businessId, openedById: req.userId || null },
     })
     logAudit(req, businessId, 'CREATE', 'CASH_SESSION', session.id, { openAmount })
     return res.status(201).json(session)
@@ -303,10 +354,83 @@ router.post('/cash-session/close', async (req: AuthRequest, res) => {
     })
     if (!session) return res.status(404).json({ error: 'No hay caja abierta' })
 
-    const closed = await prisma.cashSession.update({
-      where: { id: session.id },
-      data: { closeAmount, notes, closedAt: new Date(), status: 'CLOSED' },
-      include: { transactions: { select: { amount: true, type: true } } },
+    const now = new Date()
+    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(now); dayEnd.setHours(23, 59, 59, 999)
+
+    const closed = await prisma.$transaction(async tx => {
+      const updated = await tx.cashSession.update({
+        where: { id: session.id },
+        data: { closeAmount, notes, closedAt: now, status: 'CLOSED', closedById: req.userId || null },
+        include: { transactions: { select: { amount: true, type: true, paymentMethod: true, status: true } } },
+      })
+
+      const transactions = await tx.transaction.findMany({
+        where: { businessId, createdAt: { gte: dayStart, lte: dayEnd } },
+        include: { items: true },
+      })
+      const sales = transactions.filter(t => t.type === 'SALE' && t.status === 'COMPLETED')
+      const returns = transactions.filter(t => t.type === 'RETURN')
+      const expenses = transactions.filter(t => (t.type === 'EXPENSE' || t.type === 'PURCHASE') && t.status === 'COMPLETED')
+      const totalSales = sales.reduce((s, t) => s + t.amount, 0)
+      const totalReturns = returns.reduce((s, t) => s + t.amount, 0)
+      const totalExpenses = expenses.reduce((s, t) => s + t.amount, 0)
+      const totalTax = sales.reduce((s, t) => s + (t.taxAmount || 0), 0)
+      const costOfSales = sales.reduce((s, t) => s + t.items.reduce((si, item) => si + item.cost * item.quantity, 0), 0)
+      const cashSales = sales.filter(t => t.paymentMethod === 'CASH').reduce((s, t) => s + t.amount, 0)
+      const cashExpenses = expenses.filter(t => t.paymentMethod === 'CASH').reduce((s, t) => s + t.amount, 0)
+      const expectedCash = session.openAmount + cashSales - cashExpenses
+      const difference = closeAmount - expectedCash
+      const netSales = totalSales - totalReturns
+      const grossProfit = totalSales - costOfSales - totalReturns
+      const summary = [
+        `Cierre diario ${dayStart.toISOString().slice(0, 10)}`,
+        `Ventas: ${totalSales.toFixed(2)} (${sales.length})`,
+        `Gastos/compras: ${totalExpenses.toFixed(2)}`,
+        `Impuestos: ${totalTax.toFixed(2)}`,
+        `Utilidad bruta: ${grossProfit.toFixed(2)}`,
+        `Caja esperada: ${expectedCash.toFixed(2)}`,
+        `Caja declarada: ${closeAmount.toFixed(2)}`,
+        `Diferencia: ${difference.toFixed(2)}`,
+      ].join('\n')
+
+      await tx.dailyCloseSnapshot.upsert({
+        where: { businessId_date: { businessId, date: dayStart } },
+        update: {
+          cashSessionId: session.id,
+          totalSales,
+          totalReturns,
+          totalExpenses,
+          totalTax,
+          netSales,
+          grossProfit,
+          expectedCash,
+          closeAmount,
+          difference,
+          salesCount: sales.length,
+          summary,
+          createdById: req.userId || null,
+        },
+        create: {
+          businessId,
+          cashSessionId: session.id,
+          date: dayStart,
+          totalSales,
+          totalReturns,
+          totalExpenses,
+          totalTax,
+          netSales,
+          grossProfit,
+          expectedCash,
+          closeAmount,
+          difference,
+          salesCount: sales.length,
+          summary,
+          createdById: req.userId || null,
+        },
+      })
+
+      return updated
     })
     logAudit(req, businessId, 'UPDATE', 'CASH_SESSION', session.id, { closeAmount })
     return res.json(closed)
@@ -410,9 +534,14 @@ router.post('/return/:txId', async (req: AuthRequest, res) => {
       // Restaurar stock
       for (const item of original.items) {
         if (item.productId) {
-          await tx.product.update({
+          const updatedProduct = await tx.product.update({
             where: { id: item.productId },
             data: { quantity: { increment: item.quantity } },
+          })
+          await recordStockMovement(tx, {
+            businessId, productId: item.productId, type: 'RETURN',
+            quantity: item.quantity, balanceAfter: updatedProduct.quantity,
+            refType: 'TRANSACTION', refId: ret.id, createdById: req.userId,
           })
         }
       }

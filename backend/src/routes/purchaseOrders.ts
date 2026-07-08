@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { logAudit } from '../lib/audit'
+import { recordStockMovement } from '../lib/stockMovement'
 import { logger } from '../lib/logger'
 
 const router = Router({ mergeParams: true })
@@ -62,12 +63,14 @@ router.get('/reorder-alerts', async (req: AuthRequest, res) => {
 
   const business = await prisma.business.findUnique({ where: { id: businessId }, select: { lowStockThreshold: true } })
   const threshold = business?.lowStockThreshold ?? 5
-  const products = await prisma.product.findMany({
-    where: { businessId, quantity: { lte: threshold } },
+  const all = await prisma.product.findMany({
+    where: { businessId },
     include: { category: true },
     orderBy: [{ quantity: 'asc' }, { name: 'asc' }],
-    take: 100,
   })
+  const products = all
+    .filter(p => p.quantity <= (p.lowStockThreshold ?? threshold))
+    .slice(0, 100)
   return res.json({ threshold, products })
 })
 
@@ -157,9 +160,14 @@ router.post('/:id/receive', async (req: AuthRequest, res) => {
           data: { receivedQty: { increment: qty } },
         })
         if (item.productId) {
-          await tx.product.update({
+          const updatedProduct = await tx.product.update({
             where: { id: item.productId },
             data: { quantity: { increment: qty }, cost: item.cost },
+          })
+          await recordStockMovement(tx, {
+            businessId, productId: item.productId, type: 'RECEPTION',
+            quantity: qty, balanceAfter: updatedProduct.quantity,
+            refType: 'PURCHASE_ORDER', refId: id, createdById: req.userId,
           })
         }
       }

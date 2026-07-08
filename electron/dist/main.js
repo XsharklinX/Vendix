@@ -14,9 +14,25 @@ const PORT = 3100;
 const isDev = !electron_1.app.isPackaged;
 let mainWindow = null;
 let tray = null;
+const updateState = {
+    status: 'idle',
+    currentVersion: electron_1.app.getVersion(),
+    availableVersion: null,
+    channel: 'stable',
+    message: null,
+    lastCheckedAt: null,
+    downloadedAt: null,
+};
 function writeServerLog(message) {
     const logFile = path_1.default.join(electron_1.app.getPath('userData'), 'server.log');
     fs_1.default.appendFileSync(logFile, `[${new Date().toISOString()}] ${message}\n`);
+}
+function getLogFilePath() {
+    return path_1.default.join(electron_1.app.getPath('userData'), 'server.log');
+}
+function setUpdateState(next) {
+    Object.assign(updateState, next);
+    mainWindow?.webContents.send('vendix:update-state', updateState);
 }
 function getAutoUpdater() {
     // electron-updater is CommonJS; destructuring avoids ESM interop issues.
@@ -26,23 +42,54 @@ function configureAutoUpdates() {
     if (isDev)
         return;
     const autoUpdater = getAutoUpdater();
+    const config = getConfig();
+    const channel = config.updateChannel === 'beta' ? 'beta' : 'stable';
+    updateState.channel = channel;
+    autoUpdater.channel = channel === 'beta' ? 'beta' : 'latest';
+    autoUpdater.allowPrerelease = channel === 'beta';
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('error', error => {
         console.error('[updater]', error);
         writeServerLog(`[updater] error: ${error.stack || error.message}`);
+        setUpdateState({ status: 'error', message: error.message, lastCheckedAt: new Date().toISOString() });
     });
     autoUpdater.on('checking-for-update', () => {
         writeServerLog('[updater] buscando actualizaciones');
+        setUpdateState({ status: 'checking', message: 'Buscando actualizaciones...', lastCheckedAt: new Date().toISOString() });
     });
     autoUpdater.on('update-available', info => {
         writeServerLog(`[updater] actualizacion disponible: ${info.version}`);
+        setUpdateState({
+            status: 'available',
+            availableVersion: info.version,
+            message: `Vendix ${info.version} esta disponible. La descarga iniciara automaticamente.`,
+            lastCheckedAt: new Date().toISOString(),
+        });
     });
     autoUpdater.on('update-not-available', info => {
         writeServerLog(`[updater] sin actualizaciones: ${info.version}`);
+        setUpdateState({
+            status: 'not-available',
+            availableVersion: null,
+            message: 'Ya tienes la ultima version disponible para este canal.',
+            lastCheckedAt: new Date().toISOString(),
+        });
+    });
+    autoUpdater.on('download-progress', progress => {
+        setUpdateState({
+            status: 'downloading',
+            message: `Descargando actualizacion ${Math.round(progress.percent)}%`,
+        });
     });
     autoUpdater.on('update-downloaded', info => {
         writeServerLog(`[updater] actualizacion descargada: ${info.version}`);
+        setUpdateState({
+            status: 'downloaded',
+            availableVersion: info.version,
+            message: `Vendix ${info.version} esta lista para instalar.`,
+            downloadedAt: new Date().toISOString(),
+        });
         electron_1.dialog.showMessageBox({
             type: 'info',
             title: 'Actualizacion disponible',
@@ -63,6 +110,73 @@ function configureAutoUpdates() {
     });
 }
 // ── Helpers de rutas ────────────────────────────────────────────────────────
+function registerIpcHandlers() {
+    electron_1.ipcMain.handle('vendix:get-update-state', () => updateState);
+    electron_1.ipcMain.handle('vendix:check-for-updates', async () => {
+        if (isDev) {
+            setUpdateState({
+                status: 'not-available',
+                message: 'Las actualizaciones automaticas solo funcionan en la app instalada.',
+                lastCheckedAt: new Date().toISOString(),
+            });
+            return updateState;
+        }
+        await getAutoUpdater().checkForUpdates();
+        return updateState;
+    });
+    electron_1.ipcMain.handle('vendix:install-update', () => {
+        if (isDev || updateState.status !== 'downloaded')
+            return false;
+        electron_1.app.isQuitting = true;
+        getAutoUpdater().quitAndInstall();
+        return true;
+    });
+    electron_1.ipcMain.handle('vendix:set-update-channel', (_event, channel) => {
+        const safeChannel = channel === 'beta' ? 'beta' : 'stable';
+        const config = getConfig();
+        saveConfig({ ...config, updateChannel: safeChannel });
+        setUpdateState({
+            channel: safeChannel,
+            message: safeChannel === 'beta'
+                ? 'Canal beta activado. Recibiras versiones de prueba cuando existan.'
+                : 'Canal estable activado. Recibiras solo versiones publicas.',
+        });
+        if (!isDev) {
+            const autoUpdater = getAutoUpdater();
+            autoUpdater.channel = safeChannel === 'beta' ? 'beta' : 'latest';
+            autoUpdater.allowPrerelease = safeChannel === 'beta';
+        }
+        return updateState;
+    });
+    electron_1.ipcMain.handle('vendix:get-log-info', () => {
+        const filePath = getLogFilePath();
+        const exists = fs_1.default.existsSync(filePath);
+        const stat = exists ? fs_1.default.statSync(filePath) : null;
+        const content = exists ? fs_1.default.readFileSync(filePath, 'utf8').split(/\r?\n/).slice(-200).join('\n') : '';
+        return {
+            path: filePath,
+            exists,
+            size: stat?.size ?? 0,
+            updatedAt: stat?.mtime.toISOString() ?? null,
+            tail: content,
+        };
+    });
+    electron_1.ipcMain.handle('vendix:get-sync-config', () => getSyncConfig());
+    electron_1.ipcMain.handle('vendix:save-sync-config', (_event, input) => {
+        return saveSyncConfig(input);
+    });
+    electron_1.ipcMain.handle('vendix:open-user-data', async () => {
+        await electron_1.shell.openPath(electron_1.app.getPath('userData'));
+        return true;
+    });
+    electron_1.ipcMain.handle('vendix:open-log-file', async () => {
+        const filePath = getLogFilePath();
+        if (!fs_1.default.existsSync(filePath))
+            writeServerLog('log creado manualmente desde Configuracion');
+        await electron_1.shell.openPath(filePath);
+        return true;
+    });
+}
 function resourcePath(...parts) {
     return isDev
         ? path_1.default.join(__dirname, '..', ...parts)
@@ -81,6 +195,51 @@ function getConfig() {
 function saveConfig(data) {
     const configFile = path_1.default.join(electron_1.app.getPath('userData'), 'config.json');
     fs_1.default.writeFileSync(configFile, JSON.stringify(data, null, 2));
+}
+function getSyncConfig() {
+    const config = getConfig();
+    return {
+        enabled: config.syncEnabled === 'true',
+        cloudUrl: config.syncCloudUrl || '',
+        hasCloudToken: Boolean(config.syncCloudToken),
+        localBusinessId: config.syncLocalBusinessId || '',
+        cloudBusinessId: config.syncCloudBusinessId || '',
+        deviceKey: config.syncDeviceKey || '',
+        deviceName: config.syncDeviceName || '',
+        intervalMs: Number(config.syncIntervalMs || 60000),
+    };
+}
+function applySyncConfigToEnv(config = getConfig()) {
+    process.env.VENDIX_SYNC_ENABLED = config.syncEnabled === 'true' ? 'true' : 'false';
+    process.env.VENDIX_CLOUD_URL = config.syncCloudUrl || '';
+    process.env.VENDIX_CLOUD_TOKEN = config.syncCloudToken || '';
+    process.env.VENDIX_SYNC_LOCAL_BUSINESS_ID = config.syncLocalBusinessId || '';
+    process.env.VENDIX_SYNC_CLOUD_BUSINESS_ID = config.syncCloudBusinessId || '';
+    process.env.VENDIX_SYNC_DEVICE_KEY = config.syncDeviceKey || '';
+    process.env.VENDIX_SYNC_DEVICE_NAME = config.syncDeviceName || '';
+    process.env.VENDIX_SYNC_INTERVAL_MS = config.syncIntervalMs || '60000';
+}
+function saveSyncConfig(input) {
+    const current = getConfig();
+    const next = {
+        ...current,
+        syncEnabled: input.enabled ? 'true' : 'false',
+        syncCloudUrl: (input.cloudUrl || '').trim().replace(/\/+$/, ''),
+        syncLocalBusinessId: (input.localBusinessId || '').trim(),
+        syncCloudBusinessId: (input.cloudBusinessId || '').trim(),
+        syncDeviceKey: (input.deviceKey || '').trim(),
+        syncDeviceName: (input.deviceName || '').trim(),
+        syncIntervalMs: String(Math.max(Number(input.intervalMs) || 60000, 15000)),
+    };
+    if (typeof input.cloudToken === 'string' && input.cloudToken.trim()) {
+        next.syncCloudToken = input.cloudToken.trim();
+    }
+    else if (current.syncCloudToken) {
+        next.syncCloudToken = current.syncCloudToken;
+    }
+    saveConfig(next);
+    applySyncConfigToEnv(next);
+    return getSyncConfig();
 }
 function getOrCreateJwtSecret() {
     const config = getConfig();
@@ -105,6 +264,7 @@ function ensureDatabase() {
 function startServer(dbPath, jwtSecret) {
     const serverScript = resourcePath('backend', 'dist', 'index.js');
     const frontendDist = resourcePath('frontend', 'dist');
+    const config = getConfig();
     const env = {
         ...process.env,
         PORT: String(PORT),
@@ -113,6 +273,18 @@ function startServer(dbPath, jwtSecret) {
         JWT_SECRET: jwtSecret,
         FRONTEND_DIST: frontendDist,
         CORS_ORIGIN: `http://localhost:${PORT}`,
+        APP_VERSION: electron_1.app.getVersion(),
+        APP_USER_DATA_PATH: electron_1.app.getPath('userData'),
+        APP_DB_PATH: dbPath,
+        APP_UPDATED_AT: fs_1.default.existsSync(process.execPath) ? fs_1.default.statSync(process.execPath).mtime.toISOString() : new Date().toISOString(),
+        VENDIX_SYNC_ENABLED: config.syncEnabled === 'true' ? 'true' : 'false',
+        VENDIX_CLOUD_URL: config.syncCloudUrl || '',
+        VENDIX_CLOUD_TOKEN: config.syncCloudToken || '',
+        VENDIX_SYNC_LOCAL_BUSINESS_ID: config.syncLocalBusinessId || '',
+        VENDIX_SYNC_CLOUD_BUSINESS_ID: config.syncCloudBusinessId || '',
+        VENDIX_SYNC_DEVICE_KEY: config.syncDeviceKey || '',
+        VENDIX_SYNC_DEVICE_NAME: config.syncDeviceName || '',
+        VENDIX_SYNC_INTERVAL_MS: config.syncIntervalMs || '60000',
     };
     try {
         Object.assign(process.env, env);
@@ -240,9 +412,11 @@ async function createWindow() {
 }
 // ── Tray (bandeja del sistema) ───────────────────────────────────────────────
 function createTray() {
-    const iconPath = resourcePath('electron', 'assets', 'icon.png');
-    const img = fs_1.default.existsSync(iconPath)
-        ? electron_1.nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
+    const icoPath = resourcePath('electron', 'assets', 'icon.ico');
+    const pngPath = resourcePath('electron', 'assets', 'icon.png');
+    const iconFile = process.platform === 'win32' && fs_1.default.existsSync(icoPath) ? icoPath : pngPath;
+    const img = fs_1.default.existsSync(iconFile)
+        ? electron_1.nativeImage.createFromPath(iconFile).resize({ width: 16, height: 16 })
         : electron_1.nativeImage.createEmpty();
     tray = new electron_1.Tray(img);
     tray.setToolTip('Vendix');
@@ -268,26 +442,10 @@ function createTray() {
     tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus(); });
 }
 // ── Lifecycle ────────────────────────────────────────────────────────────────
-electron_1.app.whenReady().then(async () => {
-    const dbPath = ensureDatabase();
-    const jwtSecret = getOrCreateJwtSecret();
-    if (!isDev) {
-        startServer(dbPath, jwtSecret);
-    }
-    await createWindow();
-    createTray();
-    configureAutoUpdates();
-});
-electron_1.app.on('window-all-closed', () => {
-    // No salir al cerrar ventana — app vive en la bandeja
-});
-electron_1.app.on('activate', () => {
-    mainWindow?.show();
-});
-electron_1.app.on('before-quit', () => {
-    electron_1.app.isQuitting = true;
-});
-// Evitar múltiples instancias
+// Evitar múltiples instancias. Esto debe ir ANTES de registrar app.whenReady():
+// si una segunda instancia llega a registrar el handler de "ready", podría
+// intentar levantar el backend en el puerto 3100 antes de que app.quit()
+// surta efecto, provocando un EADDRINUSE.
 const gotLock = electron_1.app.requestSingleInstanceLock();
 if (!gotLock) {
     electron_1.app.quit();
@@ -296,6 +454,28 @@ else {
     electron_1.app.on('second-instance', () => {
         mainWindow?.show();
         mainWindow?.focus();
+    });
+    electron_1.app.whenReady().then(async () => {
+        registerIpcHandlers();
+        const config = getConfig();
+        updateState.channel = config.updateChannel === 'beta' ? 'beta' : 'stable';
+        const dbPath = ensureDatabase();
+        const jwtSecret = getOrCreateJwtSecret();
+        if (!isDev) {
+            startServer(dbPath, jwtSecret);
+        }
+        await createWindow();
+        createTray();
+        configureAutoUpdates();
+    });
+    electron_1.app.on('window-all-closed', () => {
+        // No salir al cerrar ventana — app vive en la bandeja
+    });
+    electron_1.app.on('activate', () => {
+        mainWindow?.show();
+    });
+    electron_1.app.on('before-quit', () => {
+        electron_1.app.isQuitting = true;
     });
 }
 electron_1.app.isQuitting = false;

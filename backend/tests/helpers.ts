@@ -24,3 +24,39 @@ export async function registerBusiness(overrides: Partial<{ name: string; email:
 export function authed(token: string) {
   return { Authorization: `Bearer ${token}` }
 }
+
+export async function createProduct(token: string, businessId: string, overrides: Record<string, unknown> = {}) {
+  const res = await request(app)
+    .post(`/api/businesses/${businessId}/products`)
+    .set(authed(token))
+    .send({
+      name: `Producto ${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      price: 100,
+      cost: 50,
+      quantity: 10,
+      ...overrides,
+    })
+
+  if (res.status !== 201) {
+    throw new Error(`No se pudo crear producto de prueba: ${res.status} ${JSON.stringify(res.body)}`)
+  }
+
+  return res.body
+}
+
+export async function createClient(token: string, businessId: string, overrides: Record<string, unknown> = {}) {
+  const res = await request(app)
+    .post(`/api/businesses/${businessId}/clients`)
+    .set(authed(token))
+    .send({
+      name: `Cliente ${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      phone: '809-000-0000',
+      ...overrides,
+    })
+
+  if (res.status !== 201) {
+    throw new Error(`No se pudo crear cliente de prueba: ${res.status} ${JSON.stringify(res.body)}`)
+  }
+
+  return res.body
+}

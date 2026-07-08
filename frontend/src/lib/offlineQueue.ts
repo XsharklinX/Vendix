@@ -54,3 +54,8 @@ export async function removeOfflineSale(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error)
   })
 }
+
+export async function countOfflineSales(businessId: string): Promise<number> {
+  const all = await getOfflineSales()
+  return all.filter(s => s.businessId === businessId).length
+}

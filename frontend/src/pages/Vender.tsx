@@ -1,15 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { formatCurrency } from '@/lib/utils'
 import {
-  Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle,
+  Search, Plus, Minus, Trash2, ShoppingCart,
   CreditCard, Banknote, ArrowLeftRight, Printer, Tag, Star,
   Barcode, X, ChevronUp, FileText, Globe, Zap, WifiOff, Mail,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+import { playSound } from '@/lib/sound'
 import { buildInvoiceHtml } from '@/lib/generateInvoicePdf'
 import { DocumentPreviewModal } from '@/components/ui/DocumentPreviewModal'
 import { saveOfflineSale, getOfflineSales, removeOfflineSale } from '@/lib/offlineQueue'
@@ -18,11 +19,11 @@ interface VolumePricing { id: string; minQty: number; price: number }
 interface Product {
   id: string; name: string; price: number; cost: number
   quantity: number; taxExempt: boolean; barcode?: string
-  category?: { name: string }
+  categoryId?: string; category?: { name: string }
   volumePricing: VolumePricing[]
 }
 interface CartItem { product: Product; qty: number; unitPrice: number }
-interface ClientBasic { id: string; name: string; phone?: string; isVip: boolean; discountRate: number }
+interface ClientBasic { id: string; name: string; phone?: string; isVip: boolean; discountRate: number; loyaltyPoints: number; segments?: string[] }
 
 const PAYMENT_LABELS = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia' }
 const PAYMENT_ICONS = { CASH: Banknote, CARD: CreditCard, TRANSFER: ArrowLeftRight }
@@ -140,7 +141,7 @@ export function buildReceiptHtml(data: ReceiptData): string {
       ${data.discountAmt > 0 ? `<tr><td class="muted">Descuento (${data.discountLabel})</td><td class="right">-${fmt(data.discountAmt)}</td></tr>` : ''}
       ${data.taxAmount > 0
         ? `<tr><td class="muted">${data.taxName}${data.taxIncluded ? ' (incluido)' : ''}</td><td class="right">${fmt(data.taxAmount)}</td></tr>`
-        : `<tr><td class="muted">${data.taxName}</td><td class="right muted">No aplica</td></tr>`}
+        : ''}
     </table>
     <hr class="solid">
     <table class="total-table"><tr><td>TOTAL</td><td class="right">${fmt(data.total)}</td></tr></table>
@@ -176,13 +177,16 @@ export function Vender() {
 
   const [search, setSearch] = useState('')
   const [barcodeInput, setBarcodeInput] = useState('')
+  const [filterCat, setFilterCat] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH')
   const [clientId, setClientId] = useState('')
   const [status, setStatus] = useState<'COMPLETED' | 'PENDING'>('COMPLETED')
   const [discountType, setDiscountType] = useState<'NONE' | 'PERCENT' | 'FIXED'>('NONE')
   const [discountValue, setDiscountValue] = useState(0)
-  const [applyTax, setApplyTax] = useState(true)
+  const [loyaltyPointsToRedeem, setLoyaltyPointsToRedeem] = useState(0)
+  const [applyTax, setApplyTax] = useState(false)
   const [successModal, setSuccessModal] = useState(false)
   const [lastSaleData, setLastSaleData] = useState<ReceiptData | null>(null)
   const [previewDoc, setPreviewDoc] = useState<{ title: string; html: string; filename: string } | null>(null)
@@ -259,10 +263,32 @@ export function Vender() {
     queryFn: () => api.get(`/businesses/${bid}/products`).then(r => r.data),
   })
 
+  const { data: categories = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ['categories', bid],
+    queryFn: () => api.get(`/businesses/${bid}/products/categories`).then(r => r.data),
+  })
+
   const { data: clients = [] } = useQuery<ClientBasic[]>({
     queryKey: ['clients', bid],
     queryFn: () => api.get(`/businesses/${bid}/clients`).then(r => r.data),
   })
+
+  const { data: clientPriceList = [] } = useQuery<{ productId: string; price: number }[]>({
+    queryKey: ['client-price-list', bid, clientId],
+    queryFn: () => api.get(`/businesses/${bid}/clients/${clientId}/price-list`).then(r => r.data),
+    enabled: !!clientId,
+  })
+
+  const clientPriceMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const entry of clientPriceList) map.set(entry.productId, entry.price)
+    return map
+  }, [clientPriceList])
+
+  const getEffectivePrice = useCallback((product: Product, qty: number): number => {
+    const clientPrice = clientPriceMap.get(product.id)
+    return clientPrice !== undefined ? clientPrice : getVolumePrice(product, qty)
+  }, [clientPriceMap])
 
   const { data: bizData } = useQuery({
     queryKey: ['business', bid],
@@ -275,6 +301,7 @@ export function Vender() {
   const hasNcf: boolean = !!bizData?.ncfType
 
   useEffect(() => {
+    setLoyaltyPointsToRedeem(0)
     if (!clientId) { setDiscountType('NONE'); setDiscountValue(0); return }
     const client = clients.find(c => c.id === clientId)
     if (client?.isVip && client.discountRate > 0) {
@@ -290,20 +317,20 @@ export function Vender() {
 
   const addToCart = useCallback((product: Product) => {
     const isQuick = product.id.startsWith('quick-')
-    if (!isQuick && product.quantity === 0) { toast.error(`"${product.name}" está sin stock`); return }
+    if (!isQuick && product.quantity === 0) { toast.error(`"${product.name}" está sin stock`); playSound('error'); return }
     setCart(prev => {
       const existing = prev.find(i => i.product.id === product.id)
       if (existing) {
-        if (!isQuick && existing.qty >= product.quantity) { toast.error('No hay más unidades disponibles'); return prev }
+        if (!isQuick && existing.qty >= product.quantity) { toast.error('No hay más unidades disponibles'); playSound('error'); return prev }
         const newQty = existing.qty + 1
         return prev.map(i => i.product.id === product.id
-          ? { ...i, qty: newQty, unitPrice: getVolumePrice(product, newQty) }
+          ? { ...i, qty: newQty, unitPrice: getEffectivePrice(product, newQty) }
           : i
         )
       }
-      return [...prev, { product, qty: 1, unitPrice: getVolumePrice(product, 1) }]
+      return [...prev, { product, qty: 1, unitPrice: getEffectivePrice(product, 1) }]
     })
-  }, [])
+  }, [getEffectivePrice])
 
   const handleBarcodeKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcodeInput.trim()) {
@@ -311,8 +338,8 @@ export function Vender() {
       const found = products.find(p =>
         p.barcode === code || p.name.toLowerCase() === code.toLowerCase()
       )
-      if (found) { addToCart(found); toast.success(`${found.name} agregado`) }
-      else toast.error(`Código "${code}" no encontrado`)
+      if (found) { addToCart(found); toast.success(`${found.name} agregado`); playSound('beep') }
+      else { toast.error(`Código "${code}" no encontrado`); playSound('error') }
       setBarcodeInput('')
     }
   }
@@ -328,9 +355,16 @@ export function Vender() {
   }
 
   const rawSubtotal = cart.reduce((s, i) => s + i.unitPrice * i.qty, 0)
-  const discountAmount = discountType === 'PERCENT'
+  const manualDiscountAmount = discountType === 'PERCENT'
     ? rawSubtotal * (discountValue / 100)
     : discountType === 'FIXED' ? Math.min(discountValue, rawSubtotal) : 0
+  const selectedClientForPoints = clients.find(c => c.id === clientId)
+  const loyaltyDiscountAmount = Math.min(
+    Math.max(0, loyaltyPointsToRedeem),
+    selectedClientForPoints?.loyaltyPoints ?? 0,
+    Math.max(0, rawSubtotal - manualDiscountAmount),
+  )
+  const discountAmount = manualDiscountAmount + loyaltyDiscountAmount
   const afterDiscount = rawSubtotal - discountAmount
   const taxableAmount = cart.filter(i => !i.product.taxExempt).reduce((s, i) => s + i.unitPrice * i.qty, 0) - discountAmount
   const taxAmount = applyTax && taxRate > 0 && taxableAmount > 0
@@ -382,6 +416,7 @@ export function Vender() {
       })
       setCartDrawerOpen(false)
       setSuccessModal(true)
+      playSound('success')
     },
     onError: async (err: unknown, variables: unknown) => {
       const isOffline = !navigator.onLine || (err as { code?: string })?.code === 'ERR_NETWORK'
@@ -394,9 +429,11 @@ export function Vender() {
         setCartDrawerOpen(false)
         setSuccessModal(true)
         setLastSaleData(null)
+        playSound('success')
       } else {
         const errMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
         toast.error(errMsg || 'Error al procesar la venta')
+        playSound('error')
       }
     },
   })
@@ -412,6 +449,8 @@ export function Vender() {
       status,
       discountValue: discountAmount,
       discountType,
+      loyaltyPointsRedeemed: loyaltyDiscountAmount > 0 ? Math.floor(loyaltyDiscountAmount) : 0,
+      loyaltyDiscountAmount,
       taxAmount: Math.round(taxAmount * 100) / 100,
       clientId: clientId || undefined,
       ncfNumber: ncfNumber || undefined,
@@ -429,12 +468,15 @@ export function Vender() {
         items: [...cart],
         subtotal: rawSubtotal,
         discountAmt: discountAmount,
-        discountLabel: discountType === 'PERCENT' ? `${discountValue}%` : formatCurrency(discountValue, cur),
+        discountLabel: loyaltyDiscountAmount > 0
+          ? `${discountType === 'PERCENT' ? `${discountValue}%` : discountType === 'FIXED' ? formatCurrency(discountValue, cur) : '0'} + ${loyaltyPointsToRedeem} pts`
+          : discountType === 'PERCENT' ? `${discountValue}%` : formatCurrency(discountValue, cur),
         clientName: client?.name,
       },
     })
   }, [cart, clients, clientId, altCurrency, cur, exchangeRate, total, paymentMethod, status,
-      discountAmount, discountType, discountValue, taxAmount, ncfNumber, rawSubtotal, sellMutation])
+      discountAmount, discountType, discountValue, taxAmount, ncfNumber, rawSubtotal, sellMutation,
+      loyaltyDiscountAmount, loyaltyPointsToRedeem])
 
   // Keep a ref so keyboard handler always calls latest handleSell
   const handleSellRef = useRef(handleSell)
@@ -450,6 +492,7 @@ export function Vender() {
       if (e.key === 'F2') { e.preventDefault(); setPaymentMethod('CARD') }
       if (e.key === 'F3') { e.preventDefault(); setPaymentMethod('TRANSFER') }
       if (e.key === 'F4') { e.preventDefault(); setStatus(s => s === 'COMPLETED' ? 'PENDING' : 'COMPLETED') }
+      if (e.key === '/') { e.preventDefault(); searchRef.current?.focus() }
       if (e.key === 'Enter' && !e.shiftKey && cart.length > 0 && !successModal && !quickProductModal) {
         e.preventDefault(); handleSellRef.current()
       }
@@ -469,7 +512,7 @@ export function Vender() {
       if (i.product.id !== id) return i
       const isQuick = i.product.id.startsWith('quick-')
       const newQty = Math.max(1, isQuick ? i.qty + delta : Math.min(i.qty + delta, i.product.quantity))
-      return { ...i, qty: newQty, unitPrice: getVolumePrice(i.product, newQty) }
+      return { ...i, qty: newQty, unitPrice: getEffectivePrice(i.product, newQty) }
     }))
   }
 
@@ -482,6 +525,7 @@ export function Vender() {
     setStatus('COMPLETED')
     setDiscountType('NONE')
     setDiscountValue(0)
+    setLoyaltyPointsToRedeem(0)
     setApplyTax(true)
     setNcfNumber('')
     setAltCurrency('')
@@ -491,10 +535,14 @@ export function Vender() {
     try { sessionStorage.removeItem(`cart-${bid}`) } catch { /* ignore */ }
   }, [bid])
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.barcode && p.barcode.includes(search))
-  )
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return products.filter(p => {
+      const matchSearch = p.name.toLowerCase().includes(q) || (p.barcode && p.barcode.includes(search))
+      const matchCat = !filterCat || p.categoryId === filterCat
+      return matchSearch && matchCat
+    })
+  }, [products, search, filterCat])
 
   const selectedClient = clients.find(c => c.id === clientId)
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
@@ -578,6 +626,47 @@ export function Vender() {
           )}
         </div>
 
+        {selectedClient && selectedClient.loyaltyPoints > 0 && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-emerald-700">
+                {selectedClient.loyaltyPoints} puntos disponibles
+              </p>
+              <button
+                type="button"
+                onClick={() => setLoyaltyPointsToRedeem(Math.min(selectedClient.loyaltyPoints, Math.floor(rawSubtotal - manualDiscountAmount)))}
+                className="text-[11px] font-bold text-emerald-700 hover:underline"
+              >
+                Usar max.
+              </button>
+            </div>
+            <input
+              type="number"
+              min={0}
+              max={selectedClient.loyaltyPoints}
+              value={loyaltyPointsToRedeem || ''}
+              onChange={e => setLoyaltyPointsToRedeem(Math.max(0, Number(e.target.value) || 0))}
+              className="input mt-1.5 text-sm"
+              placeholder="Puntos a canjear"
+            />
+            {loyaltyDiscountAmount > 0 && (
+              <p className="text-xs text-emerald-700 mt-1">
+                Descuento por puntos: {formatCurrency(loyaltyDiscountAmount, cur)}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Toggle opciones avanzadas */}
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full flex items-center justify-between text-xs text-gray-500 hover:text-gray-700 py-1.5"
+        >
+          <span className="font-medium">Descuento, NCF, multi-moneda</span>
+          <ChevronUp size={14} className={`transition-transform ${showAdvanced ? '' : 'rotate-180'}`} />
+        </button>
+
+        {showAdvanced && <>
         {/* Descuento */}
         <div>
           <label className="label">Descuento</label>
@@ -668,6 +757,8 @@ export function Vender() {
             </p>
           )}
         </div>
+
+        </>}
 
         {/* Método de pago */}
         <div>
@@ -796,8 +887,11 @@ export function Vender() {
               ref={searchRef} value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar producto..."
-              className="input pl-9 text-sm"
+              className="input pl-9 pr-9 text-sm"
             />
+            {!search && (
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 bg-gray-50">/</kbd>
+            )}
           </div>
 
           <div className="relative">
@@ -816,6 +910,26 @@ export function Vender() {
             )}
           </div>
         </div>
+
+        {categories.length > 0 && (
+          <div className="px-4 pt-2 flex gap-1.5 overflow-x-auto flex-shrink-0 scrollbar-none">
+            <button
+              onClick={() => setFilterCat('')}
+              className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${!filterCat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Todos
+            </button>
+            {categories.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setFilterCat(filterCat === c.id ? '' : c.id)}
+                className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${filterCat === c.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4">
           {filtered.length === 0 ? (
@@ -909,8 +1023,22 @@ export function Vender() {
       {/* ── Modal de éxito ─────────────────────────────────────────────────── */}
       <Modal open={successModal} onClose={resetSale} title="" size="sm">
         <div className="text-center py-4">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={48} className="text-green-500" />
+          <div className="relative w-20 h-20 mx-auto mb-5">
+            <div className="absolute inset-0 rounded-full bg-green-400/40 animate-success-ring" />
+            <div className="absolute inset-0 bg-green-100 rounded-full flex items-center justify-center animate-success-pop">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="text-green-500">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                <path
+                  d="M7 12.5l3 3 6-6.5"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="24"
+                  className="animate-success-check"
+                />
+              </svg>
+            </div>
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-1">¡Venta registrada!</h3>
           {lastSaleData ? (

@@ -1,8 +1,8 @@
-const CACHE = 'vendix-v1'
+const CACHE = 'vendix-v2'
 const OFFLINE_URL = '/offline.html'
 
 // Assets to pre-cache (updated on each deploy by build hash)
-const PRECACHE = ['/', '/vender', '/manifest.json']
+const PRECACHE = ['/', '/vender', '/cola-offline', '/manifest.json']
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -18,6 +18,20 @@ self.addEventListener('activate', (e) => {
   )
 })
 
+// Evita que un fetch colgado (visto en Electron al re-pasar el Request del
+// FetchEvent) bloquee la respuesta para siempre: si la red no responde en
+// FETCH_TIMEOUT_MS, se descarta y se cae al fallback de caché/offline.
+const FETCH_TIMEOUT_MS = 8000
+function fetchWithTimeout(request) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('sw-fetch-timeout')), FETCH_TIMEOUT_MS)
+    fetch(request.clone()).then(
+      (res) => { clearTimeout(timer); resolve(res) },
+      (err) => { clearTimeout(timer); reject(err) }
+    )
+  })
+}
+
 self.addEventListener('fetch', (e) => {
   const { request } = e
   const url = new URL(request.url)
@@ -30,7 +44,7 @@ self.addEventListener('fetch', (e) => {
   // For navigation requests: try network first, fall back to cached index.html
   if (request.mode === 'navigate') {
     e.respondWith(
-      fetch(request).catch(() =>
+      fetchWithTimeout(request).catch(() =>
         caches.match('/').then(r => r || new Response('Offline', { status: 503 }))
       )
     )
@@ -41,7 +55,7 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached
-      return fetch(request).then(response => {
+      return fetchWithTimeout(request).then(response => {
         if (response.ok && response.type === 'basic') {
           const clone = response.clone()
           caches.open(CACHE).then(c => c.put(request, clone))

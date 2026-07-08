@@ -3,21 +3,23 @@ import {
   LayoutDashboard, ShoppingCart, ArrowLeftRight, BarChart3,
   Package, FileText, Users, Truck, Settings, LogOut,
   ChevronDown, Plus, Briefcase, TrendingUp, Wallet,
-  CreditCard, X, Building2, Printer, Shield, Sparkles, CalendarCheck
+  CreditCard, X, Building2, Printer, Shield, CalendarCheck, WifiOff, Search
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useState } from 'react'
+import { countOfflineSales } from '@/lib/offlineQueue'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { useCommandPaletteStore } from '@/store/commandPalette'
 
 interface SidebarProps {
   isOpen: boolean
   onClose: () => void
 }
 
-interface Product { id: string; quantity: number }
+interface Product { id: string; quantity: number; lowStockThreshold?: number | null }
 interface CashSession { status: string }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -25,6 +27,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isOwner = user?.role !== 'CASHIER'
   const bid = business?.id ?? ''
   const [bizOpen, setBizOpen] = useState(false)
+  const openCommandPalette = useCommandPaletteStore(s => s.setOpen)
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products', bid],
@@ -40,8 +43,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     staleTime: 30_000,
   })
 
-  const threshold = 5
-  const lowStockCount = products.filter(p => p.quantity >= 0 && p.quantity <= threshold).length
+  const { data: offlinePending = 0 } = useQuery({
+    queryKey: ['offline-pending', bid],
+    queryFn: () => countOfflineSales(bid),
+    enabled: !!bid,
+    refetchInterval: 10_000,
+  })
+
+  const defaultThreshold = business?.lowStockThreshold ?? 5
+  const lowStockCount = products.filter(p => p.quantity >= 0 && p.quantity <= (p.lowStockThreshold ?? defaultThreshold)).length
   const cajaOpen = cashSession?.status === 'OPEN'
 
   // Badge del Planner: tareas pendientes (stock crítico)
@@ -54,17 +64,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { to: '/', icon: LayoutDashboard, label: 'Inicio', color: 'text-blue-500' },
         ...(isOwner ? [{ to: '/planner', icon: CalendarCheck, label: 'Mi semana', color: 'text-blue-500', badge: plannerBadge, badgeColor: 'bg-amber-500' }] : []),
         { to: '/vender', icon: ShoppingCart, label: 'Vender', color: 'text-green-500' },
-        { to: '/caja', icon: Wallet, label: 'Caja', color: 'text-emerald-500', badge: cajaOpen ? '●' : null, badgeColor: 'bg-green-500' },
+        { to: '/caja', icon: Wallet, label: 'Caja', color: 'text-green-500', badge: cajaOpen ? '●' : null, badgeColor: 'bg-green-500' },
+        ...(offlinePending > 0 ? [{ to: '/cola-offline', icon: WifiOff, label: 'Cola offline', color: 'text-orange-500', badge: offlinePending, badgeColor: 'bg-orange-500' }] : []),
         ...(isOwner ? [
-          { to: '/movimientos', icon: ArrowLeftRight, label: 'Movimientos', color: 'text-purple-500' },
-          { to: '/estadisticas', icon: BarChart3, label: 'Estadísticas', color: 'text-orange-500' },
+          { to: '/movimientos', icon: ArrowLeftRight, label: 'Movimientos', color: 'text-blue-500' },
+          { to: '/estadisticas', icon: BarChart3, label: 'Estadísticas', color: 'text-green-500' },
         ] : []),
-        { to: '/inventario', icon: Package, label: 'Inventario', color: 'text-cyan-500', badge: lowStockCount > 0 ? lowStockCount : null, badgeColor: 'bg-red-500' },
+        { to: '/inventario', icon: Package, label: 'Inventario', color: 'text-blue-500', badge: lowStockCount > 0 ? lowStockCount : null, badgeColor: 'bg-red-500' },
         ...(isOwner ? [
-          { to: '/cotizaciones', icon: FileText, label: 'Cotizaciones', color: 'text-yellow-500' },
+          { to: '/cotizaciones', icon: FileText, label: 'Cotizaciones', color: 'text-amber-500' },
           { to: '/cuentas-cobrar', icon: CreditCard, label: 'Lo que te deben', color: 'text-red-500' },
-          { to: '/reportes', icon: Printer, label: 'Reportes', color: 'text-indigo-500' },
-          { to: '/asistente-ia', icon: Sparkles, label: 'Asistente IA', color: 'text-violet-500' },
+          { to: '/reportes', icon: Printer, label: 'Reportes', color: 'text-amber-500' },
         ] : []),
       ],
     },
@@ -73,21 +83,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { to: '/clientes', icon: Users, label: 'Clientes', color: 'text-pink-500' },
         { to: '/proveedores', icon: Truck, label: 'Proveedores', color: 'text-teal-500' },
-        { to: '/ordenes-compra', icon: Package, label: 'Ordenes de compra', color: 'text-emerald-500', badge: lowStockCount > 0 ? lowStockCount : null, badgeColor: 'bg-amber-500' },
-        { to: '/empleados', icon: Briefcase, label: 'Empleados', color: 'text-indigo-500' },
+        { to: '/ordenes-compra', icon: Package, label: 'Ordenes de compra', color: 'text-teal-500', badge: lowStockCount > 0 ? lowStockCount : null, badgeColor: 'bg-amber-500' },
+        { to: '/empleados', icon: Briefcase, label: 'Empleados', color: 'text-pink-500' },
       ],
     }] : []),
     ...(isOwner ? [{
       section: 'CUENTA',
       items: [
         { to: '/configuraciones', icon: Settings, label: 'Configuraciones', color: 'text-gray-500' },
-        { to: '/auditoria', icon: Shield, label: 'Auditoría', color: 'text-purple-500' },
+        { to: '/auditoria', icon: Shield, label: 'Auditoría', color: 'text-gray-500' },
       ],
     }] : []),
   ]
 
   return (
-    <aside className={`
+    <aside aria-label="Menú de navegación" className={`
       fixed lg:sticky inset-y-0 left-0 z-50
       w-64 bg-white border-r border-gray-100 flex flex-col h-screen shadow-sm
       transition-transform duration-300 ease-in-out
@@ -107,7 +117,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center gap-1">
           <div className="hidden lg:block"><NotificationBell /></div>
           <ThemeToggle />
-          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="Cerrar menú">
             <X size={16} className="text-gray-500" />
           </button>
         </div>
@@ -166,6 +176,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </NavLink>
           </div>
         )}
+      </div>
+
+      {/* Búsqueda global */}
+      <div className="px-4 pt-3">
+        <button
+          onClick={() => openCommandPalette(true)}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+        >
+          <Search size={14} className="text-gray-400" />
+          <span className="flex-1 text-sm text-gray-400">Buscar...</span>
+          <kbd className="text-[10px] font-semibold text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 bg-white">Ctrl K</kbd>
+        </button>
       </div>
 
       {/* Estado de caja */}

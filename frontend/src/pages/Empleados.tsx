@@ -11,7 +11,12 @@ import { exportCSV, EXPORT_COLUMNS } from '@/lib/export'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { QueryError } from '@/components/ui/QueryError'
+import { Pagination } from '@/components/ui/Pagination'
+import { TableRowSkeleton } from '@/components/ui/Skeleton'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { TrashPanel } from '@/components/ui/TrashPanel'
+import { usePersistentState } from '@/lib/usePersistentState'
 import {
   Plus, Briefcase, Search, Edit2, Trash2, Phone, Download,
   Wallet, Clock, LogIn, LogOut, Printer, Percent, Receipt,
@@ -74,28 +79,21 @@ interface AttendanceRecord {
   hours?: number | null
 }
 
+import { printDocument } from '@/lib/print'
+
 function printPayrollReport(businessName: string, rows: PayrollPayment[], currency: string) {
   const total = rows.reduce((sum, r) => sum + r.totalAmount, 0)
   const body = rows.map(r => `
-    <tr>
-      <td>${r.employee.name}</td>
-      <td>${r.period}</td>
-      <td>${new Date(r.paidAt).toLocaleDateString('es-DO')}</td>
-      <td class="r">${formatCurrency(r.baseSalary, currency)}</td>
-      <td class="r">${formatCurrency(r.commissionAmount, currency)}</td>
-      <td class="r">${formatCurrency(r.totalAmount, currency)}</td>
-    </tr>
+    <tr><td>${r.employee.name}</td><td>${r.period}</td><td>${new Date(r.paidAt).toLocaleDateString('es-DO')}</td>
+    <td class="r">${formatCurrency(r.baseSalary, currency)}</td><td class="r">${formatCurrency(r.commissionAmount, currency)}</td><td class="r">${formatCurrency(r.totalAmount, currency)}</td></tr>
   `).join('')
-  const win = window.open('', '_blank', 'width=900,height=700')
-  if (!win) return
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Reporte de nomina</title>
-    <style>body{font-family:Arial;padding:32px;color:#111827}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:18px}th{background:#1e3a8a;color:white;text-align:left;padding:8px;font-size:12px}td{border-bottom:1px solid #e5e7eb;padding:8px;font-size:12px}.r{text-align:right}.total{font-weight:800;background:#f3f4f6}@media print{@page{margin:1.5cm}}</style>
-  </head><body><h1>${businessName} - Reporte de nomina</h1><p>Generado: ${new Date().toLocaleString('es-DO')}</p>
-  <table><thead><tr><th>Empleado</th><th>Periodo</th><th>Pago</th><th class="r">Salario</th><th class="r">Comision</th><th class="r">Total</th></tr></thead><tbody>${body}</tbody>
-  <tfoot><tr><td colspan="5" class="r total">Total pagado</td><td class="r total">${formatCurrency(total, currency)}</td></tr></tfoot></table></body></html>`)
-  win.document.close()
-  win.focus()
-  setTimeout(() => win.print(), 400)
+
+  printDocument({
+    title: 'Reporte de nómina',
+    businessName,
+    body: `<table><thead><tr><th>Empleado</th><th>Periodo</th><th>Pago</th><th class="r">Salario</th><th class="r">Comisión</th><th class="r">Total</th></tr></thead><tbody>${body}</tbody>
+      <tfoot><tr><td colspan="5" class="r total">Total pagado</td><td class="r total">${formatCurrency(total, currency)}</td></tr></tfoot></table>`,
+  })
 }
 
 export function Empleados() {
@@ -110,12 +108,15 @@ export function Empleados() {
   const [payrollOpen, setPayrollOpen] = useState(false)
   const [editing, setEditing] = useState<Employee | null>(null)
   const [paying, setPaying] = useState<Employee | null>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = usePersistentState(`vendix:${bid}:empleados:search`, '')
+  const [showTrash, setShowTrash] = useState(false)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 50
   const [from, setFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [payrollForm, setPayrollForm] = useState({ period: format(new Date(), 'yyyy-MM'), commissionAmount: 0, bonusAmount: 0, deductions: 0, notes: '' })
 
-  const { data: employees = [], isLoading } = useQuery<Employee[]>({
+  const { data: employees = [], isLoading, isError, refetch } = useQuery<Employee[]>({
     queryKey: ['employees', bid],
     queryFn: () => api.get(`/businesses/${bid}/employees`).then(r => r.data),
   })
@@ -213,6 +214,8 @@ export function Empleados() {
     e.name.toLowerCase().includes(search.toLowerCase()) ||
     e.role?.toLowerCase().includes(search.toLowerCase())
   )
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const activeCount = employees.filter(e => e.active).length
   const totalPayroll = employees.filter(e => e.active).reduce((s, e) => s + e.salary, 0)
@@ -257,12 +260,15 @@ export function Empleados() {
         action={
           <div className="flex gap-2">
             <button onClick={handleExportEmployees} className="btn-secondary"><Download size={15} /> Exportar</button>
+            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 border-rose-200 text-rose-700' : ''}`}><Trash2 size={15} /> Papelera</button>
             <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Agregar empleado</button>
           </div>
         }
       />
 
       <div className="p-6 space-y-4">
+        {showTrash && <TrashPanel businessId={bid} queryKey="employees" endpoint="employees" label="Empleado" />}
+
         <div className="card p-2 flex flex-wrap gap-2">
           {([
             ['team', 'Equipo', Briefcase],
@@ -292,13 +298,15 @@ export function Empleados() {
           <>
             <div className="relative">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o cargo..." className="input pl-10" />
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Buscar por nombre o cargo..." className="input pl-10" />
             </div>
             <div className="card overflow-hidden">
               {isLoading ? (
-                <div className="py-20 text-center text-gray-400">Cargando empleados...</div>
+                <TableRowSkeleton rows={5} cols={5} />
+              ) : isError ? (
+                <QueryError onRetry={() => refetch()} />
               ) : filtered.length === 0 ? (
-                <EmptyState icon={Briefcase} title="No hay empleados registrados" description="Agrega los miembros de tu equipo de trabajo" action={<button onClick={openCreate} className="btn-primary">Agregar primer empleado</button>} />
+                <EmptyState icon={Briefcase} tone="rose" title="Aún trabajas solo" description="Agrega a los miembros de tu equipo para controlar accesos, horarios y comisiones" action={<button onClick={openCreate} className="btn-primary">Agregar primer empleado</button>} />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -314,7 +322,7 @@ export function Empleados() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {filtered.map(emp => (
+                      {paged.map(emp => (
                         <tr key={emp.id} className="table-row">
                           <td className="table-cell">
                             <p className="font-semibold text-gray-900">{emp.name}</p>
@@ -338,6 +346,7 @@ export function Empleados() {
                   </table>
                 </div>
               )}
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={filtered.length} label="empleados" />
             </div>
           </>
         )}

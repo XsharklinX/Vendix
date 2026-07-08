@@ -36,6 +36,7 @@ export const QUOTE_STATUS_LABELS: Record<string, { label: string; color: string 
   ACCEPTED: { label: 'Aceptada', color: 'text-green-700 bg-green-50' },
   REJECTED: { label: 'Rechazada', color: 'text-red-700 bg-red-50' },
   EXPIRED: { label: 'Expirada', color: 'text-gray-600 bg-gray-100' },
+  CONVERTED: { label: 'Convertida', color: 'text-blue-700 bg-blue-50' },
 }
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {

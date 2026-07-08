@@ -5,6 +5,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { logAudit } from '../lib/audit'
 import { logger } from '../lib/logger'
+import { recordSyncChange } from '../lib/syncOutbox'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -17,6 +18,7 @@ const clientSchema = z.object({
   address: z.string().optional(),
   isVip: z.boolean().optional().default(false),
   discountRate: z.number().min(0).max(1).optional().default(0),
+  manualTags: z.array(z.string()).optional(),
 })
 
 const noteSchema = z.object({
@@ -56,22 +58,49 @@ function buildSegments(client: {
   return segments
 }
 
+function parseManualTags(value?: string | null): string[] {
+  if (!value) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
 router.get('/', async (req: AuthRequest, res) => {
   try {
     const { businessId } = req.params
     if (!await verifyBusiness(businessId, req.userId!))
       return res.status(403).json({ error: 'Acceso denegado' })
 
+    const { search, page, limit, deleted } = req.query
     const ninetyDaysAgo = new Date()
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
-    const [clients, debtRows, saleRows, recentSaleRows] = await Promise.all([
+    const deletedFilter = deleted === 'only' ? { not: null } : null
+    const clientWhere: Record<string, unknown> = { businessId, deletedAt: deletedFilter }
+    if (search) {
+      clientWhere.OR = [
+        { name: { contains: search as string } },
+        { phone: { contains: search as string } },
+        { document: { contains: search as string } },
+      ]
+    }
+
+    const usePagination = !!page
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1)
+    const pageSize = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 200)
+
+    const [clients, clientTotal, debtRows, saleRows, recentSaleRows] = await Promise.all([
       prisma.client.findMany({
-        where: { businessId },
+        where: clientWhere,
         include: { _count: { select: { transactions: true } } },
         orderBy: { name: 'asc' },
-        take: 500,
+        skip: usePagination ? (pageNum - 1) * pageSize : 0,
+        take: usePagination ? pageSize : 500,
       }),
+      usePagination ? prisma.client.count({ where: clientWhere }) : Promise.resolve(0),
       prisma.transaction.groupBy({
         by: ['clientId'],
         where: { businessId, type: 'SALE', status: 'PENDING', clientId: { not: null } },
@@ -124,20 +153,27 @@ router.get('/', async (req: AuthRequest, res) => {
       const salesLast90Days = recentSalesByClient[c.id] ?? 0
       return {
         ...c,
+        manualTags: parseManualTags(c.manualTags),
         pendingDebt,
         totalSales: saleStats.totalSales,
         lastSaleAt: saleStats.lastSaleAt,
-        segments: buildSegments({
-          isVip: c.isVip,
-          createdAt: c.createdAt,
-          pendingDebt,
-          completedSalesCount: saleStats.completedSalesCount,
-          totalSales: saleStats.totalSales,
-          salesLast90Days,
-          lastSaleAt: saleStats.lastSaleAt,
-        }),
+        segments: [
+          ...buildSegments({
+            isVip: c.isVip,
+            createdAt: c.createdAt,
+            pendingDebt,
+            completedSalesCount: saleStats.completedSalesCount,
+            totalSales: saleStats.totalSales,
+            salesLast90Days,
+            lastSaleAt: saleStats.lastSaleAt,
+          }),
+          ...parseManualTags(c.manualTags),
+        ],
       }
     })
+    if (usePagination) {
+      return res.json({ data: result, total: clientTotal, pages: Math.ceil(clientTotal / pageSize) })
+    }
     return res.json(result)
   } catch (e) {
     logger.error({ err: e }, '[clients] GET /')
@@ -152,8 +188,12 @@ router.post('/', async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Acceso denegado' })
 
     const data = clientSchema.parse(req.body)
-    const client = await prisma.client.create({ data: { ...data, businessId } })
+    const { manualTags, ...clientData } = data
+    const client = await prisma.client.create({
+      data: { ...clientData, manualTags: manualTags ? JSON.stringify(manualTags) : null, businessId },
+    })
     logAudit(req, businessId, 'CREATE', 'CLIENT', client.id, { name: client.name })
+    await recordSyncChange({ businessId, entity: 'client', entityId: client.id, operation: 'UPSERT', payload: client })
     return res.status(201).json(client)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -168,8 +208,13 @@ router.put('/:id', async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Acceso denegado' })
 
     const data = clientSchema.partial().parse(req.body)
-    const client = await prisma.client.update({ where: { id, businessId }, data })
+    const { manualTags, ...clientData } = data
+    const client = await prisma.client.update({
+      where: { id, businessId },
+      data: { ...clientData, manualTags: manualTags ? JSON.stringify(manualTags) : manualTags === undefined ? undefined : null },
+    })
     logAudit(req, businessId, 'UPDATE', 'CLIENT', id, { fields: Object.keys(data) })
+    await recordSyncChange({ businessId, entity: 'client', entityId: client.id, operation: 'UPSERT', payload: client })
     return res.json(client)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -182,9 +227,85 @@ router.delete('/:id', async (req: AuthRequest, res) => {
   if (!await verifyBusiness(businessId, req.userId!))
     return res.status(403).json({ error: 'Acceso denegado' })
 
-  await prisma.client.delete({ where: { id, businessId } })
+  const client = await prisma.client.update({ where: { id, businessId }, data: { deletedAt: new Date() } })
   logAudit(req, businessId, 'DELETE', 'CLIENT', id)
+  await recordSyncChange({ businessId, entity: 'client', entityId: id, operation: 'DELETE', payload: client })
   return res.json({ ok: true })
+})
+
+router.post('/:id/restore', async (req: AuthRequest, res) => {
+  const { businessId, id } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const client = await prisma.client.update({ where: { id, businessId }, data: { deletedAt: null } })
+  logAudit(req, businessId, 'UPDATE', 'CLIENT', id, { restored: true })
+  await recordSyncChange({ businessId, entity: 'client', entityId: client.id, operation: 'UPSERT', payload: client })
+  return res.json({ ok: true })
+})
+
+router.get('/crm/reminders', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const now = new Date()
+  const to = new Date()
+  to.setDate(to.getDate() + 14)
+  const reminders = await prisma.clientNote.findMany({
+    where: {
+      businessId,
+      type: 'REMINDER',
+      completedAt: null,
+      dueAt: { not: null, lte: to },
+    },
+    include: { client: { select: { id: true, name: true, phone: true } } },
+    orderBy: { dueAt: 'asc' },
+    take: 50,
+  })
+  return res.json(reminders.map(r => ({
+    ...r,
+    status: r.dueAt && r.dueAt < now ? 'OVERDUE' : 'OPEN',
+  })))
+})
+
+router.get('/crm/inactive-campaign', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const days = Math.max(parseInt(req.query.days as string, 10) || 60, 1)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const clients = await prisma.client.findMany({
+    where: { businessId, deletedAt: null },
+    include: {
+      transactions: {
+        where: { type: 'SALE', status: 'COMPLETED' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+    orderBy: { name: 'asc' },
+    take: 500,
+  })
+  const rows = clients
+    .map(c => {
+      const lastSale = c.transactions[0]?.createdAt ?? null
+      const daysSinceSale = lastSale ? Math.floor((Date.now() - lastSale.getTime()) / 86_400_000) : null
+      return {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+        manualTags: parseManualTags(c.manualTags),
+        lastSaleAt: lastSale,
+        daysSinceSale,
+      }
+    })
+    .filter(c => !c.lastSaleAt || (c.lastSaleAt && c.lastSaleAt < cutoff))
+
+  return res.json({ days, count: rows.length, clients: rows })
 })
 
 router.get('/:id/timeline', async (req: AuthRequest, res) => {
@@ -365,6 +486,65 @@ router.post('/:id/redeem-points', async (req: AuthRequest, res) => {
     if (e instanceof Error && e.message === 'INSUFFICIENT_POINTS') return res.status(400).json({ error: 'Puntos insuficientes' })
     return res.status(500).json({ error: 'Error interno' })
   }
+})
+
+// ── Lista de precios por cliente ──
+
+router.get('/:id/price-list', async (req: AuthRequest, res) => {
+  const { businessId, id } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const list = await prisma.clientPriceList.findMany({
+    where: { clientId: id, client: { businessId } },
+    include: { product: { select: { id: true, name: true, price: true, barcode: true } } },
+    orderBy: { product: { name: 'asc' } },
+  })
+  return res.json(list)
+})
+
+router.post('/:id/price-list', async (req: AuthRequest, res) => {
+  try {
+    const { businessId, id } = req.params
+    if (!await verifyBusiness(businessId, req.userId!))
+      return res.status(403).json({ error: 'Acceso denegado' })
+
+    const { productId, price } = z.object({
+      productId: z.string().min(1),
+      price: z.coerce.number().min(0),
+    }).parse(req.body)
+
+    const [client, product] = await Promise.all([
+      prisma.client.findFirst({ where: { id, businessId } }),
+      prisma.product.findFirst({ where: { id: productId, businessId } }),
+    ])
+    if (!client) return res.status(404).json({ error: 'Cliente no encontrado' })
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado' })
+
+    const entry = await prisma.clientPriceList.upsert({
+      where: { clientId_productId: { clientId: id, productId } },
+      update: { price },
+      create: { clientId: id, productId, price },
+      include: { product: { select: { id: true, name: true, price: true, barcode: true } } },
+    })
+
+    logAudit(req, businessId, 'UPDATE', 'CLIENT_PRICE_LIST', id, { productId, price })
+    return res.status(201).json(entry)
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
+    logger.error({ err: e }, '[clients] POST /:id/price-list')
+    return res.status(500).json({ error: 'Error interno' })
+  }
+})
+
+router.delete('/:id/price-list/:entryId', async (req: AuthRequest, res) => {
+  const { businessId, id, entryId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  await prisma.clientPriceList.deleteMany({ where: { id: entryId, clientId: id } })
+  logAudit(req, businessId, 'DELETE', 'CLIENT_PRICE_LIST', id, { entryId })
+  return res.json({ ok: true })
 })
 
 export default router

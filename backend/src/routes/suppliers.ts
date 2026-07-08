@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { logger } from '../lib/logger'
+import { recordSyncChange } from '../lib/syncOutbox'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -22,9 +23,11 @@ router.get('/', async (req: AuthRequest, res) => {
     if (!await verifyBusiness(businessId, req.userId!))
       return res.status(403).json({ error: 'Acceso denegado' })
 
+    const deletedFilter = req.query.deleted === 'only' ? { not: null } : null
+
     const [suppliers, debtRows] = await Promise.all([
       prisma.supplier.findMany({
-        where: { businessId },
+        where: { businessId, deletedAt: deletedFilter },
         orderBy: { name: 'asc' },
         take: 500,
       }),
@@ -56,6 +59,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
     const data = supplierSchema.parse(req.body)
     const supplier = await prisma.supplier.create({ data: { ...data, businessId } })
+    await recordSyncChange({ businessId, entity: 'supplier', entityId: supplier.id, operation: 'UPSERT', payload: supplier })
     return res.status(201).json(supplier)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -71,6 +75,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 
     const data = supplierSchema.partial().parse(req.body)
     const supplier = await prisma.supplier.update({ where: { id, businessId }, data })
+    await recordSyncChange({ businessId, entity: 'supplier', entityId: supplier.id, operation: 'UPSERT', payload: supplier })
     return res.json(supplier)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -83,7 +88,18 @@ router.delete('/:id', async (req: AuthRequest, res) => {
   if (!await verifyBusiness(businessId, req.userId!))
     return res.status(403).json({ error: 'Acceso denegado' })
 
-  await prisma.supplier.delete({ where: { id, businessId } })
+  const supplier = await prisma.supplier.update({ where: { id, businessId }, data: { deletedAt: new Date() } })
+  await recordSyncChange({ businessId, entity: 'supplier', entityId: id, operation: 'DELETE', payload: supplier })
+  return res.json({ ok: true })
+})
+
+router.post('/:id/restore', async (req: AuthRequest, res) => {
+  const { businessId, id } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const supplier = await prisma.supplier.update({ where: { id, businessId }, data: { deletedAt: null } })
+  await recordSyncChange({ businessId, entity: 'supplier', entityId: supplier.id, operation: 'UPSERT', payload: supplier })
   return res.json({ ok: true })
 })
 

@@ -6,7 +6,11 @@ import { useAuthStore } from '@/store/auth'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
-import { Plus, Truck, Printer, PackageCheck, AlertTriangle, Send, Trash2 } from 'lucide-react'
+import { Plus, Truck, Printer, PackageCheck, AlertTriangle, Send, Trash2, Download } from 'lucide-react'
+import { exportCSV, EXPORT_COLUMNS } from '@/lib/export'
+import { QueryError } from '@/components/ui/QueryError'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { TableRowSkeleton } from '@/components/ui/Skeleton'
 
 interface Supplier { id: string; name: string }
 interface Product { id: string; name: string; quantity: number; cost: number; price: number; category?: { name: string } }
@@ -30,30 +34,22 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelada',
 }
 
+import { printDocument } from '@/lib/print'
+
 function printOrder(order: PurchaseOrder, businessName: string, currency: string) {
   const rows = order.items.map(item => `
-    <tr>
-      <td>${item.name}</td>
-      <td class="r">${item.quantity}</td>
-      <td class="r">${formatCurrency(item.cost, currency)}</td>
-      <td class="r">${formatCurrency(item.quantity * item.cost, currency)}</td>
-    </tr>
+    <tr><td>${item.name}</td><td class="r">${item.quantity}</td><td class="r">${formatCurrency(item.cost, currency)}</td><td class="r">${formatCurrency(item.quantity * item.cost, currency)}</td></tr>
   `).join('')
-  const win = window.open('', '_blank', 'width=900,height=700')
-  if (!win) return
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Orden de compra ${order.number}</title>
-    <style>body{font-family:Arial;padding:32px;color:#111827}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#0f766e;color:white;text-align:left;padding:8px;font-size:12px}td{border-bottom:1px solid #e5e7eb;padding:8px;font-size:12px}.r{text-align:right}.meta{color:#6b7280;font-size:12px}.total{font-weight:800;background:#f3f4f6}@media print{@page{margin:1.5cm}}</style>
-  </head><body>
-    <h1>${businessName} - Orden de compra #${order.number}</h1>
-    <p class="meta">Proveedor: ${order.supplier?.name ?? 'Sin proveedor'} · Fecha: ${new Date(order.createdAt).toLocaleDateString('es-DO')}</p>
-    <p class="meta">Estado: ${STATUS_LABELS[order.status] ?? order.status}</p>
-    <table><thead><tr><th>Producto</th><th class="r">Cantidad</th><th class="r">Costo</th><th class="r">Subtotal</th></tr></thead><tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="3" class="r total">Total</td><td class="r total">${formatCurrency(order.total, currency)}</td></tr></tfoot></table>
-    ${order.notes ? `<p><strong>Notas:</strong> ${order.notes}</p>` : ''}
-  </body></html>`)
-  win.document.close()
-  win.focus()
-  setTimeout(() => win.print(), 400)
+
+  printDocument({
+    title: `Orden de compra #${order.number}`,
+    businessName,
+    subtitle: `Proveedor: ${order.supplier?.name ?? 'Sin proveedor'} · Fecha: ${new Date(order.createdAt).toLocaleDateString('es-DO')} · Estado: ${STATUS_LABELS[order.status] ?? order.status}`,
+    body: `<table><thead><tr><th>Producto</th><th class="r">Cantidad</th><th class="r">Costo</th><th class="r">Subtotal</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="3" class="r total">Total</td><td class="r total">${formatCurrency(order.total, currency)}</td></tr></tfoot></table>
+      ${order.notes ? `<p><strong>Notas:</strong> ${order.notes}</p>` : ''}`,
+    css: 'th { background: #0f766e; }',
+  })
 }
 
 export function OrdenesCompra() {
@@ -69,7 +65,7 @@ export function OrdenesCompra() {
   const [items, setItems] = useState<Array<{ productId: string; quantity: number; cost: number }>>([])
   const [receiveQty, setReceiveQty] = useState<Record<string, number>>({})
 
-  const { data: orders = [] } = useQuery<PurchaseOrder[]>({
+  const { data: orders = [], isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useQuery<PurchaseOrder[]>({
     queryKey: ['purchase-orders', bid],
     queryFn: () => api.get(`/businesses/${bid}/purchase-orders`).then(r => r.data),
   })
@@ -157,7 +153,18 @@ export function OrdenesCompra() {
         title="Ordenes de compra"
         subtitle="Planifica compras, recibe mercancia y actualiza inventario"
         icon={<Truck size={18} className="text-teal-500" />}
-        action={<button onClick={() => setCreateOpen(true)} className="btn-primary"><Plus size={16} /> Crear orden</button>}
+        action={
+          <div className="flex gap-2">
+            {orders.length > 0 && (
+              <button onClick={() => {
+                const rows = orders.map(o => ({ ...o, orderNumber: `OC-${String(o.number).padStart(4, '0')}`, supplierName: o.supplier?.name ?? '', date: formatDateTime(o.createdAt) }))
+                exportCSV('ordenes-compra', rows, EXPORT_COLUMNS.ordenesCompra)
+                toast.success('Órdenes exportadas como CSV')
+              }} className="btn-secondary"><Download size={16} /> Exportar</button>
+            )}
+            <button onClick={() => setCreateOpen(true)} className="btn-primary"><Plus size={16} /> Crear orden</button>
+          </div>
+        }
       />
 
       <div className="p-6 space-y-4">
@@ -178,6 +185,13 @@ export function OrdenesCompra() {
         )}
 
         <div className="card overflow-hidden">
+          {ordersLoading ? (
+            <TableRowSkeleton rows={5} cols={6} />
+          ) : ordersError ? (
+            <QueryError onRetry={() => refetchOrders()} />
+          ) : orders.length === 0 ? (
+            <EmptyState icon={Truck} tone="teal" title="Sin órdenes de compra" description="Crea una orden para planificar tus compras a proveedores" action={<button onClick={() => setCreateOpen(true)} className="btn-primary">Crear orden</button>} />
+          ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -209,6 +223,7 @@ export function OrdenesCompra() {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       </div>
 

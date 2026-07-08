@@ -1,56 +1,113 @@
+<div align="center">
+
+<img src="docs/icon.png" width="88" alt="Vendix">
+
 # Vendix
 
-<p align="center">
-  <strong>POS, inventario, finanzas y CRM para pequenos negocios.</strong><br>
-  Una plataforma de gestion comercial disenada para operar con claridad desde el primer dia.
-</p>
+**El sistema de ventas que no te obliga a buscar un tutorial.**
 
-<p align="center">
-  <a href="https://xsharklinx.github.io/Vendix/"><strong>Ver sitio web</strong></a>
-  ·
-  <a href="docs/README.md">Documentacion</a>
-  ·
-  <a href="DEPLOY.md">Despliegue</a>
-</p>
+POS, inventario, caja, facturación NCF, nómina y CRM — en una sola app, pensada para negocios dominicanos que necesitan vender rápido y confiar en sus números.
 
-<p align="center">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square">
-  <img alt="React" src="https://img.shields.io/badge/React-18-149ECA?style=flat-square">
-  <img alt="Express" src="https://img.shields.io/badge/Express-Node.js-101828?style=flat-square">
-  <img alt="Prisma" src="https://img.shields.io/badge/Prisma-SQLite-2D3748?style=flat-square">
-  <img alt="Electron" src="https://img.shields.io/badge/Desktop-Electron-47848F?style=flat-square">
-</p>
+[**Descargar para Windows**](https://github.com/XsharklinX/Vendix/releases/latest) · [Sitio web](https://xsharklinx.github.io/Vendix/) · [Documentación](docs/README.md) · [Reportar un problema](https://github.com/XsharklinX/Vendix/issues)
+
+<br>
+
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-18-149ECA?style=flat-square&logo=react&logoColor=white)
+![Express](https://img.shields.io/badge/Express-4-101828?style=flat-square&logo=express&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?style=flat-square&logo=prisma&logoColor=white)
+![Electron](https://img.shields.io/badge/Electron-31-47848F?style=flat-square&logo=electron&logoColor=white)
+![License](https://img.shields.io/badge/Licencia-MIT-green?style=flat-square)
+
+</div>
 
 ---
 
-## Que es Vendix
+## Por qué existe Vendix
 
-Vendix centraliza la operacion diaria de un pequeno negocio: ventas, inventario, caja, cuentas por cobrar, proveedores, nomina, facturacion y seguimiento de clientes. Puede ejecutarse como aplicacion web o como instalador de escritorio para Windows.
+La mayoría de los sistemas de venta para negocios pequeños en Latinoamérica te obligan a elegir: o son tan simples que se te quedan cortos apenas creces (necesitas facturar con NCF, llevar inventario real, pagar empleados), o son tan complejos que necesitas un curso para usarlos.
 
-El objetivo es reducir hojas de calculo, registros duplicados y decisiones tomadas sin contexto. Cada venta alimenta inventario, caja, reportes y CRM desde un mismo flujo.
+Vendix apuesta a que no hace falta elegir. La primera venta se siente tan simple como anotar en una libreta — y cuando el negocio crece, ahí está el kardex, la nómina, las órdenes de compra y la facturación fiscal, sin que tengas que migrar a otro sistema ni aprender algo nuevo desde cero.
 
-## Capacidades
+Y funciona **aunque se vaya la luz o el internet**. Las ventas se guardan localmente y se sincronizan solas cuando vuelve la conexión — porque un negocio real no se puede dar el lujo de parar de vender por eso.
 
-| Area | Incluye |
-|---|---|
-| Punto de venta | Carrito, descuentos, efectivo, tarjeta, transferencia, credito, recibos e impresion |
-| Inventario | Productos, categorias, costos, margenes, alertas de stock bajo y reabastecimiento |
-| Caja y finanzas | Apertura/cierre, movimientos, gastos, ingresos, compras, devoluciones y reportes |
-| Clientes | Cuentas por cobrar, aging de deuda, estados de cuenta y seguimiento comercial |
-| CRM y fidelizacion | Timeline, notas, recordatorios, puntos, canjes y segmentos automaticos |
-| Compras | Proveedores, ordenes de compra, estados y recepcion parcial de mercancia |
-| Equipo | Empleados, nomina, comisiones por venta y asistencia |
-| Facturacion | Logo, datos fiscales, NCF, numeracion propia, plantillas y envio por email |
-| Gestion | Multi-negocio, roles, auditoria, backups, notificaciones y asistente IA |
+---
 
-## Inicio rapido
+## Contenido
+
+- [Qué incluye](#qué-incluye)
+- [Cómo se ve](#cómo-se-ve)
+- [Empezar en 5 minutos](#empezar-en-5-minutos)
+- [Formas de usarlo](#formas-de-usarlo)
+- [Arquitectura](#arquitectura)
+- [Stack técnico](#stack-técnico)
+- [Nube y sincronización](#nube-y-sincronización-en-desarrollo)
+- [Hoja de ruta](#hoja-de-ruta)
+- [Solución de problemas](#solución-de-problemas)
+- [Contribuir](#contribuir)
+- [Licencia](#licencia)
+
+---
+
+## Qué incluye
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Punto de venta**
+Carrito rápido, código de barras, descuentos por producto o negocio, precios por volumen y por cliente VIP, cobro en efectivo/tarjeta/transferencia/crédito, cambio calculado en denominaciones reales, atajos de teclado, sonidos de confirmación, y cola de ventas offline.
+
+**Inventario**
+Productos, categorías, costos y márgenes, kardex completo de movimientos, alertas de stock bajo por producto o globales, ajustes manuales con motivo, historial de precios, importación por CSV.
+
+**Caja y finanzas**
+Apertura y cierre de turno con usuario responsable, movimientos de ingresos y gastos, devoluciones, reportes de cierre diario (Z), reportes fiscales 606/607.
+
+</td>
+<td width="50%" valign="top">
+
+**Clientes y fidelización**
+Cuentas por cobrar con antigüedad de deuda, recordatorios directos por WhatsApp, timeline por cliente, notas y recordatorios, puntos de fidelidad, segmentos automáticos (VIP, frecuente, en riesgo).
+
+**Compras y proveedores**
+Órdenes de compra con recepción parcial, alertas de reorden, historial de proveedores y deuda pendiente.
+
+**Equipo**
+Empleados con roles (dueño / cajero), nómina, comisiones por venta, control de asistencia.
+
+**Facturación**
+NCF para República Dominicana, numeración propia, tres plantillas de recibo, envío de documentos por correo, logo y datos fiscales del negocio.
+
+</td>
+</tr>
+</table>
+
+Todo conectado: una venta descuenta inventario, alimenta la caja, suma puntos al cliente y aparece en los reportes — sin doble captura de datos.
+
+---
+
+## Cómo se ve
+
+<div align="center">
+
+*Vista previa completa disponible en el [sitio web](https://xsharklinx.github.io/Vendix/)*
+
+</div>
+
+---
+
+## Empezar en 5 minutos
 
 ### Requisitos
 
 - Node.js 18 o superior
 - npm 9 o superior
 
-### Instalacion
+<details>
+<summary><strong>Instalación para desarrollo</strong></summary>
+
+<br>
 
 ```bash
 git clone https://github.com/XsharklinX/Vendix.git
@@ -59,33 +116,59 @@ npm run setup
 npm run dev
 ```
 
-Durante desarrollo:
+Esto levanta backend y frontend en paralelo:
 
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3001`
-- API docs: `http://localhost:3001/api/docs`
+| Servicio | URL |
+|---|---|
+| Aplicación web | `http://localhost:5173` |
+| API | `http://localhost:3100` |
+| Documentación interactiva de la API (Swagger) | `http://localhost:3100/api/docs` |
 
-Antes de usar datos reales, cambia `JWT_SECRET` en `backend/.env`:
+Antes de manejar datos reales, genera un `JWT_SECRET` propio en `backend/.env`:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
-## Comandos principales
+</details>
+
+<details>
+<summary><strong>Modo escritorio (Electron)</strong></summary>
+
+<br>
 
 ```bash
-npm run dev              # Frontend y backend en paralelo
-npm run build:backend    # Compila la API TypeScript
-npm run build:frontend   # Compila la aplicacion React
-npm run build            # Build completo para escritorio
-npm run dist             # Genera instalador Windows
-npm run dist:portable    # Genera ejecutable portable
-npm run release:github   # Publica instalador y latest.yml en GitHub Releases
+npm run dev:electron
 ```
 
-Los pushes de codigo a `main` publican automaticamente una nueva release de Windows si el build completo termina correctamente. Consulta [Releases y auto-update](docs/releases-and-auto-update.md) para el flujo detallado.
+Abre la app como ventana nativa, con el backend embebido — así se distribuye la versión de producción.
 
-Para sincronizar el schema local:
+</details>
+
+<details>
+<summary><strong>Generar el instalador de Windows</strong></summary>
+
+<br>
+
+```bash
+npm run build       # compila backend + frontend + electron
+npm run dist        # genera el instalador .exe
+npm run dist:portable   # genera versión portable, sin instalación
+```
+
+Los pushes a `main` publican automáticamente una nueva release si el build completo pasa. Ver [releases y auto-actualización](docs/releases-and-auto-update.md).
+
+</details>
+
+### Comandos frecuentes
+
+```bash
+npm run dev              # Desarrollo: frontend + backend
+npm run build            # Build completo de producción
+npm run dist              # Instalador de Windows
+```
+
+Para sincronizar el esquema de base de datos tras un cambio:
 
 ```bash
 cd backend
@@ -93,96 +176,100 @@ npx prisma generate
 npx prisma db push
 ```
 
-## Solucion de problemas
+---
 
-### El instalador de Windows no abre o falla con error 0xc0000005
+## Formas de usarlo
 
-El instalador (`Vendix-Setup-x.x.x.exe`) y el ejecutable portable no estan firmados digitalmente. Windows Defender u otro antivirus puede poner en cuarentena o modificar el archivo despues de generarlo, lo que corrompe el binario y provoca el error `0xc0000005` al abrirlo.
+| Escenario | Cómo funciona |
+|---|---|
+| **Un solo negocio, una computadora** | Instalador de escritorio para Windows. Todo local, cero configuración de red. |
+| **Varios puntos de venta en el mismo local** | Backend accesible por la red Wi-Fi del negocio; cada caja se conecta como cliente. |
+| **Acceso remoto o multi-sucursal** | Backend desplegado en la nube (ver sección siguiente). |
 
-Para evitarlo:
-
-1. Revisa el historial de protección de Windows Defender (`Seguridad de Windows > Protección antivirus y contra amenazas > Historial de protección`) y restaura el archivo si fue puesto en cuarentena.
-2. Agrega una exclusion para la carpeta de salida antes de generar el build:
-
-```powershell
-Add-MpPreference -ExclusionPath "E:\Programacion\Vendix\release"
-```
-
-3. Vuelve a ejecutar `npm run dist` o `npm run dist:portable`.
-4. Verifica que el hash del instalador coincida con el registrado en `release/latest.yml` antes de distribuirlo.
+---
 
 ## Arquitectura
 
 ```text
 Vendix/
-|-- backend/         API Express, Prisma y SQLite
-|-- frontend/        React, Vite y Tailwind CSS
-|-- electron/        Shell de escritorio para Windows
-|-- scripts/         Helpers de build y base inicial
-|-- docs/            Landing de GitHub Pages y documentacion tecnica
-|-- DEPLOY.md        Guia de despliegue
-`-- README.md
+├── backend/          API en Express + Prisma, 16 módulos de rutas, SQLite local
+├── frontend/          React 18 + Vite + Tailwind, 18 pantallas
+├── electron/          Shell de escritorio para Windows con auto-actualización
+├── scripts/           Utilidades de build y generación de base semilla
+├── docs/               Sitio público (GitHub Pages) y documentación técnica
+└── DEPLOY.md           Guía de despliegue
 ```
 
-| Capa | Tecnologia |
+| Capa | Tecnología |
 |---|---|
-| Frontend | React 18, Vite, TypeScript, Tailwind CSS |
-| Estado | TanStack Query, Zustand |
-| Backend | Node.js, Express, TypeScript |
-| Datos | Prisma ORM, SQLite |
-| Desktop | Electron |
-| Seguridad | JWT, bcrypt, rate limiting, auditoria |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Zustand, TanStack Query |
+| Backend | Node.js, Express, TypeScript, Zod |
+| Base de datos | Prisma ORM sobre SQLite (local) o PostgreSQL (nube) |
+| Escritorio | Electron con actualizaciones automáticas |
+| Seguridad | JWT, bcrypt, rate limiting, CSP, auditoría de acciones |
 
-## Formas de uso
+La documentación técnica completa está en [`docs/`](docs/README.md): arquitectura, esquema de base de datos, referencia de la API, autenticación y variables de entorno.
 
-| Modalidad | Uso recomendado |
+---
+
+## Nube y sincronización (en desarrollo)
+
+Vendix nació **local-first** — la app funciona completa sin depender de internet. Sobre esa base, se está construyendo una capa opcional de nube para quienes quieran respaldo automático y acceso desde varios dispositivos, sin tocar la experiencia local de nadie que no la necesite.
+
+- Backend cloud ya desplegado y en funcionamiento (Railway + PostgreSQL/Neon)
+- Sistema de licencias con plan gratuito completo y plan Pro opcional
+- Sincronización incremental entre dispositivos — en construcción
+
+El plan detallado está en [`docs/roadmap-saas.md`](docs/roadmap-saas.md).
+
+---
+
+## Hoja de ruta
+
+El desarrollo de Vendix se organiza en tres frentes, documentados a fondo:
+
+| Documento | Enfoque |
 |---|---|
-| Escritorio Windows | Un negocio que opera en una computadora y prioriza simplicidad |
-| Red local | Varias computadoras o tablets conectadas al mismo Wi-Fi |
-| Cloud | Acceso remoto desde diferentes ubicaciones y dispositivos |
+| [`docs/roadmap-v3.md`](docs/roadmap-v3.md) | Calidad técnica: accesibilidad, rendimiento, pruebas automatizadas |
+| [`docs/roadmap-saas.md`](docs/roadmap-saas.md) | Infraestructura en la nube, sincronización y suscripciones |
+| [`docs/roadmap-diferenciacion.md`](docs/roadmap-diferenciacion.md) | Producto y experiencia: por qué Vendix debería ser la mejor opción para un negocio dominicano |
 
-Consulta [DEPLOY.md](DEPLOY.md) antes de publicar una instancia. SQLite funciona bien en escritorio y red local; para un despliegue cloud serio conviene definir almacenamiento persistente o migrar a PostgreSQL.
+---
 
-## Estado del producto
+## Solución de problemas
 
-Vendix esta en desarrollo activo. Las funciones principales estan operativas, pero existen mejoras planificadas:
+<details>
+<summary><strong>El instalador de Windows no abre o falla con error 0xc0000005</strong></summary>
 
-- Generacion de PDF binario server-side para facturas y estados de cuenta.
-- Aplicacion directa de canjes de puntos dentro del POS.
-- Integracion de recordatorios CRM en Planner.
-- Experiencia PWA y responsive movil dedicada.
-- Hardening adicional para produccion cloud.
+<br>
 
-El detalle se mantiene en [docs/roadmap-progress.md](docs/roadmap-progress.md).
+El instalador y el ejecutable portable aún no están firmados digitalmente. Windows Defender puede poner el archivo en cuarentena o modificarlo, corrompiendo el binario.
 
-## GitHub Pages
+1. Revisa `Seguridad de Windows → Protección antivirus y contra amenazas → Historial de protección` y restaura el archivo si fue puesto en cuarentena.
+2. Excluye la carpeta de salida antes de generar el build:
+   ```powershell
+   Add-MpPreference -ExclusionPath "E:\Programacion\Vendix\release"
+   ```
+3. Vuelve a ejecutar `npm run dist`.
+4. Verifica que el hash del instalador coincida con el de `release/latest.yml` antes de distribuirlo.
 
-La landing publica vive en `docs/`. Para publicarla:
+</details>
 
-1. Abre `Settings > Pages` en GitHub.
-2. En `Build and deployment`, selecciona `Deploy from a branch`.
-3. Selecciona la rama principal y la carpeta `/docs`.
-4. Guarda la configuracion.
-
-## Documentacion
-
-- [Arquitectura](docs/architecture.md)
-- [Referencia API](docs/api-reference.md)
-- [Seguridad](docs/auth-security.md)
-- [Base de datos](docs/database.md)
-- [Configuracion de entorno](docs/env-configuration.md)
-- [Roadmap implementado](docs/roadmap-progress.md)
-- [Releases y auto-update](docs/releases-and-auto-update.md)
+---
 
 ## Contribuir
 
-Antes de proponer cambios:
+Antes de proponer un cambio:
 
-1. Ejecuta `npm run build:backend`.
-2. Ejecuta `npm run build:frontend`.
-3. Evita romper los flujos existentes de venta, inventario, caja y cuentas por cobrar.
-4. Documenta cualquier cambio de schema o variable de entorno.
+1. Corre `npm run build:backend` y `npm run build:frontend` — deben pasar sin errores.
+2. No rompas los flujos existentes de venta, caja, inventario o cuentas por cobrar.
+3. Si tocas el esquema de base de datos o una variable de entorno, documéntalo.
+4. Describe el *por qué* del cambio, no solo el *qué* — ayuda a mantener el criterio del proyecto con el tiempo.
 
 ## Licencia
 
-Este repositorio se publica bajo licencia MIT.
+MIT © 2026 [XsharklinX](https://github.com/XsharklinX) — ver [`LICENSE`](LICENSE).
+
+<div align="center">
+<sub>Hecho para negocios que no tienen tiempo que perder.</sub>
+</div>

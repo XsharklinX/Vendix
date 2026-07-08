@@ -690,4 +690,173 @@ router.get('/by-employee', async (req: AuthRequest, res) => {
   })
 })
 
+router.get('/profitability', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const { from, to, groupBy = 'product' } = req.query
+  const createdAt: Record<string, unknown> = {}
+  if (from) createdAt.gte = new Date(from as string)
+  if (to) {
+    const d = new Date(to as string); d.setHours(23, 59, 59, 999)
+    createdAt.lte = d
+  }
+
+  const sales = await prisma.transaction.findMany({
+    where: {
+      businessId,
+      type: 'SALE',
+      status: 'COMPLETED',
+      ...(Object.keys(createdAt).length ? { createdAt } : {}),
+    },
+    include: {
+      items: true,
+      client: { select: { id: true, name: true } },
+    },
+  })
+
+  if (groupBy === 'client') {
+    const byClient = new Map<string, { id: string; name: string; sales: number; cost: number; profit: number; count: number }>()
+    for (const sale of sales) {
+      const id = sale.client?.id ?? 'sin-cliente'
+      const name = sale.client?.name ?? 'Consumidor final'
+      const cost = sale.items.reduce((s, item) => s + item.cost * item.quantity, 0)
+      const current = byClient.get(id) ?? { id, name, sales: 0, cost: 0, profit: 0, count: 0 }
+      current.sales += sale.amount
+      current.cost += cost
+      current.profit += sale.amount - cost
+      current.count++
+      byClient.set(id, current)
+    }
+    const rows = Array.from(byClient.values()).sort((a, b) => b.profit - a.profit)
+    return res.json({
+      groupBy: 'client',
+      rows: rows.map(r => ({ ...r, margin: r.sales > 0 ? (r.profit / r.sales) * 100 : 0 })),
+      totals: rows.reduce((acc, r) => ({
+        sales: acc.sales + r.sales,
+        cost: acc.cost + r.cost,
+        profit: acc.profit + r.profit,
+        count: acc.count + r.count,
+      }), { sales: 0, cost: 0, profit: 0, count: 0 }),
+    })
+  }
+
+  const byProduct = new Map<string, { id: string; name: string; quantity: number; sales: number; cost: number; profit: number }>()
+  for (const sale of sales) {
+    for (const item of sale.items) {
+      const id = item.productId ?? item.name
+      const current = byProduct.get(id) ?? { id, name: item.name, quantity: 0, sales: 0, cost: 0, profit: 0 }
+      const revenue = item.price * item.quantity
+      const cost = item.cost * item.quantity
+      current.quantity += item.quantity
+      current.sales += revenue
+      current.cost += cost
+      current.profit += revenue - cost
+      byProduct.set(id, current)
+    }
+  }
+  const rows = Array.from(byProduct.values()).sort((a, b) => b.profit - a.profit)
+  return res.json({
+    groupBy: 'product',
+    rows: rows.map(r => ({ ...r, margin: r.sales > 0 ? (r.profit / r.sales) * 100 : 0 })),
+    totals: rows.reduce((acc, r) => ({
+      sales: acc.sales + r.sales,
+      cost: acc.cost + r.cost,
+      profit: acc.profit + r.profit,
+      quantity: acc.quantity + r.quantity,
+    }), { sales: 0, cost: 0, profit: 0, quantity: 0 }),
+  })
+})
+
+router.get('/aging-receivables', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const pending = await prisma.transaction.findMany({
+    where: { businessId, type: 'SALE', status: 'PENDING' },
+    include: { client: { select: { id: true, name: true, phone: true, document: true } } },
+    orderBy: { createdAt: 'asc' },
+  })
+  const now = Date.now()
+  const rows = pending.map(t => {
+    const days = Math.max(0, Math.floor((now - t.createdAt.getTime()) / 86_400_000))
+    const bucket = days <= 30 ? '0-30' : days <= 60 ? '31-60' : days <= 90 ? '61-90' : '90+'
+    return {
+      id: t.id,
+      clientId: t.client?.id ?? null,
+      clientName: t.client?.name ?? 'Sin cliente',
+      phone: t.client?.phone ?? '',
+      document: t.client?.document ?? '',
+      invoiceNumber: t.invoiceNumber ?? '',
+      date: t.createdAt.toISOString().slice(0, 10),
+      amount: t.amount,
+      days,
+      bucket,
+    }
+  })
+  const buckets = ['0-30', '31-60', '61-90', '90+'].reduce((acc, bucket) => {
+    const items = rows.filter(r => r.bucket === bucket)
+    acc[bucket] = { count: items.length, total: items.reduce((s, r) => s + r.amount, 0) }
+    return acc
+  }, {} as Record<string, { count: number; total: number }>)
+  return res.json({ rows, buckets, total: rows.reduce((s, r) => s + r.amount, 0), count: rows.length })
+})
+
+router.get('/fiscal-summary', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const { month } = req.query
+  const target = month ? new Date((month as string) + '-01') : new Date()
+  const from = new Date(target.getFullYear(), target.getMonth(), 1)
+  const to = new Date(target.getFullYear(), target.getMonth() + 1, 0, 23, 59, 59, 999)
+  const transactions = await prisma.transaction.findMany({
+    where: { businessId, type: 'SALE', createdAt: { gte: from, lte: to } },
+    include: { client: { select: { name: true, document: true } } },
+    orderBy: { createdAt: 'asc' },
+  })
+  const completed = transactions.filter(t => t.status === 'COMPLETED')
+  const cancelled = transactions.filter(t => t.status === 'CANCELLED')
+  const rows = transactions.map(t => ({
+    date: t.createdAt.toISOString().slice(0, 10),
+    status: t.status,
+    invoiceNumber: t.invoiceNumber ?? '',
+    ncf: t.ncfNumber ?? '',
+    clientName: t.client?.name ?? 'Consumidor final',
+    document: t.client?.document ?? '',
+    amount: t.amount,
+    taxAmount: t.taxAmount ?? 0,
+    taxableAmount: t.amount - (t.taxAmount ?? 0),
+  }))
+  return res.json({
+    month: from.toISOString().slice(0, 7),
+    rows,
+    totals: {
+      sales: completed.reduce((s, t) => s + t.amount, 0),
+      tax: completed.reduce((s, t) => s + (t.taxAmount ?? 0), 0),
+      taxable: completed.reduce((s, t) => s + t.amount - (t.taxAmount ?? 0), 0),
+      ncfCount: completed.filter(t => !!t.ncfNumber).length,
+      invoiceCount: completed.length,
+      cancelledCount: cancelled.length,
+      cancelledAmount: cancelled.reduce((s, t) => s + t.amount, 0),
+    },
+  })
+})
+
+router.get('/daily-close-snapshots', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const snapshots = await prisma.dailyCloseSnapshot.findMany({
+    where: { businessId },
+    orderBy: { date: 'desc' },
+    take: 60,
+  })
+  return res.json(snapshots)
+})
+
 export default router

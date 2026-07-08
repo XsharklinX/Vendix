@@ -1,0 +1,3 @@
+ALTER TABLE "User" ADD COLUMN "permissions" TEXT;
+ALTER TABLE "User" ADD COLUMN "disabledAt" DATETIME;
+ALTER TABLE "User" ADD COLUMN "lastLoginAt" DATETIME;

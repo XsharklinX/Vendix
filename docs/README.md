@@ -1,6 +1,6 @@
-# Vendix (FinanzasPro) — Documentación Oficial
+# Vendix — Documentación Oficial
 
-> Versión 1.1.0 · Express + Prisma + React + Electron · Windows
+> v2.5 · Express + Prisma + React + Electron · Windows
 
 Vendix es un sistema de gestión de ventas, inventario y contabilidad diseñado para pequeños negocios en Latinoamérica. Funciona tanto como aplicación web como aplicación de escritorio Windows. Incluye soporte nativo para los requerimientos fiscales de República Dominicana (NCF, ITBIS).
 
@@ -16,9 +16,12 @@ Vendix es un sistema de gestión de ventas, inventario y contabilidad diseñado 
 | [auth-security.md](auth-security.md) | Autenticación JWT, roles, middleware, rate limiting, plan limits |
 | [features.md](features.md) | Todas las funcionalidades de usuario explicadas en detalle |
 | [frontend.md](frontend.md) | Estructura React, páginas, componentes, estado global, hooks |
-| [integrations.md](integrations.md) | Stripe, Twilio WhatsApp, Email (Resend/SMTP), Swagger |
+| [integrations.md](integrations.md) | WhatsApp (enlaces directos), Email (Resend/SMTP), Swagger |
 | [build-deploy.md](build-deploy.md) | Scripts de desarrollo, build de producción, Electron, distribución |
 | [env-configuration.md](env-configuration.md) | Todas las variables de entorno explicadas |
+| [roadmap-v3.md](roadmap-v3.md) | Roadmap técnico: accesibilidad, rendimiento, pruebas |
+| [roadmap-saas.md](roadmap-saas.md) | Roadmap de nube, sincronización y suscripciones |
+| [roadmap-diferenciacion.md](roadmap-diferenciacion.md) | Roadmap de producto y experiencia de usuario |
 
 ---
 
@@ -36,17 +39,17 @@ npm run dev:electron
 ```
 
 Acceso web: `http://localhost:5173`  
-API: `http://localhost:3001/api`  
-Swagger UI: `http://localhost:3001/api/docs`
+API: `http://localhost:3100/api`  
+Swagger UI: `http://localhost:3100/api/docs`
 
 ---
 
 ## Arquitectura en una línea
 
 ```
-frontend (React/Vite :5173)  ──HTTP──►  backend (Express :3001)  ──Prisma──►  SQLite
+frontend (React/Vite :5173)  ──HTTP──►  backend (Express :3100)  ──Prisma──►  SQLite / PostgreSQL
                                                │
-                              electron/src/main.ts (desktop shell)
+                              electron/main.ts (desktop shell)
 ```
 
 ---
@@ -65,4 +68,4 @@ frontend (React/Vite :5173)  ──HTTP──►  backend (Express :3001)  ─�
 
 ## Licencia
 
-ISC © 2025 FinanzasPro / Vendix
+MIT © 2026 XsharklinX / Vendix

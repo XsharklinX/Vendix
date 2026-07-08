@@ -12,6 +12,7 @@ import {
 } from '../lib/email'
 import { logAudit } from '../lib/audit'
 import { logger } from '../lib/logger'
+import { DEFAULT_CASHIER_PERMISSIONS, parsePermissions, serializePermissions } from '../lib/permissions'
 
 const router = Router()
 
@@ -34,6 +35,7 @@ const staffSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   businessId: z.string(),
+  permissions: z.array(z.string()).optional(),
 })
 
 // ── Register ─────────────────────────────────────────────────────────────────
@@ -91,9 +93,18 @@ router.post('/login', async (req, res) => {
       include: { businesses: true },
     })
     if (!user) return res.status(400).json({ error: 'Credenciales incorrectas' })
+    if (user.disabledAt) return res.status(403).json({ error: 'Usuario inactivo. Contacta al administrador.' })
 
     const valid = await bcrypt.compare(data.password, user.password)
     if (!valid) return res.status(400).json({ error: 'Credenciales incorrectas' })
+
+    // En el servidor cloud el email verificado es obligatorio (en el desktop
+    // local no: el usuario es dueño de su propia instalación).
+    if (process.env.VENDIX_CLOUD_MODE === 'true' && !user.emailVerified) {
+      return res.status(403).json({ error: 'Verifica tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.' })
+    }
+
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
 
     const token = signToken({ userId: user.id, email: user.email, role: user.role })
 
@@ -101,6 +112,7 @@ router.post('/login', async (req, res) => {
       id: user.id, name: user.name, email: user.email,
       role: user.role, emailVerified: user.emailVerified,
       onboardingCompleted: user.onboardingCompleted,
+      permissions: parsePermissions(user.permissions),
     }
 
     if (user.role === 'CASHIER') {
@@ -266,12 +278,14 @@ router.post('/staff', authMiddleware, async (req: AuthRequest, res) => {
         password: hashed,
         role: 'CASHIER',
         staffOf: data.businessId,
+        permissions: serializePermissions(data.permissions ?? DEFAULT_CASHIER_PERMISSIONS),
         emailVerified: true,
       },
     })
 
     return res.status(201).json({
       id: staff.id, name: staff.name, email: staff.email, role: staff.role,
+      permissions: parsePermissions(staff.permissions),
     })
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -287,9 +301,12 @@ router.get('/staff/:businessId', authMiddleware, async (req: AuthRequest, res) =
 
     const staff = await prisma.user.findMany({
       where: { staffOf: businessId, role: 'CASHIER' },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, permissions: true, disabledAt: true, lastLoginAt: true, createdAt: true },
     })
-    return res.json(staff)
+    return res.json(staff.map(user => ({
+      ...user,
+      permissions: parsePermissions(user.permissions),
+    })))
   } catch {
     return res.status(500).json({ error: 'Error interno del servidor' })
   }

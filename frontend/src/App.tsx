@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -27,8 +27,31 @@ const Configuraciones = lazy(() => import('@/pages/Configuraciones').then(module
 const Caja = lazy(() => import('@/pages/Caja').then(module => ({ default: module.Caja })))
 const CuentasCobrar = lazy(() => import('@/pages/CuentasCobrar').then(module => ({ default: module.CuentasCobrar })))
 const Reportes = lazy(() => import('@/pages/Reportes').then(module => ({ default: module.Reportes })))
-const AiAssistant = lazy(() => import('@/pages/AiAssistant').then(module => ({ default: module.AiAssistant })))
 const Planner = lazy(() => import('@/pages/Planner').then(module => ({ default: module.Planner })))
+const OfflineQueue = lazy(() => import('@/pages/OfflineQueue').then(module => ({ default: module.OfflineQueue })))
+
+// Precarga en segundo plano de los chunks de las páginas principales:
+// una vez que la app cargó, los navegadores entre pestañas no muestran
+// el spinner de ContentLoader porque el chunk ya está en caché.
+const prefetchPageChunks = () => {
+  void import('@/pages/Dashboard')
+  void import('@/pages/Vender')
+  void import('@/pages/Movimientos')
+  void import('@/pages/Estadisticas')
+  void import('@/pages/Inventario')
+  void import('@/pages/Cotizaciones')
+  void import('@/pages/Clientes')
+  void import('@/pages/Proveedores')
+  void import('@/pages/Empleados')
+  void import('@/pages/OrdenesCompra')
+  void import('@/pages/Configuraciones')
+  void import('@/pages/Caja')
+  void import('@/pages/CuentasCobrar')
+  void import('@/pages/Reportes')
+  void import('@/pages/Planner')
+  void import('@/pages/AuditLog')
+  void import('@/pages/OfflineQueue')
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +63,8 @@ const queryClient = new QueryClient({
         return failureCount < 2
       },
       staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
     },
     mutations: {
       onError: (error) => {
@@ -58,10 +83,28 @@ function OwnerOnly({ children }: { children: React.ReactNode }) {
 }
 
 function RouteLoader() {
-  return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Cargando...</div>
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+      Cargando...
+    </div>
+  )
 }
 
 export default function App() {
+  const { token } = useAuthStore()
+
+  useEffect(() => {
+    if (!token) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ric = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined
+    if (ric) {
+      const id = ric(prefetchPageChunks)
+      return () => (window as any).cancelIdleCallback?.(id)
+    }
+    const timer = window.setTimeout(prefetchPageChunks, 1500)
+    return () => window.clearTimeout(timer)
+  }, [token])
+
   return (
     <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -87,9 +130,9 @@ export default function App() {
             <Route path="/empleados" element={<OwnerOnly><ErrorBoundary><Empleados /></ErrorBoundary></OwnerOnly>} />
             <Route path="/configuraciones" element={<OwnerOnly><ErrorBoundary><Configuraciones /></ErrorBoundary></OwnerOnly>} />
             <Route path="/caja" element={<ErrorBoundary><Caja /></ErrorBoundary>} />
+            <Route path="/cola-offline" element={<ErrorBoundary><OfflineQueue /></ErrorBoundary>} />
             <Route path="/cuentas-cobrar" element={<OwnerOnly><ErrorBoundary><CuentasCobrar /></ErrorBoundary></OwnerOnly>} />
             <Route path="/reportes" element={<OwnerOnly><ErrorBoundary><Reportes /></ErrorBoundary></OwnerOnly>} />
-            <Route path="/asistente-ia" element={<OwnerOnly><ErrorBoundary><AiAssistant /></ErrorBoundary></OwnerOnly>} />
             <Route path="/planner" element={<OwnerOnly><ErrorBoundary><Planner /></ErrorBoundary></OwnerOnly>} />
             <Route path="/auditoria" element={<OwnerOnly><ErrorBoundary><AuditLog /></ErrorBoundary></OwnerOnly>} />
           </Route>

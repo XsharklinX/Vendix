@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, session } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, session, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import http from 'http'
@@ -12,9 +12,51 @@ const isDev = !app.isPackaged
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
+type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+
+interface UpdateState {
+  status: UpdateStatus
+  currentVersion: string
+  availableVersion: string | null
+  channel: 'stable' | 'beta'
+  message: string | null
+  lastCheckedAt: string | null
+  downloadedAt: string | null
+}
+
+interface SyncConfigInput {
+  enabled?: boolean
+  cloudUrl?: string
+  cloudToken?: string
+  localBusinessId?: string
+  cloudBusinessId?: string
+  deviceKey?: string
+  deviceName?: string
+  intervalMs?: number
+}
+
+const updateState: UpdateState = {
+  status: 'idle',
+  currentVersion: app.getVersion(),
+  availableVersion: null,
+  channel: 'stable',
+  message: null,
+  lastCheckedAt: null,
+  downloadedAt: null,
+}
+
 function writeServerLog(message: string) {
   const logFile = path.join(app.getPath('userData'), 'server.log')
   fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${message}\n`)
+}
+
+function getLogFilePath() {
+  return path.join(app.getPath('userData'), 'server.log')
+}
+
+function setUpdateState(next: Partial<UpdateState>) {
+  Object.assign(updateState, next)
+  mainWindow?.webContents.send('vendix:update-state', updateState)
 }
 
 function getAutoUpdater(): AppUpdater {
@@ -26,28 +68,61 @@ function configureAutoUpdates() {
   if (isDev) return
 
   const autoUpdater = getAutoUpdater()
+  const config = getConfig()
+  const channel = config.updateChannel === 'beta' ? 'beta' : 'stable'
+
+  updateState.channel = channel
+  autoUpdater.channel = channel === 'beta' ? 'beta' : 'latest'
+  autoUpdater.allowPrerelease = channel === 'beta'
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('error', error => {
     console.error('[updater]', error)
     writeServerLog(`[updater] error: ${error.stack || error.message}`)
+    setUpdateState({ status: 'error', message: error.message, lastCheckedAt: new Date().toISOString() })
   })
 
   autoUpdater.on('checking-for-update', () => {
     writeServerLog('[updater] buscando actualizaciones')
+    setUpdateState({ status: 'checking', message: 'Buscando actualizaciones...', lastCheckedAt: new Date().toISOString() })
   })
 
   autoUpdater.on('update-available', info => {
     writeServerLog(`[updater] actualizacion disponible: ${info.version}`)
+    setUpdateState({
+      status: 'available',
+      availableVersion: info.version,
+      message: `Vendix ${info.version} esta disponible. La descarga iniciara automaticamente.`,
+      lastCheckedAt: new Date().toISOString(),
+    })
   })
 
   autoUpdater.on('update-not-available', info => {
     writeServerLog(`[updater] sin actualizaciones: ${info.version}`)
+    setUpdateState({
+      status: 'not-available',
+      availableVersion: null,
+      message: 'Ya tienes la ultima version disponible para este canal.',
+      lastCheckedAt: new Date().toISOString(),
+    })
+  })
+
+  autoUpdater.on('download-progress', progress => {
+    setUpdateState({
+      status: 'downloading',
+      message: `Descargando actualizacion ${Math.round(progress.percent)}%`,
+    })
   })
 
   autoUpdater.on('update-downloaded', info => {
     writeServerLog(`[updater] actualizacion descargada: ${info.version}`)
+    setUpdateState({
+      status: 'downloaded',
+      availableVersion: info.version,
+      message: `Vendix ${info.version} esta lista para instalar.`,
+      downloadedAt: new Date().toISOString(),
+    })
     dialog.showMessageBox({
       type: 'info',
       title: 'Actualizacion disponible',
@@ -70,6 +145,84 @@ function configureAutoUpdates() {
 }
 
 // ── Helpers de rutas ────────────────────────────────────────────────────────
+function registerIpcHandlers() {
+  ipcMain.handle('vendix:get-update-state', () => updateState)
+
+  ipcMain.handle('vendix:check-for-updates', async () => {
+    if (isDev) {
+      setUpdateState({
+        status: 'not-available',
+        message: 'Las actualizaciones automaticas solo funcionan en la app instalada.',
+        lastCheckedAt: new Date().toISOString(),
+      })
+      return updateState
+    }
+
+    await getAutoUpdater().checkForUpdates()
+    return updateState
+  })
+
+  ipcMain.handle('vendix:install-update', () => {
+    if (isDev || updateState.status !== 'downloaded') return false
+    app.isQuitting = true
+    getAutoUpdater().quitAndInstall()
+    return true
+  })
+
+  ipcMain.handle('vendix:set-update-channel', (_event, channel: 'stable' | 'beta') => {
+    const safeChannel = channel === 'beta' ? 'beta' : 'stable'
+    const config = getConfig()
+    saveConfig({ ...config, updateChannel: safeChannel })
+    setUpdateState({
+      channel: safeChannel,
+      message: safeChannel === 'beta'
+        ? 'Canal beta activado. Recibiras versiones de prueba cuando existan.'
+        : 'Canal estable activado. Recibiras solo versiones publicas.',
+    })
+
+    if (!isDev) {
+      const autoUpdater = getAutoUpdater()
+      autoUpdater.channel = safeChannel === 'beta' ? 'beta' : 'latest'
+      autoUpdater.allowPrerelease = safeChannel === 'beta'
+    }
+
+    return updateState
+  })
+
+  ipcMain.handle('vendix:get-log-info', () => {
+    const filePath = getLogFilePath()
+    const exists = fs.existsSync(filePath)
+    const stat = exists ? fs.statSync(filePath) : null
+    const content = exists ? fs.readFileSync(filePath, 'utf8').split(/\r?\n/).slice(-200).join('\n') : ''
+
+    return {
+      path: filePath,
+      exists,
+      size: stat?.size ?? 0,
+      updatedAt: stat?.mtime.toISOString() ?? null,
+      tail: content,
+    }
+  })
+
+  ipcMain.handle('vendix:get-sync-config', () => getSyncConfig())
+
+  ipcMain.handle('vendix:save-sync-config', (_event, input: SyncConfigInput) => {
+    return saveSyncConfig(input)
+  })
+
+  ipcMain.handle('vendix:open-user-data', async () => {
+    await shell.openPath(app.getPath('userData'))
+    return true
+  })
+
+  ipcMain.handle('vendix:open-log-file', async () => {
+    const filePath = getLogFilePath()
+    if (!fs.existsSync(filePath)) writeServerLog('log creado manualmente desde Configuracion')
+    await shell.openPath(filePath)
+    return true
+  })
+}
+
 function resourcePath(...parts: string[]) {
   return isDev
     ? path.join(__dirname, '..', ...parts)
@@ -85,6 +238,55 @@ function getConfig(): Record<string, string> {
 function saveConfig(data: Record<string, string>) {
   const configFile = path.join(app.getPath('userData'), 'config.json')
   fs.writeFileSync(configFile, JSON.stringify(data, null, 2))
+}
+
+function getSyncConfig() {
+  const config = getConfig()
+  return {
+    enabled: config.syncEnabled === 'true',
+    cloudUrl: config.syncCloudUrl || '',
+    hasCloudToken: Boolean(config.syncCloudToken),
+    localBusinessId: config.syncLocalBusinessId || '',
+    cloudBusinessId: config.syncCloudBusinessId || '',
+    deviceKey: config.syncDeviceKey || '',
+    deviceName: config.syncDeviceName || '',
+    intervalMs: Number(config.syncIntervalMs || 60000),
+  }
+}
+
+function applySyncConfigToEnv(config = getConfig()) {
+  process.env.VENDIX_SYNC_ENABLED = config.syncEnabled === 'true' ? 'true' : 'false'
+  process.env.VENDIX_CLOUD_URL = config.syncCloudUrl || ''
+  process.env.VENDIX_CLOUD_TOKEN = config.syncCloudToken || ''
+  process.env.VENDIX_SYNC_LOCAL_BUSINESS_ID = config.syncLocalBusinessId || ''
+  process.env.VENDIX_SYNC_CLOUD_BUSINESS_ID = config.syncCloudBusinessId || ''
+  process.env.VENDIX_SYNC_DEVICE_KEY = config.syncDeviceKey || ''
+  process.env.VENDIX_SYNC_DEVICE_NAME = config.syncDeviceName || ''
+  process.env.VENDIX_SYNC_INTERVAL_MS = config.syncIntervalMs || '60000'
+}
+
+function saveSyncConfig(input: SyncConfigInput) {
+  const current = getConfig()
+  const next: Record<string, string> = {
+    ...current,
+    syncEnabled: input.enabled ? 'true' : 'false',
+    syncCloudUrl: (input.cloudUrl || '').trim().replace(/\/+$/, ''),
+    syncLocalBusinessId: (input.localBusinessId || '').trim(),
+    syncCloudBusinessId: (input.cloudBusinessId || '').trim(),
+    syncDeviceKey: (input.deviceKey || '').trim(),
+    syncDeviceName: (input.deviceName || '').trim(),
+    syncIntervalMs: String(Math.max(Number(input.intervalMs) || 60000, 15000)),
+  }
+
+  if (typeof input.cloudToken === 'string' && input.cloudToken.trim()) {
+    next.syncCloudToken = input.cloudToken.trim()
+  } else if (current.syncCloudToken) {
+    next.syncCloudToken = current.syncCloudToken
+  }
+
+  saveConfig(next)
+  applySyncConfigToEnv(next)
+  return getSyncConfig()
 }
 
 function getOrCreateJwtSecret(): string {
@@ -111,6 +313,7 @@ function ensureDatabase(): string {
 function startServer(dbPath: string, jwtSecret: string) {
   const serverScript = resourcePath('backend', 'dist', 'index.js')
   const frontendDist = resourcePath('frontend', 'dist')
+  const config = getConfig()
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PORT: String(PORT),
@@ -119,6 +322,18 @@ function startServer(dbPath: string, jwtSecret: string) {
     JWT_SECRET: jwtSecret,
     FRONTEND_DIST: frontendDist,
     CORS_ORIGIN: `http://localhost:${PORT}`,
+    APP_VERSION: app.getVersion(),
+    APP_USER_DATA_PATH: app.getPath('userData'),
+    APP_DB_PATH: dbPath,
+    APP_UPDATED_AT: fs.existsSync(process.execPath) ? fs.statSync(process.execPath).mtime.toISOString() : new Date().toISOString(),
+    VENDIX_SYNC_ENABLED: config.syncEnabled === 'true' ? 'true' : 'false',
+    VENDIX_CLOUD_URL: config.syncCloudUrl || '',
+    VENDIX_CLOUD_TOKEN: config.syncCloudToken || '',
+    VENDIX_SYNC_LOCAL_BUSINESS_ID: config.syncLocalBusinessId || '',
+    VENDIX_SYNC_CLOUD_BUSINESS_ID: config.syncCloudBusinessId || '',
+    VENDIX_SYNC_DEVICE_KEY: config.syncDeviceKey || '',
+    VENDIX_SYNC_DEVICE_NAME: config.syncDeviceName || '',
+    VENDIX_SYNC_INTERVAL_MS: config.syncIntervalMs || '60000',
   }
 
   try {
@@ -251,9 +466,11 @@ async function createWindow() {
 
 // ── Tray (bandeja del sistema) ───────────────────────────────────────────────
 function createTray() {
-  const iconPath = resourcePath('electron', 'assets', 'icon.png')
-  const img = fs.existsSync(iconPath)
-    ? nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
+  const icoPath = resourcePath('electron', 'assets', 'icon.ico')
+  const pngPath = resourcePath('electron', 'assets', 'icon.png')
+  const iconFile = process.platform === 'win32' && fs.existsSync(icoPath) ? icoPath : pngPath
+  const img = fs.existsSync(iconFile)
+    ? nativeImage.createFromPath(iconFile).resize({ width: 16, height: 16 })
     : nativeImage.createEmpty()
 
   tray = new Tray(img)
@@ -297,6 +514,11 @@ if (!gotLock) {
   })
 
   app.whenReady().then(async () => {
+    registerIpcHandlers()
+
+    const config = getConfig()
+    updateState.channel = config.updateChannel === 'beta' ? 'beta' : 'stable'
+
     const dbPath = ensureDatabase()
     const jwtSecret = getOrCreateJwtSecret()
 

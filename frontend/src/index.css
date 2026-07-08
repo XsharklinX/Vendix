@@ -171,3 +171,81 @@
 .dark .bg-blue-50\/50 { @apply bg-blue-500/15; }
 .dark .hover\:bg-blue-50:hover { @apply bg-blue-500/10; }
 .dark .hover\:bg-blue-50\/30:hover { @apply bg-blue-500/15; }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Modo oscuro — cajas de alerta/estado/badges (rojo, verde, ámbar, etc.)
+   Los fondos pastel -50/-100 se ven como bloques blancos/crema muy
+   brillantes sobre el fondo slate oscuro; los convertimos a un tinte
+   translúcido del mismo color, igual que se hizo con blue-50 arriba.
+   ────────────────────────────────────────────────────────────────────── */
+.dark .bg-red-50 { @apply bg-red-500/10; }
+.dark .bg-green-50 { @apply bg-green-500/10; }
+.dark .bg-emerald-50 { @apply bg-emerald-500/10; }
+.dark .bg-amber-50 { @apply bg-amber-500/10; }
+.dark .bg-orange-50 { @apply bg-orange-500/10; }
+.dark .bg-yellow-50 { @apply bg-yellow-500/10; }
+.dark .bg-purple-50 { @apply bg-purple-500/10; }
+.dark .bg-indigo-50 { @apply bg-indigo-500/10; }
+.dark .bg-violet-50 { @apply bg-violet-500/10; }
+.dark .bg-cyan-50 { @apply bg-cyan-500/10; }
+.dark .bg-teal-50 { @apply bg-teal-500/10; }
+.dark .bg-rose-50 { @apply bg-rose-500/10; }
+.dark .bg-pink-50 { @apply bg-pink-500/10; }
+.dark .bg-sky-50 { @apply bg-sky-500/10; }
+
+.dark .bg-red-100 { @apply bg-red-500/15; }
+.dark .bg-green-100 { @apply bg-green-500/15; }
+.dark .bg-emerald-100 { @apply bg-emerald-500/15; }
+.dark .bg-amber-100 { @apply bg-amber-500/15; }
+.dark .bg-orange-100 { @apply bg-orange-500/15; }
+.dark .bg-yellow-100 { @apply bg-yellow-500/15; }
+.dark .bg-purple-100 { @apply bg-purple-500/15; }
+.dark .bg-indigo-100 { @apply bg-indigo-500/15; }
+.dark .bg-violet-100 { @apply bg-violet-500/15; }
+.dark .bg-cyan-100 { @apply bg-cyan-500/15; }
+.dark .bg-teal-100 { @apply bg-teal-500/15; }
+.dark .bg-rose-100 { @apply bg-rose-500/15; }
+.dark .bg-pink-100 { @apply bg-pink-500/15; }
+.dark .bg-sky-100 { @apply bg-sky-500/15; }
+
+/* Variantes con opacidad explícita (bg-X-50/30, bg-X-100/50, etc.) */
+.dark .bg-red-50\/20, .dark .bg-red-50\/30, .dark .bg-red-50\/40,
+.dark .bg-red-50\/50, .dark .bg-red-50\/60 { @apply bg-red-500/10; }
+.dark .bg-green-50\/20, .dark .bg-green-50\/30, .dark .bg-green-50\/40,
+.dark .bg-green-50\/50, .dark .bg-green-50\/60 { @apply bg-green-500/10; }
+.dark .bg-emerald-50\/20, .dark .bg-emerald-50\/30, .dark .bg-emerald-50\/40,
+.dark .bg-emerald-50\/50, .dark .bg-emerald-50\/60 { @apply bg-emerald-500/10; }
+.dark .bg-amber-50\/20, .dark .bg-amber-50\/30, .dark .bg-amber-50\/40,
+.dark .bg-amber-50\/50, .dark .bg-amber-50\/60 { @apply bg-amber-500/10; }
+.dark .bg-amber-100\/50 { @apply bg-amber-500/15; }
+.dark .bg-orange-50\/20, .dark .bg-orange-50\/30, .dark .bg-orange-50\/40,
+.dark .bg-orange-50\/50, .dark .bg-orange-50\/60 { @apply bg-orange-500/10; }
+.dark .bg-indigo-50\/20, .dark .bg-indigo-50\/30, .dark .bg-indigo-50\/40,
+.dark .bg-indigo-50\/50, .dark .bg-indigo-50\/60 { @apply bg-indigo-500/10; }
+
+/* Bordes claros sobre cajas de alerta/estado */
+.dark .border-red-100, .dark .border-red-200, .dark .border-red-300 { @apply border-red-500/20; }
+.dark .border-green-100, .dark .border-green-200, .dark .border-green-300 { @apply border-green-500/20; }
+.dark .border-emerald-100, .dark .border-emerald-200 { @apply border-emerald-500/20; }
+.dark .border-amber-100, .dark .border-amber-200, .dark .border-amber-300 { @apply border-amber-500/20; }
+.dark .border-orange-100, .dark .border-orange-200, .dark .border-orange-300 { @apply border-orange-500/20; }
+.dark .border-yellow-100, .dark .border-yellow-200, .dark .border-yellow-300 { @apply border-yellow-500/20; }
+.dark .border-purple-100, .dark .border-purple-200 { @apply border-purple-500/20; }
+.dark .border-indigo-100, .dark .border-indigo-200, .dark .border-indigo-300 { @apply border-indigo-500/20; }
+.dark .border-violet-100, .dark .border-violet-200 { @apply border-violet-500/20; }
+.dark .border-cyan-100, .dark .border-cyan-200 { @apply border-cyan-500/20; }
+.dark .border-teal-100, .dark .border-teal-200 { @apply border-teal-500/20; }
+.dark .border-rose-100, .dark .border-rose-200 { @apply border-rose-500/20; }
+
+/* Textos muy oscuros (-800/-900) ilegibles sobre fondo slate oscuro */
+.dark .text-amber-800 { @apply text-amber-300; }
+.dark .text-amber-900 { @apply text-amber-300; }
+.dark .text-emerald-800 { @apply text-emerald-300; }
+.dark .text-green-800 { @apply text-green-300; }
+.dark .text-green-900 { @apply text-green-300; }
+.dark .text-orange-800 { @apply text-orange-300; }
+.dark .text-indigo-800 { @apply text-indigo-300; }
+.dark .text-red-800 { @apply text-red-300; }
+.dark .text-red-900 { @apply text-red-300; }
+.dark .text-purple-800 { @apply text-purple-300; }
+.dark .text-yellow-800 { @apply text-yellow-300; }

@@ -50,6 +50,13 @@ function getCartItem(name: string) {
   return item as HTMLElement
 }
 
+async function findProductButton(name: RegExp) {
+  const buttons = await screen.findAllByRole('button', { name })
+  const productButton = buttons.find(button => button.textContent?.includes('disp.'))
+  if (!productButton) throw new Error(`No se encontro boton de producto para ${name}`)
+  return productButton
+}
+
 describe('Vender — carrito de compras', () => {
   beforeEach(() => {
     sessionStorage.clear()
@@ -58,7 +65,7 @@ describe('Vender — carrito de compras', () => {
   it('agrega un producto al carrito al hacer click en él', async () => {
     renderVender()
 
-    const productButton = await screen.findByRole('button', { name: /Coca Cola/i })
+    const productButton = await findProductButton(/Coca Cola/i)
     fireEvent.click(productButton)
 
     const cartItem = await waitFor(() => getCartItem('Coca Cola'))
@@ -69,7 +76,7 @@ describe('Vender — carrito de compras', () => {
   it('modifica la cantidad de un producto en el carrito con los botones +/-', async () => {
     renderVender()
 
-    const productButton = await screen.findByRole('button', { name: /Coca Cola/i })
+    const productButton = await findProductButton(/Coca Cola/i)
     fireEvent.click(productButton)
 
     let cartItem = await waitFor(() => getCartItem('Coca Cola'))
@@ -88,8 +95,8 @@ describe('Vender — carrito de compras', () => {
   it('vacía el carrito al pulsar "Vaciar"', async () => {
     renderVender()
 
-    const cocaButton = await screen.findByRole('button', { name: /Coca Cola/i })
-    const aguaButton = await screen.findByRole('button', { name: /Agua/i })
+    const cocaButton = await findProductButton(/Coca Cola/i)
+    const aguaButton = await findProductButton(/Agua/i)
     fireEvent.click(cocaButton)
     fireEvent.click(aguaButton)
 

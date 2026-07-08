@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vendix
+      POSTGRES_USER: vendix
+      POSTGRES_PASSWORD: vendix_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - vendix-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vendix -d vendix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3100
+      DATABASE_URL: postgresql://vendix:vendix_dev_password@postgres:5432/vendix?schema=public
+      JWT_SECRET: change-me-before-deploying
+      VENDIX_CLOUD_MODE: "true"
+      VENDIX_SYNC_ENABLED: "false"
+      VENDIX_CLOUD_BACKUPS: "false"
+      CORS_ORIGIN: http://localhost:5173,http://localhost:3100
+    ports:
+      - "3100:3100"
+    command: sh -c "npx prisma db push --schema prisma/schema.production.prisma && node dist/index.js"
+
+volumes:
+  vendix-postgres:

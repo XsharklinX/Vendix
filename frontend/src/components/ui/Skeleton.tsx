@@ -1,11 +1,11 @@
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  return <div className={`animate-pulse bg-gray-200 dark:bg-slate-700 rounded ${className}`} />
 }
 
 /** Filas tipo lista (icono circular + 2 líneas de texto + valor a la derecha) */
 export function ListRowSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-gray-50">
+    <div className="divide-y divide-gray-50 dark:divide-slate-800">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-3.5">
           <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
@@ -23,7 +23,7 @@ export function ListRowSkeleton({ rows = 5 }: { rows?: number }) {
 /** Filas de tabla genéricas */
 export function TableRowSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div className="divide-y divide-gray-50">
+    <div className="divide-y divide-gray-50 dark:divide-slate-800">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-3.5">
           {Array.from({ length: cols }).map((_, j) => (
@@ -38,7 +38,7 @@ export function TableRowSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?:
 /** Tarjetas, p. ej. cotizaciones o cards de cuadrícula */
 export function CardRowSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-gray-50">
+    <div className="divide-y divide-gray-50 dark:divide-slate-800">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-4">
           <Skeleton className="h-4 w-12" />

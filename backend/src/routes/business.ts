@@ -2,16 +2,12 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
+import { logAudit } from '../lib/audit'
+import { recordStockMovement } from '../lib/stockMovement'
 import { logger } from '../lib/logger'
 
 const router = Router()
 router.use(authMiddleware)
-
-// Nunca exponer el blob cifrado de la API key de IA en respuestas al frontend.
-function omitAiKey<T extends { aiApiKeyEnc?: string | null }>(business: T): Omit<T, 'aiApiKeyEnc'> {
-  const { aiApiKeyEnc: _aiApiKeyEnc, ...rest } = business
-  return rest
-}
 
 const updateSchema = z.object({
   name: z.string().min(2).optional().nullable(),
@@ -41,7 +37,7 @@ router.get('/', async (req: AuthRequest, res) => {
     const businesses = await prisma.business.findMany({
       where: { userId: req.userId },
     })
-    return res.json(businesses.map(omitAiKey))
+    return res.json(businesses)
   } catch (e) {
     logger.error({ err: e }, '[business] GET /')
     return res.status(500).json({ error: 'Error interno' })
@@ -67,7 +63,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
       where: { id: req.params.id, userId: req.userId },
     })
     if (!business) return res.status(404).json({ error: 'Negocio no encontrado' })
-    return res.json(omitAiKey(business))
+    return res.json(business)
   } catch (e) {
     logger.error({ err: e }, '[business] GET /:id')
     return res.status(500).json({ error: 'Error interno' })
@@ -91,7 +87,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
       where: { id: req.params.id },
       data,
     })
-    return res.json(omitAiKey(updated))
+    return res.json(updated)
   } catch (e) {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: e.errors[0].message, field: e.errors[0].path[0] })
@@ -109,8 +105,9 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
     })
     if (!business) return res.status(403).json({ error: 'Acceso denegado' })
 
-    const [products, clients, suppliers, employees, transactions, quotes, cashSessions] =
+    const [categories, products, clients, suppliers, employees, transactions, quotes, cashSessions] =
       await Promise.all([
+        prisma.category.findMany({ where: { businessId: business.id } }),
         prisma.product.findMany({ where: { businessId: business.id }, include: { volumePricing: true } }),
         prisma.client.findMany({ where: { businessId: business.id } }),
         prisma.supplier.findMany({ where: { businessId: business.id } }),
@@ -129,7 +126,8 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
 
     const payload = {
       exportedAt: new Date().toISOString(),
-      business: omitAiKey(business),
+      business,
+      categories,
       products,
       clients,
       suppliers,
@@ -148,6 +146,271 @@ router.get('/:id/export', async (req: AuthRequest, res) => {
   } catch (e) {
     logger.error({ err: e }, '[business] GET /:id/export')
     return res.status(500).json({ error: 'Error al exportar' })
+  }
+})
+
+const importSchema = z.object({
+  categories: z.array(z.object({
+    id: z.string().optional(),
+    name: z.string().min(1),
+  })).optional().default([]),
+  products: z.array(z.object({
+    name: z.string().min(1),
+    description: z.string().nullable().optional(),
+    price: z.coerce.number().min(0),
+    cost: z.coerce.number().min(0).optional().default(0),
+    quantity: z.coerce.number().int().min(0).optional().default(0),
+    barcode: z.string().nullable().optional(),
+    imageUrl: z.string().nullable().optional(),
+    taxExempt: z.boolean().optional().default(false),
+    lowStockThreshold: z.coerce.number().int().min(0).nullable().optional(),
+    categoryId: z.string().nullable().optional(),
+    volumePricing: z.array(z.object({
+      minQty: z.coerce.number().int().min(1),
+      price: z.coerce.number().min(0),
+    })).optional().default([]),
+  })).optional().default([]),
+  clients: z.array(z.object({
+    name: z.string().min(1),
+    phone: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    document: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    isVip: z.boolean().optional().default(false),
+    discountRate: z.coerce.number().min(0).max(1).optional().default(0),
+    loyaltyPoints: z.coerce.number().int().min(0).optional().default(0),
+  })).optional().default([]),
+  suppliers: z.array(z.object({
+    name: z.string().min(1),
+    phone: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    document: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+  })).optional().default([]),
+  employees: z.array(z.object({
+    name: z.string().min(1),
+    phone: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    role: z.string().nullable().optional(),
+    salary: z.coerce.number().min(0).optional().default(0),
+    commissionRate: z.coerce.number().min(0).optional().default(0),
+    active: z.boolean().optional().default(true),
+  })).optional().default([]),
+}).passthrough()
+
+// Restaurar datos desde un respaldo JSON (importación aditiva, omite duplicados)
+router.post('/:id/import/validate', async (req: AuthRequest, res) => {
+  try {
+    const business = await prisma.business.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    })
+    if (!business) return res.status(403).json({ error: 'Acceso denegado' })
+
+    const data = importSchema.parse(req.body)
+    const counts = {
+      categories: data.categories.length,
+      products: data.products.length,
+      clients: data.clients.length,
+      suppliers: data.suppliers.length,
+      employees: data.employees.length,
+    }
+    const total = Object.values(counts).reduce((sum, count) => sum + count, 0)
+    const warnings: string[] = []
+
+    if (!total) warnings.push('El archivo no contiene datos importables.')
+    if (!req.body.exportedAt) warnings.push('El archivo no tiene fecha de exportacion.')
+    if (!req.body.business?.name) warnings.push('El archivo no incluye metadatos del negocio original.')
+
+    return res.json({
+      ok: total > 0,
+      validatedAt: new Date().toISOString(),
+      sourceBusiness: req.body.business?.name ?? null,
+      exportedAt: req.body.exportedAt ?? null,
+      counts,
+      warnings,
+    })
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({
+        ok: false,
+        error: 'El archivo no tiene el formato esperado de Vendix',
+        detail: e.errors[0].message,
+        field: e.errors[0].path.join('.'),
+      })
+    }
+    logger.error({ err: e }, '[business] POST /:id/import/validate')
+    return res.status(500).json({ ok: false, error: 'No se pudo validar el respaldo' })
+  }
+})
+
+router.post('/:id/import', async (req: AuthRequest, res) => {
+  try {
+    const business = await prisma.business.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+    })
+    if (!business) return res.status(403).json({ error: 'Acceso denegado' })
+
+    const data = importSchema.parse(req.body)
+    if (!data.categories.length && !data.products.length && !data.clients.length
+      && !data.suppliers.length && !data.employees.length) {
+      return res.status(400).json({ error: 'El archivo no contiene datos para importar' })
+    }
+
+    const summary = {
+      categories: { created: 0, skipped: 0 },
+      products: { created: 0, skipped: 0 },
+      clients: { created: 0, skipped: 0 },
+      suppliers: { created: 0, skipped: 0 },
+      employees: { created: 0, skipped: 0 },
+    }
+
+    await prisma.$transaction(async tx => {
+      // Categorías
+      const existingCategories = await tx.category.findMany({ where: { businessId: business.id } })
+      const categoryByName = new Map(existingCategories.map(c => [c.name.toLowerCase(), c.id]))
+      const categoryIdMap = new Map<string, string>()
+
+      for (const cat of data.categories) {
+        const key = cat.name.toLowerCase()
+        let newId = categoryByName.get(key)
+        if (!newId) {
+          const created = await tx.category.create({ data: { name: cat.name, businessId: business.id } })
+          newId = created.id
+          categoryByName.set(key, newId)
+          summary.categories.created++
+        } else {
+          summary.categories.skipped++
+        }
+        if (cat.id) categoryIdMap.set(cat.id, newId)
+      }
+
+      // Productos
+      const existingProducts = await tx.product.findMany({ where: { businessId: business.id } })
+      const productByBarcode = new Map(existingProducts.filter(p => p.barcode).map(p => [p.barcode as string, p]))
+      const productByName = new Map(existingProducts.map(p => [p.name.toLowerCase(), p]))
+
+      for (const p of data.products) {
+        const existing = (p.barcode && productByBarcode.get(p.barcode)) || productByName.get(p.name.toLowerCase())
+        if (existing) {
+          summary.products.skipped++
+          continue
+        }
+        const categoryId = p.categoryId ? categoryIdMap.get(p.categoryId) : undefined
+        const created = await tx.product.create({
+          data: {
+            name: p.name,
+            description: p.description ?? undefined,
+            price: p.price,
+            cost: p.cost,
+            quantity: p.quantity,
+            barcode: p.barcode ?? undefined,
+            imageUrl: p.imageUrl ?? undefined,
+            taxExempt: p.taxExempt,
+            lowStockThreshold: p.lowStockThreshold ?? undefined,
+            categoryId: categoryId ?? undefined,
+            businessId: business.id,
+            volumePricing: p.volumePricing.length
+              ? { create: p.volumePricing.map(v => ({ minQty: v.minQty, price: v.price })) }
+              : undefined,
+          },
+        })
+        if (created.quantity > 0) {
+          await recordStockMovement(tx, {
+            businessId: business.id, productId: created.id, type: 'ADJUSTMENT',
+            quantity: created.quantity, balanceAfter: created.quantity,
+            reason: 'Importación de respaldo', createdById: req.userId,
+          })
+        }
+        summary.products.created++
+        if (p.barcode) productByBarcode.set(p.barcode, created)
+        productByName.set(p.name.toLowerCase(), created)
+      }
+
+      // Clientes
+      const existingClients = await tx.client.findMany({ where: { businessId: business.id } })
+      const clientByDoc = new Map(existingClients.filter(c => c.document).map(c => [c.document as string, c]))
+      const clientByNamePhone = new Map(existingClients.map(c => [`${c.name.toLowerCase()}|${c.phone ?? ''}`, c]))
+
+      for (const c of data.clients) {
+        const existing = (c.document && clientByDoc.get(c.document)) || clientByNamePhone.get(`${c.name.toLowerCase()}|${c.phone ?? ''}`)
+        if (existing) {
+          summary.clients.skipped++
+          continue
+        }
+        const created = await tx.client.create({
+          data: {
+            name: c.name,
+            phone: c.phone ?? undefined,
+            email: c.email ?? undefined,
+            document: c.document ?? undefined,
+            address: c.address ?? undefined,
+            isVip: c.isVip,
+            discountRate: c.discountRate,
+            loyaltyPoints: c.loyaltyPoints,
+            businessId: business.id,
+          },
+        })
+        summary.clients.created++
+        if (c.document) clientByDoc.set(c.document, created)
+        clientByNamePhone.set(`${c.name.toLowerCase()}|${c.phone ?? ''}`, created)
+      }
+
+      // Proveedores
+      const existingSuppliers = await tx.supplier.findMany({ where: { businessId: business.id } })
+      const supplierByName = new Set(existingSuppliers.map(s => s.name.toLowerCase()))
+
+      for (const s of data.suppliers) {
+        if (supplierByName.has(s.name.toLowerCase())) {
+          summary.suppliers.skipped++
+          continue
+        }
+        await tx.supplier.create({
+          data: {
+            name: s.name,
+            phone: s.phone ?? undefined,
+            email: s.email ?? undefined,
+            document: s.document ?? undefined,
+            address: s.address ?? undefined,
+            businessId: business.id,
+          },
+        })
+        summary.suppliers.created++
+        supplierByName.add(s.name.toLowerCase())
+      }
+
+      // Empleados
+      const existingEmployees = await tx.employee.findMany({ where: { businessId: business.id } })
+      const employeeKeys = new Set(existingEmployees.map(e => `${e.name.toLowerCase()}|${e.role ?? ''}`))
+
+      for (const e of data.employees) {
+        const key = `${e.name.toLowerCase()}|${e.role ?? ''}`
+        if (employeeKeys.has(key)) {
+          summary.employees.skipped++
+          continue
+        }
+        await tx.employee.create({
+          data: {
+            name: e.name,
+            phone: e.phone ?? undefined,
+            email: e.email ?? undefined,
+            role: e.role ?? undefined,
+            salary: e.salary,
+            commissionRate: e.commissionRate,
+            active: e.active,
+            businessId: business.id,
+          },
+        })
+        summary.employees.created++
+        employeeKeys.add(key)
+      }
+    }, { timeout: 30000 })
+
+    logAudit(req, business.id, 'CREATE', 'BACKUP_IMPORT', business.id, summary)
+    return res.json({ ok: true, summary })
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
+    logger.error({ err: e }, '[business] POST /:id/import')
+    return res.status(500).json({ error: 'Error al importar el respaldo' })
   }
 })
 

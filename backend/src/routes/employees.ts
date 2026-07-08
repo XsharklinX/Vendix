@@ -5,6 +5,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
 import { logAudit } from '../lib/audit'
 import { logger } from '../lib/logger'
+import { recordSyncChange } from '../lib/syncOutbox'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -37,10 +38,21 @@ router.get('/', async (req: AuthRequest, res) => {
   if (!await verifyBusiness(businessId, req.userId!))
     return res.status(403).json({ error: 'Acceso denegado' })
 
-  const employees = await prisma.employee.findMany({
-    where: { businessId },
-    orderBy: { name: 'asc' },
-  })
+  const { page, limit, deleted } = req.query
+  const deletedFilter = deleted === 'only' ? { not: null } : null
+  const where = { businessId, deletedAt: deletedFilter }
+
+  if (page) {
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1)
+    const pageSize = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 200)
+    const [data, total] = await Promise.all([
+      prisma.employee.findMany({ where, orderBy: { name: 'asc' }, skip: (pageNum - 1) * pageSize, take: pageSize }),
+      prisma.employee.count({ where }),
+    ])
+    return res.json({ data, total, pages: Math.ceil(total / pageSize) })
+  }
+
+  const employees = await prisma.employee.findMany({ where, orderBy: { name: 'asc' } })
   return res.json(employees)
 })
 
@@ -53,6 +65,7 @@ router.post('/', async (req: AuthRequest, res) => {
     const data = employeeSchema.parse(req.body)
     const employee = await prisma.employee.create({ data: { ...data, businessId } })
     logAudit(req, businessId, 'CREATE', 'EMPLOYEE', employee.id, { name: employee.name })
+    await recordSyncChange({ businessId, entity: 'employee', entityId: employee.id, operation: 'UPSERT', payload: employee })
     return res.status(201).json(employee)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -69,6 +82,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
     const data = employeeSchema.partial().parse(req.body)
     const employee = await prisma.employee.update({ where: { id, businessId }, data })
     logAudit(req, businessId, 'UPDATE', 'EMPLOYEE', id, data)
+    await recordSyncChange({ businessId, entity: 'employee', entityId: employee.id, operation: 'UPSERT', payload: employee })
     return res.json(employee)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -81,8 +95,20 @@ router.delete('/:id', async (req: AuthRequest, res) => {
   if (!await verifyBusiness(businessId, req.userId!))
     return res.status(403).json({ error: 'Acceso denegado' })
 
-  await prisma.employee.delete({ where: { id, businessId } })
+  const employee = await prisma.employee.update({ where: { id, businessId }, data: { deletedAt: new Date() } })
   logAudit(req, businessId, 'DELETE', 'EMPLOYEE', id)
+  await recordSyncChange({ businessId, entity: 'employee', entityId: id, operation: 'DELETE', payload: employee })
+  return res.json({ ok: true })
+})
+
+router.post('/:id/restore', async (req: AuthRequest, res) => {
+  const { businessId, id } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const employee = await prisma.employee.update({ where: { id, businessId }, data: { deletedAt: null } })
+  logAudit(req, businessId, 'UPDATE', 'EMPLOYEE', id, { restored: true })
+  await recordSyncChange({ businessId, entity: 'employee', entityId: employee.id, operation: 'UPSERT', payload: employee })
   return res.json({ ok: true })
 })
 

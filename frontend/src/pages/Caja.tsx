@@ -6,8 +6,11 @@ import { useAuthStore } from '@/store/auth'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
-import { Wallet, Lock, Unlock, TrendingUp, TrendingDown, Banknote, CreditCard, ArrowLeftRight, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Wallet, Lock, Unlock, TrendingUp, TrendingDown, Banknote, CreditCard, ArrowLeftRight, Clock, CheckCircle, AlertCircle, Download } from 'lucide-react'
+import { exportCSV } from '@/lib/export'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { QueryError } from '@/components/ui/QueryError'
+import { CardRowSkeleton } from '@/components/ui/Skeleton'
 
 interface CashTx {
   amount: number
@@ -49,7 +52,7 @@ export function Caja() {
   const [detailSession, setDetailSession] = useState<CashSession | null>(null)
   const { confirm, dialog: confirmDialog } = useConfirm()
 
-  const { data: current, isLoading } = useQuery<CashSession | null>({
+  const { data: current, isLoading, isError, refetch } = useQuery<CashSession | null>({
     queryKey: ['cash-session', bid],
     queryFn: () => api.get(`/businesses/${bid}/transactions/cash-session/current`).then(r => r.data),
     refetchInterval: 30_000,
@@ -97,7 +100,10 @@ export function Caja() {
   const closeDiff = closeForm.amount ? parseFloat(closeForm.amount) - expectedClose : null
 
   if (isLoading) {
-    return <div className="p-8 text-center text-gray-400">Cargando estado de caja...</div>
+    return <div className="p-6"><div className="card overflow-hidden"><CardRowSkeleton rows={4} /></div></div>
+  }
+  if (isError) {
+    return <div className="p-6"><QueryError onRetry={() => refetch()} /></div>
   }
 
   return (
@@ -301,6 +307,24 @@ export function Caja() {
 
       {/* Modal historial */}
       <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title="Historial de turnos" size="lg">
+        {history.length > 0 && (
+          <div className="mb-4">
+            <button onClick={() => {
+              const rows = history.map(s => {
+                const sum = sessionSummary(s)
+                return { apertura: formatDate(s.openedAt), cierre: s.closedAt ? formatDate(s.closedAt) : 'Abierta', montoApertura: s.openAmount, ventas: sum.sales, gastos: sum.expenses, ingresos: sum.income, esperadoCierre: sum.expectedCash, montoCierre: s.closeAmount ?? '', diferencia: s.closeAmount != null ? (s.closeAmount - sum.expectedCash).toFixed(2) : '' }
+              })
+              exportCSV('historial-caja', rows, [
+                { key: 'apertura', label: 'Apertura' }, { key: 'cierre', label: 'Cierre' },
+                { key: 'montoApertura', label: 'Monto Apertura' }, { key: 'ventas', label: 'Ventas' },
+                { key: 'gastos', label: 'Gastos' }, { key: 'ingresos', label: 'Otros Ingresos' },
+                { key: 'esperadoCierre', label: 'Esperado Cierre' }, { key: 'montoCierre', label: 'Monto Cierre' },
+                { key: 'diferencia', label: 'Diferencia' },
+              ])
+              toast.success('Historial de caja exportado como CSV')
+            }} className="btn-secondary text-sm"><Download size={14} /> Exportar CSV</button>
+          </div>
+        )}
         {history.length === 0 ? (
           <p className="text-center text-gray-400 py-8">No hay turnos anteriores</p>
         ) : (

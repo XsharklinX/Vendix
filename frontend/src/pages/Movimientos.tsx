@@ -14,6 +14,7 @@ import { exportCSV, EXPORT_COLUMNS } from '@/lib/export'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { QueryError } from '@/components/ui/QueryError'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { ListRowSkeleton } from '@/components/ui/Skeleton'
 import {
@@ -99,7 +100,7 @@ export function Movimientos() {
     setPage(1)
   }
 
-  const { data: txResponse, isLoading } = useQuery<{ data: Transaction[]; total: number; pages: number }>({
+  const { data: txResponse, isLoading, isError, refetch } = useQuery<{ data: Transaction[]; total: number; pages: number }>({
     queryKey: ['transactions', bid, from, to, typeFilter, page],
     queryFn: () => api.get(`/businesses/${bid}/transactions`, {
       params: { from, to, type: typeFilter || undefined, page, limit: PAGE_SIZE }
@@ -258,8 +259,10 @@ export function Movimientos() {
         <div className="card overflow-hidden">
           {isLoading ? (
             <ListRowSkeleton rows={8} />
+          ) : isError ? (
+            <QueryError onRetry={() => refetch()} />
           ) : transactions.length === 0 ? (
-            <EmptyState icon={ArrowLeftRight} title="Sin movimientos" description="No hay movimientos en el período seleccionado" />
+            <EmptyState icon={ArrowLeftRight} tone="blue" title="Sin movimientos en este período" description="Las ventas, compras y demás transacciones que registres aparecerán aquí" />
           ) : (
             <div className="divide-y divide-gray-50">
               {transactions.map(tx => {

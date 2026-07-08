@@ -10,8 +10,10 @@ import { formatCurrency, formatDate, QUOTE_STATUS_LABELS } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { QueryError } from '@/components/ui/QueryError'
 import { CardRowSkeleton } from '@/components/ui/Skeleton'
-import { Plus, FileText, Trash2, PlusCircle, AlertTriangle, ShoppingBag, Search } from 'lucide-react'
+import { Plus, FileText, Trash2, PlusCircle, AlertTriangle, ShoppingBag, Search, Download } from 'lucide-react'
+import { exportCSV, EXPORT_COLUMNS } from '@/lib/export'
 
 const itemSchema = z.object({
   productId: z.string().optional(),
@@ -54,7 +56,7 @@ export function Cotizaciones() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
-  const { data: quotes = [], isLoading } = useQuery<Quote[]>({
+  const { data: quotes = [], isLoading, isError, refetch } = useQuery<Quote[]>({
     queryKey: ['quotes', bid],
     queryFn: () => api.get(`/businesses/${bid}/quotes`).then(r => r.data),
   })
@@ -98,26 +100,13 @@ export function Cotizaciones() {
 
   const convertMutation = useMutation({
     mutationFn: (quote: Quote) =>
-      api.post(`/businesses/${bid}/transactions`, {
-        type: 'SALE',
-        amount: quote.total,
-        paymentMethod: 'CASH',
-        status: 'COMPLETED',
-        clientId: quote.client?.id || undefined,
-        description: `Cotización #${quote.number}${quote.concept ? ` — ${quote.concept}` : ''}`,
-        items: quote.items.map(i => ({
-          productId: i.productId || undefined,
-          name: i.name,
-          quantity: i.quantity,
-          price: i.price,
-          cost: 0,
-        })),
-      }),
+      api.post(`/businesses/${bid}/quotes/${quote.id}/convert`),
     onSuccess: (_, quote) => {
       qc.invalidateQueries({ queryKey: ['quotes', bid] })
+      qc.invalidateQueries({ queryKey: ['products', bid] })
       qc.invalidateQueries({ queryKey: ['recent-tx', bid] })
       setDetailQuote(null)
-      toast.success(`Venta de ${formatCurrency(quote.total, cur)} registrada`)
+      toast.success(`Venta de ${formatCurrency(quote.total, cur)} registrada correctamente`)
     },
     onError: (e: unknown) => toast.error(getErrorMessage(e)),
   })
@@ -146,9 +135,18 @@ export function Cotizaciones() {
         title="Cotizaciones"
         subtitle={filtered.length !== quotes.length ? `${filtered.length} de ${quotes.length} cotizaciones` : `${quotes.length} cotizaciones`}
         action={
-          <button onClick={() => { setModalOpen(true); reset({ items: [{ name: '', quantity: 1, price: 0 }] }); setError('') }} className="btn-primary">
-            <Plus size={16} /> Crear cotización
-          </button>
+          <div className="flex gap-2">
+            {quotes.length > 0 && (
+              <button onClick={() => {
+                const rows = filtered.map(q => ({ ...q, clientName: q.client?.name ?? '', statusLabel: QUOTE_STATUS_LABELS[q.status]?.label ?? q.status, date: formatDate(q.createdAt) }))
+                exportCSV('cotizaciones', rows, EXPORT_COLUMNS.cotizaciones)
+                toast.success('Cotizaciones exportadas como CSV')
+              }} className="btn-secondary"><Download size={16} /> Exportar</button>
+            )}
+            <button onClick={() => { setModalOpen(true); reset({ items: [{ name: '', quantity: 1, price: 0 }] }); setError('') }} className="btn-primary">
+              <Plus size={16} /> Crear cotización
+            </button>
+          </div>
         }
       />
 
@@ -171,6 +169,7 @@ export function Cotizaciones() {
             <option value="">Todos los estados</option>
             <option value="PENDING">Pendientes</option>
             <option value="ACCEPTED">Aceptadas</option>
+            <option value="CONVERTED">Convertidas</option>
             <option value="REJECTED">Rechazadas</option>
             <option value="EXPIRED">Expiradas</option>
           </select>
@@ -179,11 +178,14 @@ export function Cotizaciones() {
         <div className="card overflow-hidden">
           {isLoading ? (
             <CardRowSkeleton rows={5} />
+          ) : isError ? (
+            <QueryError onRetry={() => refetch()} />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title={search || statusFilter ? 'No hay resultados' : 'No hay cotizaciones'}
-              description={search || statusFilter ? 'Prueba con otros filtros' : 'Crea cotizaciones para tus clientes de forma ilimitada'}
+              tone="amber"
+              title={search || statusFilter ? 'No hay resultados' : 'Todavía no has creado cotizaciones'}
+              description={search || statusFilter ? 'Prueba con otros filtros' : 'Crea cotizaciones para tus clientes y conviértelas en venta cuando acepten'}
               action={!search && !statusFilter ? <button onClick={() => setModalOpen(true)} className="btn-primary">Crear cotización</button> : undefined}
             />
           ) : (
@@ -390,7 +392,7 @@ export function Cotizaciones() {
               </tfoot>
             </table>
 
-            {detailQuote.status === 'ACCEPTED' && (
+            {(detailQuote.status === 'PENDING' || detailQuote.status === 'ACCEPTED') && (
               <div className="pt-2 border-t border-gray-100">
                 <button
                   onClick={() => convertMutation.mutate(detailQuote)}
@@ -400,7 +402,7 @@ export function Cotizaciones() {
                   <ShoppingBag size={16} />
                   {convertMutation.isPending ? 'Registrando...' : 'Convertir en venta'}
                 </button>
-                <p className="text-xs text-gray-400 text-center mt-1.5">Se registra como venta en efectivo (puedes editarla en Movimientos)</p>
+                <p className="text-xs text-gray-400 text-center mt-1.5">Descuenta stock, registra venta en efectivo y marca la cotización como convertida</p>
               </div>
             )}
           </div>

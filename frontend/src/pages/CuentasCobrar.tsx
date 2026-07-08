@@ -7,7 +7,10 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { DocumentPreviewModal } from '@/components/ui/DocumentPreviewModal'
-import { CreditCard, Phone, CheckCircle, AlertCircle, Users, DollarSign, MessageCircle, FileText, Mail } from 'lucide-react'
+import { CreditCard, Phone, CheckCircle, AlertCircle, Users, DollarSign, MessageCircle, FileText, Mail, Search, Download } from 'lucide-react'
+import { exportCSV, EXPORT_COLUMNS } from '@/lib/export'
+import { QueryError } from '@/components/ui/QueryError'
+import { ListRowSkeleton } from '@/components/ui/Skeleton'
 import { Link } from 'react-router-dom'
 import { differenceInCalendarDays } from 'date-fns'
 
@@ -36,8 +39,10 @@ export function CuentasCobrar() {
   const qc = useQueryClient()
   const { confirm, dialog } = useConfirm()
   const [statementDoc, setStatementDoc] = useState<{ title: string; html: string; filename: string } | null>(null)
+  const [search, setSearch] = useState('')
+  const [agingFilter, setAgingFilter] = useState<'' | '7' | '15' | '30' | '30+'>('')
 
-  const { data: clients = [], isLoading } = useQuery<ClientWithDebt[]>({
+  const { data: clients = [], isLoading, isError, refetch } = useQuery<ClientWithDebt[]>({
     queryKey: ['clients-debt', bid],
     queryFn: async () => {
       const [clientsRes, txRes] = await Promise.all([
@@ -117,11 +122,28 @@ export function CuentasCobrar() {
     return acc
   }, { current: 0, week2: 0, month: 0, critical: 0 })
 
+  const filtered = clients.filter(c => {
+    const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search)
+    const matchAging = !agingFilter
+      || (agingFilter === '7' && c.oldestDebtDays <= 7)
+      || (agingFilter === '15' && c.oldestDebtDays > 7 && c.oldestDebtDays <= 15)
+      || (agingFilter === '30' && c.oldestDebtDays > 15 && c.oldestDebtDays <= 30)
+      || (agingFilter === '30+' && c.oldestDebtDays > 30)
+    return matchSearch && matchAging
+  })
+
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Lo que te deben"
         subtitle="Clientes que se fueron sin pagar — dale seguimiento"
+        action={clients.length > 0 ? (
+          <button onClick={() => {
+            const rows = filtered.map(c => ({ ...c, pendingCount: c.pendingTransactions.length }))
+            exportCSV('cuentas-cobrar', rows, EXPORT_COLUMNS.cuentasCobrar)
+            toast.success('Cuentas por cobrar exportadas como CSV')
+          }} className="btn-secondary"><Download size={16} /> Exportar</button>
+        ) : undefined}
       />
 
       <div className="p-6 space-y-6">
@@ -172,9 +194,37 @@ export function CuentasCobrar() {
           ))}
         </div>
 
+        {/* Búsqueda y filtros */}
+        {clients.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar cliente por nombre o teléfono..."
+                className="input pl-10 w-full"
+              />
+            </div>
+            <select
+              value={agingFilter}
+              onChange={e => setAgingFilter(e.target.value as typeof agingFilter)}
+              className="input w-auto"
+            >
+              <option value="">Todas las deudas</option>
+              <option value="7">0-7 días</option>
+              <option value="15">8-15 días</option>
+              <option value="30">16-30 días</option>
+              <option value="30+">+30 días (críticas)</option>
+            </select>
+          </div>
+        )}
+
         {/* Lista de clientes con deuda */}
         {isLoading ? (
-          <div className="text-center py-12 text-gray-400">Cargando...</div>
+          <div className="card overflow-hidden"><ListRowSkeleton rows={6} /></div>
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : clients.length === 0 ? (
           <div className="card p-12 text-center">
             <CheckCircle size={48} className="text-green-400 mx-auto mb-3" />
@@ -182,9 +232,15 @@ export function CuentasCobrar() {
             <p className="text-sm text-gray-400 mt-1">Todos los clientes están al día</p>
             <Link to="/vender" className="btn-primary mt-4 inline-flex">Registrar venta</Link>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-12 text-center">
+            <Search size={32} className="text-gray-300 mx-auto mb-3" />
+            <p className="font-semibold text-gray-700">Sin resultados</p>
+            <p className="text-sm text-gray-400 mt-1">Prueba con otro nombre o cambia el filtro de antigüedad</p>
+          </div>
         ) : (
           <div className="space-y-3">
-            {clients.map(client => (
+            {filtered.map(client => (
               <div key={client.id} className="card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">

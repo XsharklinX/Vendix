@@ -2,7 +2,9 @@ import axios from 'axios'
 import { useAuthStore } from '@/store/auth'
 import { emitPlanLimit } from '@/hooks/usePlanLimit'
 
-export const api = axios.create({ baseURL: '/api' })
+// Límite de tiempo para evitar que una petición se quede "colgada" para
+// siempre (visto en Electron): sin esto, isLoading nunca pasa a false.
+export const api = axios.create({ baseURL: '/api', timeout: 20_000 })
 
 api.interceptors.request.use(config => {
   const token = useAuthStore.getState().token

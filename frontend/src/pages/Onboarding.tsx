@@ -12,6 +12,78 @@ const BUSINESS_TYPES = [
   { value: 'Other', label: 'Otro', icon: '💼' },
 ]
 
+interface BusinessTemplate {
+  id: string
+  label: string
+  icon: string
+  description: string
+  type: string
+  taxRate?: number
+  taxName?: string
+  taxIncluded?: boolean
+  lowStockThreshold?: number
+  categories: string[]
+}
+
+const BUSINESS_TEMPLATES: BusinessTemplate[] = [
+  {
+    id: 'grocery',
+    label: 'Tienda de abarrotes',
+    icon: '🛒',
+    description: 'Categorías y stock listos para colmado/minimarket',
+    type: 'Retail',
+    taxRate: 0.18,
+    taxName: 'ITBIS',
+    taxIncluded: true,
+    lowStockThreshold: 10,
+    categories: ['Bebidas', 'Lácteos', 'Snacks', 'Limpieza', 'Granos y cereales', 'Enlatados'],
+  },
+  {
+    id: 'restaurant',
+    label: 'Restaurante',
+    icon: '🍽️',
+    description: 'Categorías de menú y alertas de stock para perecederos',
+    type: 'Food',
+    taxRate: 0.18,
+    taxName: 'ITBIS',
+    taxIncluded: true,
+    lowStockThreshold: 5,
+    categories: ['Entradas', 'Platos fuertes', 'Bebidas', 'Postres', 'Acompañantes'],
+  },
+  {
+    id: 'hardware',
+    label: 'Ferretería',
+    icon: '🔨',
+    description: 'Categorías típicas de materiales y herramientas',
+    type: 'Retail',
+    taxRate: 0.18,
+    taxName: 'ITBIS',
+    taxIncluded: true,
+    lowStockThreshold: 8,
+    categories: ['Herramientas manuales', 'Eléctrico', 'Plomería', 'Pintura', 'Tornillería y fijaciones', 'Materiales de construcción'],
+  },
+  {
+    id: 'salon',
+    label: 'Salón de belleza',
+    icon: '💇',
+    description: 'Categorías de productos y servicios de belleza',
+    type: 'Services',
+    taxRate: 0.18,
+    taxName: 'ITBIS',
+    taxIncluded: true,
+    lowStockThreshold: 3,
+    categories: ['Cabello', 'Uñas', 'Maquillaje', 'Cuidado de la piel', 'Productos para venta'],
+  },
+  {
+    id: 'custom',
+    label: 'Otro tipo de negocio',
+    icon: '⚙️',
+    description: 'Empezar sin plantilla y elegir el tipo manualmente',
+    type: '',
+    categories: [],
+  },
+]
+
 const CURRENCIES = [
   { value: 'DOP', label: 'Peso Dominicano', symbol: 'RD$' },
   { value: 'USD', label: 'Dólar Americano', symbol: '$' },
@@ -24,6 +96,7 @@ export function Onboarding() {
   const navigate = useNavigate()
   const { user, business, setAuth, token, businesses } = useAuthStore()
   const [step, setStep] = useState(1)
+  const [template, setTemplate] = useState('')
   const [type, setType] = useState('')
   const [currency, setCurrency] = useState('DOP')
   const [productName, setProductName] = useState('')
@@ -41,8 +114,24 @@ export function Onboarding() {
     setLoading(true)
     setError('')
     try {
-      // Save business type and currency
-      await api.put(`/businesses/${business.id}`, { type, currency })
+      const selectedTemplate = BUSINESS_TEMPLATES.find(t => t.id === template)
+
+      // Save business type, currency, and template defaults (taxes, umbral de stock)
+      const updatePayload: Record<string, unknown> = { type, currency }
+      if (selectedTemplate && selectedTemplate.id !== 'custom') {
+        updatePayload.taxRate = selectedTemplate.taxRate
+        updatePayload.taxName = selectedTemplate.taxName
+        updatePayload.taxIncluded = selectedTemplate.taxIncluded
+        updatePayload.lowStockThreshold = selectedTemplate.lowStockThreshold
+      }
+      await api.put(`/businesses/${business.id}`, updatePayload)
+
+      // Create starter categories from the chosen template
+      if (selectedTemplate?.categories.length) {
+        for (const name of selectedTemplate.categories) {
+          await api.post(`/businesses/${business.id}/products/categories`, { name }).catch(() => {})
+        }
+      }
 
       // Create first product if provided
       if (productName && productPrice) {
@@ -103,23 +192,46 @@ export function Onboarding() {
           {step === 1 && (
             <>
               <h2 className="text-lg font-semibold text-gray-900 mb-1">¿Qué tipo de negocio tienes?</h2>
-              <p className="text-gray-500 text-sm mb-5">Esto nos ayuda a personalizar tu experiencia.</p>
+              <p className="text-gray-500 text-sm mb-5">Elige una plantilla y configuramos impuestos, categorías y alertas de stock por ti.</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {BUSINESS_TYPES.map(bt => (
+                {BUSINESS_TEMPLATES.map(t => (
                   <button
-                    key={bt.value}
-                    onClick={() => setType(bt.value)}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                      type === bt.value
+                    key={t.id}
+                    onClick={() => { setTemplate(t.id); setType(t.type) }}
+                    className={`flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                      template === t.id
                         ? 'border-blue-600 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-2xl">{bt.icon}</span>
-                    <span className="font-medium text-gray-800 text-sm">{bt.label}</span>
+                    <span className="text-2xl">{t.icon}</span>
+                    <span>
+                      <span className="font-medium text-gray-800 text-sm block">{t.label}</span>
+                      <span className="text-gray-500 text-xs">{t.description}</span>
+                    </span>
                   </button>
                 ))}
               </div>
+
+              {template === 'custom' && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-4">
+                  {BUSINESS_TYPES.map(bt => (
+                    <button
+                      key={bt.value}
+                      onClick={() => setType(bt.value)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                        type === bt.value
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="text-2xl">{bt.icon}</span>
+                      <span className="font-medium text-gray-800 text-sm">{bt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <button
                 className="btn-primary w-full justify-center mt-6 py-2.5"
                 disabled={!type}
