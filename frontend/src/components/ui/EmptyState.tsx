@@ -4,11 +4,11 @@ import { ReactNode } from 'react'
 type EmptyStateTone = 'blue' | 'green' | 'amber' | 'rose' | 'teal' | 'gray'
 
 const TONE_STYLES: Record<EmptyStateTone, { circle: string; icon: string; accent: string }> = {
-  blue: { circle: 'text-blue-50 dark:text-blue-950/40', icon: 'text-blue-400 dark:text-blue-300', accent: '#3b82f6' },
-  green: { circle: 'text-green-50 dark:text-green-950/40', icon: 'text-green-400 dark:text-green-300', accent: '#22c55e' },
-  amber: { circle: 'text-amber-50 dark:text-amber-950/40', icon: 'text-amber-400 dark:text-amber-300', accent: '#f59e0b' },
-  rose: { circle: 'text-rose-50 dark:text-rose-950/40', icon: 'text-rose-400 dark:text-rose-300', accent: '#f43f5e' },
-  teal: { circle: 'text-teal-50 dark:text-teal-950/40', icon: 'text-teal-400 dark:text-teal-300', accent: '#14b8a6' },
+  blue: { circle: 'text-blue-50 dark:text-blue-950/40', icon: 'text-blue-400 dark:text-blue-400 dark:text-blue-300', accent: '#3b82f6' },
+  green: { circle: 'text-green-50 dark:text-green-950/40', icon: 'text-green-400 dark:text-green-400 dark:text-green-300', accent: '#22c55e' },
+  amber: { circle: 'text-amber-50 dark:text-amber-950/40', icon: 'text-amber-400 dark:text-amber-400 dark:text-amber-300', accent: '#f59e0b' },
+  rose: { circle: 'text-rose-50 dark:text-rose-950/40', icon: 'text-rose-400 dark:text-rose-400 dark:text-rose-300', accent: '#f43f5e' },
+  teal: { circle: 'text-teal-50 dark:text-teal-950/40', icon: 'text-teal-400 dark:text-teal-400 dark:text-teal-300', accent: '#14b8a6' },
   gray: { circle: 'text-gray-100 dark:text-slate-800', icon: 'text-gray-400 dark:text-slate-400', accent: '#9ca3af' },
 }
 

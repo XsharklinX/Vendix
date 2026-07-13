@@ -124,7 +124,13 @@ export function Configuraciones() {
   const { business, businesses, setAuth, user, setBusiness, token } = useAuthStore()
   const bid = business!.id
   const qc = useQueryClient()
-  const [tab, setTab] = useState<Tab>('general')
+  const [tab, setTab] = useState<Tab>(() => {
+    // Permite abrir una pestaña directamente vía ?tab=sistema (usado por el aviso
+    // de salud de base de datos que enlaza a la reparación).
+    const valid: Tab[] = ['general', 'impuestos', 'ncf', 'facturacion', 'staff', 'negocios', 'backup', 'sync', 'sistema']
+    const q = new URLSearchParams(window.location.search).get('tab') as Tab | null
+    return q && valid.includes(q) ? q : 'general'
+  })
   const { enabled: soundEnabled, volume: soundVolume, setEnabled: setSoundEnabled, setVolume: setSoundVolume } = useSoundStore()
 
   // General form state
@@ -229,6 +235,19 @@ export function Configuraciones() {
       })
     }).catch(() => undefined)
   }, [tab, bid])
+
+  // Activa el worker automáticamente en cuanto la configuración queda completa
+  // — antes quedaba "configurado pero apagado" a menos que el usuario tocara
+  // un interruptor aparte, un paso de más que nadie que llenó estos campos
+  // querría dar a propósito.
+  useEffect(() => {
+    if (tab !== 'sync' || syncConfig.enabled) return
+    const complete = Boolean(
+      syncConfig.cloudUrl && (syncConfig.cloudToken || syncTokenSaved) &&
+      syncConfig.localBusinessId && syncConfig.cloudBusinessId && syncConfig.deviceKey
+    )
+    if (complete) setSyncConfig(current => ({ ...current, enabled: true }))
+  }, [tab, syncConfig.enabled, syncConfig.cloudUrl, syncConfig.cloudToken, syncConfig.localBusinessId, syncConfig.cloudBusinessId, syncConfig.deviceKey, syncTokenSaved])
 
   // Sync forms when bizData loads
   useEffect(() => {
@@ -552,8 +571,8 @@ export function Configuraciones() {
         <div className="flex-1 overflow-y-auto p-6 sm:pt-6 pt-16">
           {/* Section header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-              <activeTab.icon size={18} className="text-blue-600" />
+            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/40 rounded-xl flex items-center justify-center">
+              <activeTab.icon size={18} className="text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <h2 className="font-bold text-gray-900">{activeTab.label}</h2>
@@ -619,7 +638,7 @@ export function Configuraciones() {
 
               <div className="card p-5">
                 <h3 className="font-semibold text-gray-800 text-sm flex items-center gap-2 mb-4">
-                  <AlertTriangle size={15} className="text-amber-400" /> Alertas de inventario
+                  <AlertTriangle size={15} className="text-amber-400 dark:text-amber-400" /> Alertas de inventario
                 </h3>
                 <label className="label">Alerta stock bajo (unidades)</label>
                 <input
@@ -776,8 +795,8 @@ export function Configuraciones() {
             <div className="space-y-5 max-w-xl">
               <div className="card p-5 space-y-5">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FileText size={16} className="text-blue-600" />
+                  <div className="w-9 h-9 bg-blue-50 dark:bg-blue-950/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <FileText size={16} className="text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Números de Comprobante Fiscal (NCF)</h3>
@@ -813,11 +832,11 @@ export function Configuraciones() {
                 )}
 
                 {bizData?.ncfType && (
-                  <div className="bg-green-50 rounded-xl p-4 flex items-center gap-3">
-                    <CheckCircle2 size={18} className="text-green-600 flex-shrink-0" />
+                  <div className="bg-green-50 dark:bg-green-950/40 rounded-xl p-4 flex items-center gap-3">
+                    <CheckCircle2 size={18} className="text-green-600 dark:text-green-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-green-800">NCF activo</p>
-                      <p className="text-xs text-green-600">Tipo: {bizData.ncfType} · Próximo: {bizData.ncfType}{String(bizData.ncfSequence ?? 1).padStart(8, '0')}</p>
+                      <p className="text-sm font-semibold text-green-800 dark:text-green-200">NCF activo</p>
+                      <p className="text-xs text-green-600 dark:text-green-400">Tipo: {bizData.ncfType} · Próximo: {bizData.ncfType}{String(bizData.ncfSequence ?? 1).padStart(8, '0')}</p>
                     </div>
                   </div>
                 )}
@@ -834,8 +853,8 @@ export function Configuraciones() {
             <div className="space-y-5 max-w-xl">
               <div className="card p-5 space-y-5">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Hash size={16} className="text-indigo-600" />
+                  <div className="w-9 h-9 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Hash size={16} className="text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Facturación profesional</h3>
@@ -869,9 +888,9 @@ export function Configuraciones() {
                   <p className="text-xs text-gray-400 mt-1">Debe ser una URL pública para que también aparezca en emails.</p>
                 </div>
 
-                <div className="bg-indigo-50 rounded-xl p-4">
-                  <p className="text-xs text-indigo-600 font-semibold">Próxima factura</p>
-                  <p className="text-xl font-black text-indigo-700">{invoiceForm.invoicePrefix || 'FAC'}-{String(invoiceForm.invoiceSequence).padStart(6, '0')}</p>
+                <div className="bg-indigo-50 dark:bg-indigo-950/40 rounded-xl p-4">
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">Próxima factura</p>
+                  <p className="text-xl font-black text-indigo-700 dark:text-indigo-300">{invoiceForm.invoicePrefix || 'FAC'}-{String(invoiceForm.invoiceSequence).padStart(6, '0')}</p>
                 </div>
               </div>
 
@@ -891,15 +910,15 @@ export function Configuraciones() {
               </div>
 
               {/* Owner */}
-              <div className="card p-4 flex items-center gap-3 border-blue-100">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Shield size={16} className="text-blue-600" />
+              <div className="card p-4 flex items-center gap-3 border-blue-100 dark:border-blue-900/50">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center">
+                  <Shield size={16} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
                   <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                 </div>
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">OWNER</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full">OWNER</span>
               </div>
 
               {staffList.length === 0 ? (
@@ -912,17 +931,17 @@ export function Configuraciones() {
                 <div className="card divide-y divide-gray-50 overflow-hidden">
                   {staffList.map(s => (
                     <div key={s.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/50 group">
-                      <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <span className="text-purple-700 font-bold text-sm">{s.name[0].toUpperCase()}</span>
+                      <div className="w-9 h-9 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center">
+                        <span className="text-purple-700 dark:text-purple-300 font-bold text-sm">{s.name[0].toUpperCase()}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 text-sm">{s.name}</p>
                         <p className="text-xs text-gray-400">{s.email}</p>
                       </div>
-                      <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">CAJERO</span>
+                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-full">CAJERO</span>
                       <button
                         onClick={() => deleteStaffMutation.mutate(s.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-red-400 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -944,10 +963,10 @@ export function Configuraciones() {
                       {b.name[0].toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`font-semibold truncate ${b.id === bid ? 'text-blue-700' : 'text-gray-900'}`}>{b.name}</p>
+                      <p className={`font-semibold truncate ${b.id === bid ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900'}`}>{b.name}</p>
                       <p className="text-xs text-gray-400">{b.currency}</p>
                     </div>
-                    {b.id === bid && <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">Activo</span>}
+                    {b.id === bid && <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full">Activo</span>}
                   </div>
                 ))}
               </div>
@@ -1015,9 +1034,9 @@ export function Configuraciones() {
                     </label>
 
                     {backupValidation && (
-                      <div className={`mt-4 rounded-xl border p-3 text-sm space-y-3 ${backupValidation.ok ? 'border-blue-100 bg-blue-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
+                      <div className={`mt-4 rounded-xl border p-3 text-sm space-y-3 ${backupValidation.ok ? 'border-blue-100 dark:border-blue-900/50 bg-blue-50/60' : 'border-amber-100 dark:border-amber-900/50 bg-amber-50/60'}`}>
                         <div>
-                          <p className={`font-semibold flex items-center gap-1.5 ${backupValidation.ok ? 'text-blue-800' : 'text-amber-800'}`}>
+                          <p className={`font-semibold flex items-center gap-1.5 ${backupValidation.ok ? 'text-blue-800 dark:text-blue-200' : 'text-amber-800 dark:text-amber-200'}`}>
                             {backupValidation.ok ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
                             Validacion previa del respaldo
                           </p>
@@ -1035,7 +1054,7 @@ export function Configuraciones() {
                         {backupValidation.warnings.length > 0 && (
                           <div className="space-y-1">
                             {backupValidation.warnings.map(warning => (
-                              <p key={warning} className="text-xs text-amber-700">• {warning}</p>
+                              <p key={warning} className="text-xs text-amber-700 dark:text-amber-300">• {warning}</p>
                             ))}
                           </div>
                         )}
@@ -1058,10 +1077,10 @@ export function Configuraciones() {
                     )}
 
                     {importSummary && (
-                      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-sm space-y-1">
-                        <p className="font-semibold text-emerald-800 flex items-center gap-1.5"><CheckCircle2 size={14} /> Restauración completada</p>
+                      <div className="mt-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/60 p-3 text-sm space-y-1">
+                        <p className="font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5"><CheckCircle2 size={14} /> Restauración completada</p>
                         {Object.entries(importSummary).map(([key, v]) => (
-                          <p key={key} className="text-emerald-700 text-xs">
+                          <p key={key} className="text-emerald-700 dark:text-emerald-300 text-xs">
                             {key}: {v.created} agregado(s), {v.skipped} omitido(s) por duplicado
                           </p>
                         ))}
@@ -1113,7 +1132,7 @@ export function Configuraciones() {
                         <button
                           key={d}
                           onClick={() => setBackupForm(f => ({ ...f, autoBackupInterval: d }))}
-                          className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${backupForm.autoBackupInterval === d ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300'}`}
+                          className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${backupForm.autoBackupInterval === d ? 'bg-blue-600 text-white border-blue-600 dark:border-blue-500' : 'border-gray-200 text-gray-600 hover:border-blue-300 dark:hover:border-blue-700'}`}
                         >
                           {d === 1 ? 'Diario' : d === 7 ? 'Semanal' : d === 14 ? 'Quincenal' : 'Mensual'}
                         </button>
@@ -1132,29 +1151,29 @@ export function Configuraciones() {
                 </button>
               </div>
 
-              <div className="card p-4 bg-amber-50 border border-amber-100 flex items-start gap-3">
-                <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="card p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 flex items-start gap-3">
+                <AlertTriangle size={16} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">Recomendación</p>
-                  <p className="text-sm text-amber-700 mt-0.5">Realiza un respaldo al menos una vez por semana. Los datos se almacenan en este servidor.</p>
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Recomendación</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-0.5">Realiza un respaldo al menos una vez por semana. Los datos se almacenan en este servidor.</p>
                 </div>
               </div>
 
               {/* Zona de peligro */}
               {user?.role !== 'CASHIER' && (
-                <div className="card p-5 border border-red-200 bg-red-50/40 space-y-3">
+                <div className="card p-5 border border-red-200 dark:border-red-800 bg-red-50/40 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Trash2 size={16} className="text-red-500" />
-                    <h3 className="font-semibold text-red-700 text-sm">Zona de peligro</h3>
+                    <Trash2 size={16} className="text-red-500 dark:text-red-400" />
+                    <h3 className="font-semibold text-red-700 dark:text-red-300 text-sm">Zona de peligro</h3>
                   </div>
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-red-600 dark:text-red-400">
                     Elimina permanentemente <strong>todos los datos operativos</strong>: productos, clientes, proveedores,
                     empleados, ventas, cotizaciones y movimientos. Tu cuenta y configuración del negocio se conservan.
                   </p>
-                  <p className="text-xs text-red-500 font-medium">Esta acción no se puede deshacer. Descarga un respaldo antes.</p>
+                  <p className="text-xs text-red-500 dark:text-red-400 font-medium">Esta acción no se puede deshacer. Descarga un respaldo antes.</p>
                   <button
                     onClick={() => { setResetModal(true); setResetConfirm('') }}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 border border-red-300 rounded-xl hover:bg-red-100 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                   >
                     <Trash2 size={14} /> Eliminar todos los datos
                   </button>
@@ -1166,7 +1185,7 @@ export function Configuraciones() {
           {/* ── Sistema ─────────────────────────────────────────────────────── */}
           {tab === 'sync' && (
             <div className="space-y-4 max-w-4xl">
-              <div className="card p-5 border border-cyan-100 bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-950/30 dark:to-slate-900">
+              <div className="card p-5 border border-cyan-100 dark:border-cyan-900/50 bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-950/30 dark:to-slate-900">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-cyan-600 flex items-center justify-center shadow-sm">
@@ -1181,9 +1200,9 @@ export function Configuraciones() {
                   </div>
                   <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
                     syncStatus?.enabled && syncStatus?.configured
-                      ? 'bg-emerald-100 text-emerald-700'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
                       : syncStatus?.enabled
-                        ? 'bg-amber-100 text-amber-700'
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
                         : 'bg-slate-100 text-slate-600'
                   }`}>
                     {syncStatus?.enabled ? (syncStatus.configured ? 'Activo' : 'Incompleto') : 'Apagado'}
@@ -1196,7 +1215,7 @@ export function Configuraciones() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="font-bold text-gray-900 dark:text-slate-100">Configuracion</h3>
-                      <p className="text-sm text-gray-500 dark:text-slate-400">Se guarda localmente en la carpeta de datos de Vendix.</p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400">Se guarda localmente en la carpeta de datos de Vendix. Se activa sola en cuanto completes todos los campos.</p>
                     </div>
                     <label className="inline-flex items-center gap-3 cursor-pointer">
                       <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Activar</span>
@@ -1268,7 +1287,7 @@ export function Configuraciones() {
                   </div>
 
                   {!window.electronAPI && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-amber-700 dark:text-amber-300">
                       Esta configuracion solo se puede guardar desde la app instalada de escritorio.
                     </div>
                   )}
@@ -1293,10 +1312,10 @@ export function Configuraciones() {
                         <p className="text-gray-700 dark:text-slate-300">{value ? new Date(value).toLocaleString('es-DO') : 'No disponible'}</p>
                       </div>
                     ))}
-                    {syncStatus?.lastError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{syncStatus.lastError}</div>}
+                    {syncStatus?.lastError && <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-700 dark:text-red-300">{syncStatus.lastError}</div>}
                   </div>
 
-                  <div className="card p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
+                  <div className="card p-4 bg-blue-50 dark:bg-blue-950/40 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
                     <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Recomendacion</p>
                     <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">Antes de activar en produccion, prueba con un negocio duplicado y confirma que productos, clientes, proveedores y empleados suben y bajan correctamente.</p>
                   </div>
@@ -1328,9 +1347,9 @@ export function Configuraciones() {
                     </div>
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                       updateState?.status === 'downloaded' || updateState?.status === 'available'
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
                         : updateState?.status === 'error'
-                          ? 'bg-red-100 text-red-700'
+                          ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                           : 'bg-slate-100 text-slate-600'
                     }`}>
                       {updateState?.status || 'desktop'}
@@ -1338,9 +1357,9 @@ export function Configuraciones() {
                   </div>
 
                   {updateState?.status === 'downloaded' && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                      <p className="text-sm font-semibold text-emerald-800">Nueva version disponible</p>
-                      <p className="text-xs text-emerald-700 mt-1">{updateState.message}</p>
+                    <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-3">
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Nueva version disponible</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">{updateState.message}</p>
                     </div>
                   )}
 
@@ -1437,7 +1456,7 @@ export function Configuraciones() {
                     <p className="text-sm text-gray-500 dark:text-slate-400">Validacion SQLite y reparacion basica antes de recurrir a restaurar backup.</p>
                   </div>
                   {dbCheck && (
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${dbCheck.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${dbCheck.ok ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'}`}>
                       {dbCheck.ok ? 'Saludable' : 'Revisar'}
                     </span>
                   )}
@@ -1463,7 +1482,7 @@ export function Configuraciones() {
                     {(dbCheck.after || dbCheck.messages || []).map(message => (
                       <p key={message}>{message}</p>
                     ))}
-                    {dbCheck.requiredRestore && <p className="font-semibold text-red-600">Si esto persiste, restaura un respaldo validado.</p>}
+                    {dbCheck.requiredRestore && <p className="font-semibold text-red-600 dark:text-red-400">Si esto persiste, restaura un respaldo validado.</p>}
                   </div>
                 )}
               </div>
@@ -1497,7 +1516,7 @@ export function Configuraciones() {
                 ))}
               </div>
 
-              <div className="card p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
+              <div className="card p-4 bg-blue-50 dark:bg-blue-950/40 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
                 <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Uso recomendado</p>
                 <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">Si necesitas soporte, comparte esta pantalla junto con el archivo de log ubicado en la carpeta de datos de usuario.</p>
               </div>
@@ -1509,9 +1528,9 @@ export function Configuraciones() {
       {/* Modal eliminar todos los datos */}
       <Modal open={resetModal} onClose={() => { setResetModal(false); setResetConfirm('') }} title="Eliminar todos los datos" size="sm">
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-200">
-            <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-red-700 space-y-1">
+          <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-800">
+            <AlertTriangle size={18} className="text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700 dark:text-red-300 space-y-1">
               <p className="font-semibold">Esta acción es irreversible.</p>
               <p>Se eliminarán todos los productos, clientes, proveedores, empleados, ventas, cotizaciones y movimientos del negocio <strong>{business?.name}</strong>.</p>
             </div>

@@ -152,7 +152,7 @@ export function OrdenesCompra() {
       <PageHeader
         title="Ordenes de compra"
         subtitle="Planifica compras, recibe mercancia y actualiza inventario"
-        icon={<Truck size={18} className="text-teal-500" />}
+        icon={<Truck size={18} className="text-teal-500 dark:text-teal-400" />}
         action={
           <div className="flex gap-2">
             {orders.length > 0 && (
@@ -169,14 +169,14 @@ export function OrdenesCompra() {
 
       <div className="p-6 space-y-4">
         {(reorder?.products.length ?? 0) > 0 && (
-          <div className="card p-4 bg-amber-50 border-amber-100">
+          <div className="card p-4 bg-amber-50 dark:bg-amber-950/40 border-amber-100 dark:border-amber-900/50">
             <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle size={16} className="text-amber-600" />
-              <p className="font-bold text-amber-800">Alertas de reorden (umbral {reorder?.threshold})</p>
+              <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />
+              <p className="font-bold text-amber-800 dark:text-amber-200">Alertas de reorden (umbral {reorder?.threshold})</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {reorder!.products.slice(0, 10).map(p => (
-                <button key={p.id} onClick={() => { setCreateOpen(true); addItem(p) }} className="px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-sm text-amber-700 hover:bg-amber-100">
+                <button key={p.id} onClick={() => { setCreateOpen(true); addItem(p) }} className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
                   {p.name} · {p.quantity} uds.
                 </button>
               ))}
@@ -193,7 +193,7 @@ export function OrdenesCompra() {
             <EmptyState icon={Truck} tone="teal" title="Sin órdenes de compra" description="Crea una orden para planificar tus compras a proveedores" action={<button onClick={() => setCreateOpen(true)} className="btn-primary">Crear orden</button>} />
           ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-slate-800">
               <tr>
                 <th className="table-header">Orden</th>
                 <th className="table-header">Proveedor</th>
@@ -203,20 +203,20 @@ export function OrdenesCompra() {
                 <th className="table-header text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
               {orders.map(order => (
                 <tr key={order.id} className="table-row">
                   <td className="table-cell font-bold">OC-{String(order.number).padStart(4, '0')}</td>
                   <td className="table-cell">{order.supplier?.name ?? 'Sin proveedor'}</td>
-                  <td className="table-cell"><span className="badge bg-teal-50 text-teal-700">{STATUS_LABELS[order.status] ?? order.status}</span></td>
+                  <td className="table-cell"><span className="badge bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300">{STATUS_LABELS[order.status] ?? order.status}</span></td>
                   <td className="table-cell text-right font-bold">{formatCurrency(order.total, cur)}</td>
-                  <td className="table-cell text-gray-500">{formatDateTime(order.createdAt)}</td>
+                  <td className="table-cell text-gray-500 dark:text-slate-400">{formatDateTime(order.createdAt)}</td>
                   <td className="table-cell">
                     <div className="flex justify-center gap-1">
-                      {order.status === 'DRAFT' && <button onClick={() => statusMutation.mutate({ id: order.id, status: 'SENT' })} className="btn-ghost text-xs text-blue-600"><Send size={13} /> Enviar</button>}
-                      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && <button onClick={() => { setReceiveOrder(order); setReceiveQty({}) }} className="btn-ghost text-xs text-emerald-600"><PackageCheck size={13} /> Recibir</button>}
-                      <button onClick={() => printOrder(order, business?.name ?? 'Vendix', cur)} className="btn-ghost text-xs text-gray-600"><Printer size={13} /></button>
-                      <button onClick={() => deleteMutation.mutate(order.id)} className="btn-ghost text-xs text-red-500"><Trash2 size={13} /></button>
+                      {order.status === 'DRAFT' && <button onClick={() => statusMutation.mutate({ id: order.id, status: 'SENT' })} className="btn-ghost text-xs text-blue-600 dark:text-blue-400"><Send size={13} /> Enviar</button>}
+                      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && <button onClick={() => { setReceiveOrder(order); setReceiveQty({}) }} className="btn-ghost text-xs text-emerald-600 dark:text-emerald-400"><PackageCheck size={13} /> Recibir</button>}
+                      <button onClick={() => printOrder(order, business?.name ?? 'Vendix', cur)} className="btn-ghost text-xs text-gray-600 dark:text-slate-300"><Printer size={13} /></button>
+                      <button onClick={() => deleteMutation.mutate(order.id)} className="btn-ghost text-xs text-red-500 dark:text-red-400"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>
@@ -254,14 +254,14 @@ export function OrdenesCompra() {
                 </select>
                 <input type="number" min="1" value={item.quantity} onChange={e => setItems(prev => prev.map((row, i) => i === index ? { ...row, quantity: Number(e.target.value) } : row))} className="input col-span-2" />
                 <input type="number" min="0" step="0.01" value={item.cost} onChange={e => setItems(prev => prev.map((row, i) => i === index ? { ...row, cost: Number(e.target.value) } : row))} className="input col-span-3" />
-                <button onClick={() => setItems(prev => prev.filter((_, i) => i !== index))} className="btn-ghost text-red-500 col-span-1"><Trash2 size={14} /></button>
+                <button onClick={() => setItems(prev => prev.filter((_, i) => i !== index))} className="btn-ghost text-red-500 dark:text-red-400 col-span-1"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
-          <div className="flex justify-between items-center border-t border-gray-100 pt-3">
+          <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-700 pt-3">
             <button onClick={() => addItem()} className="btn-secondary"><Plus size={14} /> Agregar producto</button>
             <div className="text-right">
-              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Total</p>
               <p className="text-xl font-black">{formatCurrency(total, cur)}</p>
             </div>
           </div>
@@ -278,17 +278,17 @@ export function OrdenesCompra() {
             {receiveOrder.items.map(item => {
               const remaining = item.quantity - item.receivedQty
               return (
-                <div key={item.id} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-xl">
+                <div key={item.id} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
                   <div className="col-span-6">
-                    <p className="font-semibold text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">Ordenado {item.quantity} · Recibido {item.receivedQty} · Pendiente {remaining}</p>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100">{item.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Ordenado {item.quantity} · Recibido {item.receivedQty} · Pendiente {remaining}</p>
                   </div>
                   <input type="number" min="0" max={remaining} value={receiveQty[item.id] ?? 0} onChange={e => setReceiveQty(q => ({ ...q, [item.id]: Number(e.target.value) }))} className="input col-span-3" />
                   <button onClick={() => setReceiveQty(q => ({ ...q, [item.id]: remaining }))} className="btn-secondary col-span-3 text-xs">Recibir pendiente</button>
                 </div>
               )
             })}
-            <div className="flex justify-end gap-3 border-t border-gray-100 pt-3">
+            <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-slate-700 pt-3">
               <button onClick={() => setReceiveOrder(null)} className="btn-secondary">Cancelar</button>
               <button onClick={() => receiveMutation.mutate()} disabled={receiveMutation.isPending} className="btn-primary"><PackageCheck size={15} /> Actualizar inventario</button>
             </div>

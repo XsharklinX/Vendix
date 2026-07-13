@@ -859,4 +859,111 @@ router.get('/daily-close-snapshots', async (req: AuthRequest, res) => {
   return res.json(snapshots)
 })
 
+// ── Posición del día: cuánto tengo, cuánto me deben, cuánto debo ──────────────
+// Consolida en un solo lugar lo que hoy exige entrar a Caja + Cuentas por Cobrar
+// + Proveedores por separado.
+router.get('/position', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+
+  const [openSession, receivable, payable] = await Promise.all([
+    prisma.cashSession.findFirst({ where: { businessId, status: 'OPEN' }, orderBy: { openedAt: 'desc' } }),
+    // Lo que me deben: ventas al fiado (SALE PENDING)
+    prisma.transaction.aggregate({
+      where: { businessId, type: 'SALE', status: 'PENDING' },
+      _sum: { amount: true }, _count: true,
+    }),
+    // Lo que debo: compras a crédito (PURCHASE PENDING)
+    prisma.transaction.aggregate({
+      where: { businessId, type: 'PURCHASE', status: 'PENDING' },
+      _sum: { amount: true }, _count: true,
+    }),
+  ])
+
+  // Efectivo esperado en la caja abierta = apertura + ventas en efectivo del turno − gastos del turno
+  let cashInDrawer: number | null = null
+  if (openSession) {
+    const [cashSales, sessionExpenses] = await Promise.all([
+      prisma.transaction.aggregate({
+        where: { businessId, cashSessionId: openSession.id, type: 'SALE', status: 'COMPLETED', paymentMethod: 'CASH' },
+        _sum: { amount: true },
+      }),
+      prisma.transaction.aggregate({
+        where: { businessId, cashSessionId: openSession.id, type: { in: ['EXPENSE', 'PURCHASE'] }, status: 'COMPLETED' },
+        _sum: { amount: true },
+      }),
+    ])
+    cashInDrawer = openSession.openAmount + (cashSales._sum.amount ?? 0) - (sessionExpenses._sum.amount ?? 0)
+  }
+
+  return res.json({
+    cashInDrawer,                                   // null si no hay caja abierta
+    cashSessionOpen: !!openSession,
+    receivable: receivable._sum.amount ?? 0,        // me deben
+    receivableCount: receivable._count,
+    payable: payable._sum.amount ?? 0,              // debo a proveedores
+    payableCount: payable._count,
+    generatedAt: new Date().toISOString(),
+    dayStart: dayStart.toISOString(),
+  })
+})
+
+// ── Pulso del día: ¿hoy vas mejor, igual o peor que tu promedio? ──────────────
+// Compara la venta de hoy contra el promedio de los días CON ventas de las últimas
+// 4 semanas (excluye hoy). Devuelve un veredicto simple, no una gráfica.
+router.get('/pulse', async (req: AuthRequest, res) => {
+  const { businessId } = req.params
+  if (!await verifyBusiness(businessId, req.userId!))
+    return res.status(403).json({ error: 'Acceso denegado' })
+
+  const now = new Date()
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
+  const windowStart = new Date(todayStart); windowStart.setDate(windowStart.getDate() - 28)
+
+  const [todayAgg, priorSales] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { businessId, type: 'SALE', status: 'COMPLETED', createdAt: { gte: todayStart } },
+      _sum: { amount: true }, _count: true,
+    }),
+    prisma.transaction.findMany({
+      where: { businessId, type: 'SALE', status: 'COMPLETED', createdAt: { gte: windowStart, lt: todayStart } },
+      select: { amount: true, createdAt: true },
+    }),
+  ])
+
+  // Agrupar ventas previas por día para sacar el promedio de días operativos
+  const byDay = new Map<string, number>()
+  for (const t of priorSales) {
+    const key = t.createdAt.toISOString().slice(0, 10)
+    byDay.set(key, (byDay.get(key) ?? 0) + t.amount)
+  }
+  const activeDays = byDay.size
+  const priorTotal = Array.from(byDay.values()).reduce((s, v) => s + v, 0)
+  const average = activeDays > 0 ? priorTotal / activeDays : 0
+  const today = todayAgg._sum.amount ?? 0
+
+  // Veredicto con margen de ±15% para que "igual" no sea una línea imposible de tocar
+  let verdict: 'above' | 'onpar' | 'below' | 'nodata' = 'nodata'
+  let deltaPct: number | null = null
+  if (activeDays >= 3) {
+    deltaPct = average > 0 ? Math.round(((today - average) / average) * 100) : (today > 0 ? 100 : 0)
+    if (deltaPct >= 15) verdict = 'above'
+    else if (deltaPct <= -15) verdict = 'below'
+    else verdict = 'onpar'
+  }
+
+  return res.json({
+    today,
+    todayCount: todayAgg._count,
+    average: Math.round(average * 100) / 100,
+    activeDays,
+    verdict,
+    deltaPct,
+    generatedAt: now.toISOString(),
+  })
+})
+
 export default router

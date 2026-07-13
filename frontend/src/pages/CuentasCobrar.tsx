@@ -113,6 +113,21 @@ export function CuentasCobrar() {
     }
   }
 
+  // Mensaje de recordatorio: cálido, con nombre del negocio y antigüedad — un
+  // recordatorio que se lee como escrito por una persona cobra mejor que uno robótico.
+  const buildReminder = (client: ClientWithDebt) => {
+    const negocio = business?.name ? ` de ${business.name}` : ''
+    const monto = formatCurrency(client.pendingDebt, cur)
+    const tiempo = client.oldestDebtDays > 30
+      ? ` La deuda más antigua ya tiene ${client.oldestDebtDays} días.`
+      : client.oldestDebtDays >= 7
+      ? ` (pendiente desde hace ${client.oldestDebtDays} días).`
+      : ''
+    return `Hola ${client.name}, te saludo${negocio}. Te recuerdo con cariño que tienes un saldo pendiente de ${monto}.${tiempo} Cuando puedas pasar a saldarlo te lo agradezco. ¡Gracias!`
+  }
+  const waLink = (client: ClientWithDebt) =>
+    `https://wa.me/${client.phone!.replace(/\D/g, '')}?text=${encodeURIComponent(buildReminder(client))}`
+
   const totalDebt = clients.reduce((s, c) => s + c.pendingDebt, 0)
   const agingBuckets = clients.reduce((acc, client) => {
     if (client.oldestDebtDays <= 7) acc.current += client.pendingDebt
@@ -182,10 +197,10 @@ export function CuentasCobrar() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: '0-7 días', value: agingBuckets.current, color: 'text-green-700', bg: 'bg-green-50' },
-            { label: '8-15 días', value: agingBuckets.week2, color: 'text-yellow-700', bg: 'bg-yellow-50' },
-            { label: '16-30 días', value: agingBuckets.month, color: 'text-orange-700', bg: 'bg-orange-50' },
-            { label: '+30 días', value: agingBuckets.critical, color: 'text-red-700', bg: 'bg-red-50' },
+            { label: '0-7 días', value: agingBuckets.current, color: 'text-green-700 dark:text-green-300', bg: 'bg-green-50 dark:bg-green-950/40' },
+            { label: '8-15 días', value: agingBuckets.week2, color: 'text-yellow-700 dark:text-yellow-300', bg: 'bg-yellow-50 dark:bg-yellow-950/40' },
+            { label: '16-30 días', value: agingBuckets.month, color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-50 dark:bg-orange-950/40' },
+            { label: '+30 días', value: agingBuckets.critical, color: 'text-red-700 dark:text-red-300', bg: 'bg-red-50 dark:bg-red-950/40' },
           ].map(bucket => (
             <div key={bucket.label} className={`rounded-2xl p-4 ${bucket.bg}`}>
               <p className={`text-xs font-semibold ${bucket.color}`}>{bucket.label}</p>
@@ -198,7 +213,7 @@ export function CuentasCobrar() {
         {clients.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -227,16 +242,16 @@ export function CuentasCobrar() {
           <QueryError onRetry={() => refetch()} />
         ) : clients.length === 0 ? (
           <div className="card p-12 text-center">
-            <CheckCircle size={48} className="text-green-400 mx-auto mb-3" />
-            <p className="font-semibold text-gray-700">¡Sin deudas pendientes!</p>
-            <p className="text-sm text-gray-400 mt-1">Todos los clientes están al día</p>
+            <CheckCircle size={48} className="text-green-400 dark:text-green-400 mx-auto mb-3" />
+            <p className="font-semibold text-gray-700 dark:text-slate-300">¡Sin deudas pendientes!</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">Todos los clientes están al día</p>
             <Link to="/vender" className="btn-primary mt-4 inline-flex">Registrar venta</Link>
           </div>
         ) : filtered.length === 0 ? (
           <div className="card p-12 text-center">
-            <Search size={32} className="text-gray-300 mx-auto mb-3" />
-            <p className="font-semibold text-gray-700">Sin resultados</p>
-            <p className="text-sm text-gray-400 mt-1">Prueba con otro nombre o cambia el filtro de antigüedad</p>
+            <Search size={32} className="text-gray-300 dark:text-slate-600 mx-auto mb-3" />
+            <p className="font-semibold text-gray-700 dark:text-slate-300">Sin resultados</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">Prueba con otro nombre o cambia el filtro de antigüedad</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -248,21 +263,21 @@ export function CuentasCobrar() {
                       {client.name[0].toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-900">{client.name}</p>
+                      <p className="font-bold text-gray-900 dark:text-slate-100">{client.name}</p>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {client.phone && (
-                          <a href={`tel:${client.phone}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600">
+                          <a href={`tel:${client.phone}`} className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400">
                             <Phone size={11} /> {client.phone}
                           </a>
                         )}
-                        <span className="flex items-center gap-1 text-xs text-orange-600">
+                        <span className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
                           <AlertCircle size={11} /> {client.pendingTransactions.length} venta{client.pendingTransactions.length !== 1 ? 's' : ''} pendiente{client.pendingTransactions.length !== 1 ? 's' : ''}
                         </span>
                         <span className={`text-xs font-semibold ${
-                          client.oldestDebtDays > 30 ? 'text-red-600'
-                          : client.oldestDebtDays > 15 ? 'text-orange-600'
-                          : client.oldestDebtDays > 7 ? 'text-yellow-600'
-                          : 'text-green-600'
+                          client.oldestDebtDays > 30 ? 'text-red-600 dark:text-red-400'
+                          : client.oldestDebtDays > 15 ? 'text-orange-600 dark:text-orange-400'
+                          : client.oldestDebtDays > 7 ? 'text-yellow-600 dark:text-yellow-400'
+                          : 'text-green-600 dark:text-green-400'
                         }`}>
                           Antigüedad: {client.oldestDebtDays} día{client.oldestDebtDays !== 1 ? 's' : ''}
                         </span>
@@ -272,15 +287,15 @@ export function CuentasCobrar() {
 
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
-                      <p className="text-xs text-gray-400">Total deuda</p>
-                      <p className="text-lg font-bold text-red-600">{formatCurrency(client.pendingDebt, cur)}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">Total deuda</p>
+                      <p className="text-lg font-bold text-red-600 dark:text-red-400">{formatCurrency(client.pendingDebt, cur)}</p>
                     </div>
                     {client.phone && (
                       <a
-                        href={`https://wa.me/${client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${client.name}, te recordamos que tienes una deuda pendiente de ${formatCurrency(client.pendingDebt, cur)}. ¡Gracias!`)}`}
+                        href={waLink(client)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-secondary px-2.5 py-2 text-green-600 border-green-200 hover:bg-green-50"
+                        className="btn-secondary px-2.5 py-2 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950/40"
                         title="Recordatorio por WhatsApp"
                       >
                         <MessageCircle size={15} />
@@ -288,7 +303,7 @@ export function CuentasCobrar() {
                     )}
                     <button
                       onClick={() => openStatement(client)}
-                      className="btn-secondary px-2.5 py-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                      className="btn-secondary px-2.5 py-2 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
                       title="Estado de cuenta"
                     >
                       <FileText size={15} />
@@ -296,7 +311,7 @@ export function CuentasCobrar() {
                     {client.email && (
                       <button
                         onClick={() => sendStatementMutation.mutate(client.id)}
-                        className="btn-secondary px-2.5 py-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        className="btn-secondary px-2.5 py-2 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                         title="Enviar estado de cuenta por email"
                       >
                         <Mail size={15} />
@@ -322,15 +337,15 @@ export function CuentasCobrar() {
 
                 {/* Desglose de transacciones */}
                 {client.pendingTransactions.length > 0 && (
-                  <div className="mt-4 border-t border-gray-100 pt-3 space-y-1.5">
+                  <div className="mt-4 border-t border-gray-100 dark:border-slate-700 pt-3 space-y-1.5">
                     {client.pendingTransactions.map(tx => (
-                      <div key={tx.id} className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-gray-50">
+                      <div key={tx.id} className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-gray-50 dark:bg-slate-800">
                         <div>
-                          <span className="text-gray-700">{tx.description || 'Venta'}</span>
-                          <span className="text-gray-400 text-xs ml-2">{formatDate(tx.createdAt, 'dd MMM, HH:mm')}</span>
+                          <span className="text-gray-700 dark:text-slate-300">{tx.description || 'Venta'}</span>
+                          <span className="text-gray-400 dark:text-slate-500 text-xs ml-2">{formatDate(tx.createdAt, 'dd MMM, HH:mm')}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-red-500">{formatCurrency(tx.amount, cur)}</span>
+                          <span className="font-semibold text-red-500 dark:text-red-400">{formatCurrency(tx.amount, cur)}</span>
                           <button
                             onClick={async () => {
                               const ok = await confirm(
@@ -341,7 +356,7 @@ export function CuentasCobrar() {
                               if (ok) markTxPaidMutation.mutate(tx.id)
                             }}
                             disabled={markTxPaidMutation.isPending}
-                            className="text-xs font-medium text-green-600 hover:text-green-700 hover:underline disabled:opacity-50"
+                            className="text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline disabled:opacity-50"
                           >
                             Marcar pagada
                           </button>

@@ -29,10 +29,8 @@ Rama: `codex/roadmap-fases-vendix`
 
 > *Features que están a medias: el backend lo soporta pero el frontend no lo expone.*
 
-### 1.1 Papelera / restaurar eliminados
-Los soft-deletes funcionan en backend (Product, Client, Supplier, Employee) pero no hay forma de ver ni restaurar lo eliminado desde la UI. Un cajero que borra un producto por error no tiene cómo recuperarlo.
-
-**Qué hacer:** una pestaña "Papelera" (o sección colapsable) en Inventario, Clientes, Proveedores y Empleados que muestre items con `deletedAt != null` y botón "Restaurar". Endpoint `POST /:id/restore` ya existe.
+### 1.1 ~~Papelera / restaurar eliminados~~ ✅ (con un hueco: Proveedores)
+Implementado en v2.1 vía `TrashPanel.tsx`, integrado en Inventario, Clientes y Empleados. **Pendiente real:** Proveedores no tiene `TrashPanel` en su página — el backend soporta `deletedAt` en `Supplier` (confirmado por `applySyncChange` en `cloud.ts`), solo falta la integración de UI. Es un pendiente de 30 minutos, no una feature nueva.
 
 ### 1.2 Modo oscuro en componentes nuevos
 `QueryError`, `Pagination`, `EmptyState` y `printDocument` no tienen clases `dark:`. La app soporta modo oscuro pero estos componentes se ven con fondo blanco/gris claro sobre fondo oscuro.
@@ -50,25 +48,19 @@ Dashboard tiene 14 queries independientes sin skeleton ni manejo de error. Si un
 
 > *Funciones que un dueño preguntaría "¿por qué no puedo hacer esto?"*
 
-### 2.1 Exportar reportes como PDF
-Los reportes se generan en HTML y se abren en `window.open` para imprimir. Pero "imprimir a PDF" depende de que el usuario sepa hacer Ctrl+P → guardar como PDF. Un botón "Descargar PDF" directo es más profesional y funciona mejor en Electron.
+### 2.1 Exportar reportes como PDF — parcial, sigue pendiente lo específico
+v2.2 agregó export CSV-UTF8 y una vista imprimible, pero sigue siendo el mecanismo `Ctrl+P → guardar como PDF`, no un botón "Descargar PDF" real. Sigue pendiente tal como se describía.
 
-**Qué hacer:** usar `window.print()` con `@media print` ya funciona, pero agregar un botón explícito "Descargar PDF" que use `webContents.printToPDF()` en Electron o la API de impresión del navegador con destination 'save' como fallback.
+**Qué hacer:** botón explícito "Descargar PDF" con `webContents.printToPDF()` en Electron.
 
-### 2.2 Historial de precios visible en POS
-El POS muestra el precio actual pero no si cambió recientemente. Un dueño que subió precios quiere confirmar que el nuevo precio es el correcto antes de cobrar.
+### 2.2 Historial de precios visible en POS — sigue pendiente
+v2.3 agregó historial de precios visible **desde Inventario**, que es un lugar distinto al POS. El badge "↑ Antes: RD$X" en la tarjeta de producto de `Vender.tsx` no existe todavía.
 
-**Qué hacer:** tooltip o badge sutil en la tarjeta del producto en Vender.tsx si el precio cambió en los últimos 7 días: "↑ Antes: RD$X". No intrusivo, solo informativo.
+### 2.3 ~~Resumen diario automático al cerrar caja~~ ✅
+Implementado en v2.2 — "Copiar resumen" en el modal de cierre, formato WhatsApp-friendly con `DailyCloseSnapshot` persistido.
 
-### 2.3 Resumen diario automático al cerrar caja
-Al cerrar la caja se muestra un modal con cifras, pero no se puede compartir ese resumen. El dueño quiere enviárselo por WhatsApp al socio o guardarlo.
-
-**Qué hacer:** botón "Copiar resumen" o "Compartir" en el modal de cierre que genere un texto plano con: fecha, ventas, gastos, efectivo esperado vs contado, diferencia. Formato WhatsApp-friendly.
-
-### 2.4 Alertas de cotizaciones por vencer
-Las cotizaciones tienen `validUntil` pero no se notifica cuando están por expirar. El dueño pierde ventas porque se le olvida darle seguimiento.
-
-**Qué hacer:** en el job de notificaciones (`checkLowStock` pattern), agregar check de cotizaciones PENDING cuyo `validUntil` sea en los próximos 3 días. Crear notificación "Cotización #X para {cliente} vence en N días".
+### 2.4 Alertas de cotizaciones por vencer — implementado distinto a lo descrito
+Planner.tsx ya muestra cotizaciones por vencer/vencidas (cálculo de `daysToExpire` desde `validUntil`), pero no existe el mecanismo de notificación push/badge automático que describía este ítem originalmente — solo aparece si el usuario entra a Planner. Si se quiere el badge de notificación real, sigue pendiente esa pieza específica.
 
 ---
 
@@ -76,16 +68,13 @@ Las cotizaciones tienen `validUntil` pero no se notifica cuando están por expir
 
 > *Lo que separa un proyecto personal de algo que un usuario pagaría por usar.*
 
-### 3.1 Testing real
-Solo 3 archivos de test en backend, 0 en frontend. No hay CI. Un cambio en `transactions.ts` puede romper el POS sin que nadie lo note hasta que un cajero intente cobrar.
+### 3.1 ~~Testing real~~ ✅
+Implementado en v3.0: backend (auth, cashSession, transactions, quotes, backup, clientsDebt — 19 tests, todos pasan con `npx jest --runInBand`), frontend (smoke tests de Login/Vender/Inventario/Caja + interacción de carrito — 22 tests con Vitest), y CI en GitHub Actions (`.github/workflows/ci.yml`, Node 20, corre typecheck+tests+build en cada push).
 
-**Qué hacer (mínimo viable con máximo ROI):**
-- Backend: tests de integración para los 5 flujos críticos: crear venta (con stock), crear cotización y convertirla, abrir/cerrar caja, crear cliente y verificar segmentos, export/import backup. Con supertest contra el app Express real + db SQLite en memoria.
-- Frontend: smoke tests con Vitest + Testing Library para Vender.tsx (agregar producto al carrito, cobrar) y Login (credenciales inválidas, flujo exitoso).
-- GitHub Actions CI que corra `npm test` en cada push.
+**Nota operativa:** `npm test` en backend se cuelga en Node 25 local (Prisma 5 espera Node LTS) — usar `npx jest --runInBand` como workaround al verificar localmente. CI usa Node 20 y no sufre esto.
 
-### 3.2 Dividir páginas monolíticas
-Cinco archivos superan 800 líneas: Vender (1238), Configuraciones (1015), Reportes (870), Inventario (859), Dashboard (781). Cada cambio es arriesgado.
+### 3.2 Dividir páginas monolíticas — sigue pendiente y empeoró
+Los archivos no solo no se dividieron, crecieron: Vender 1284 líneas (antes 1238), Configuraciones 1576 (antes 1015 — el salto más grande, por la pestaña Cloud sync + permisos), Reportes 1186 (antes 870), Inventario 1104 (antes 859), Dashboard 830 (antes 781). Este ítem es más urgente ahora que hace un mes.
 
 **Qué hacer:**
 - `Vender.tsx` → extraer `CartPanel`, `PaymentSection`, `SuccessModal`, `QuickProductModal`

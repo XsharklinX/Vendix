@@ -12,7 +12,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
     >
-      {isDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-gray-500" />}
+      {isDark ? <Sun size={18} className="text-yellow-400 dark:text-yellow-400" /> : <Moon size={18} className="text-gray-500" />}
     </button>
   )
 }

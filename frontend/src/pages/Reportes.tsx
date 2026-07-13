@@ -497,7 +497,7 @@ export function Reportes() {
       <PageHeader
         title="Reportes"
         subtitle="Genera e imprime reportes de tu negocio"
-        icon={<FileText size={18} className="text-indigo-500" />}
+        icon={<FileText size={18} className="text-indigo-500 dark:text-indigo-400" />}
         action={
           <div className="flex items-center gap-2">
             {(reportType === 'daily' || reportType === 'cierrez') && (
@@ -520,15 +520,15 @@ export function Reportes() {
         <div className="space-y-2">
           {sections.map(section => (
             <div key={section} className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 w-14">{section}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 w-14">{section}</span>
               {REPORT_TYPES.filter(r => r.section === section).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setReportType(key)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium transition-all
                     ${reportType === key
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
+                      ? 'bg-indigo-600 text-white border-indigo-600 dark:border-indigo-500 shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-700'}`}
                 >
                   <Icon size={13} /> {label}
                 </button>
@@ -540,21 +540,21 @@ export function Reportes() {
         {/* Selectores de fecha */}
         {(reportType === 'daily' || reportType === 'cierrez') && (
           <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-500 font-medium">Fecha:</label>
+            <label className="text-sm text-gray-500 dark:text-slate-400 font-medium">Fecha:</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input w-44" />
           </div>
         )}
         {(reportType === 'monthly' || reportType === '606' || reportType === '607' || reportType === 'fiscal' || reportType === 'profitProducts' || reportType === 'profitClients') && (
           <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-500 font-medium">Mes:</label>
+            <label className="text-sm text-gray-500 dark:text-slate-400 font-medium">Mes:</label>
             <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="input w-44" />
           </div>
         )}
         {reportType === 'employees' && (
           <div className="flex items-center gap-3 flex-wrap">
-            <label className="text-sm text-gray-500 font-medium">PerÃ­odo:</label>
+            <label className="text-sm text-gray-500 dark:text-slate-400 font-medium">PerÃ­odo:</label>
             <input type="date" value={empFrom} onChange={e => setEmpFrom(e.target.value)} className="input w-44" />
-            <span className="text-gray-400">â€”</span>
+            <span className="text-gray-400 dark:text-slate-500">â€”</span>
             <input type="date" value={empTo} onChange={e => setEmpTo(e.target.value)} className="input w-44" />
           </div>
         )}
@@ -563,42 +563,42 @@ export function Reportes() {
         {(reportType === 'daily' || reportType === 'monthly') && (
           <div className="space-y-4">
             <div className="card p-5">
-              <div className="text-center mb-4 border-b border-gray-100 pb-4">
-                <h2 className="text-xl font-bold text-gray-900">{business?.name}</h2>
-                <p className="text-gray-500 text-sm">
+              <div className="text-center mb-4 border-b border-gray-100 dark:border-slate-700 pb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">{business?.name}</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">
                   {reportType === 'daily'
                     ? `Cierre del ${format(new Date(date + 'T00:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: es })}`
                     : `Resumen de ${format(new Date(month + '-01'), "MMMM yyyy", { locale: es })}`
                   }
                 </p>
-                <p className="text-xs text-gray-400 mt-1">Generado: {format(today, "dd/MM/yyyy HH:mm")}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Generado: {format(today, "dd/MM/yyyy HH:mm")}</p>
               </div>
               <div className="grid grid-cols-2 gap-4 mb-5">
-                <div className="bg-green-50 rounded-xl p-4">
-                  <p className="text-xs text-green-600 font-medium">Ventas brutas</p>
-                  <p className="text-2xl font-bold text-green-700">{formatCurrency(totalSales, cur)}</p>
-                  <p className="text-xs text-green-500">{salesTx.length} transacciones</p>
+                <div className="bg-green-50 dark:bg-green-950/40 rounded-xl p-4">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">Ventas brutas</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">{formatCurrency(totalSales, cur)}</p>
+                  <p className="text-xs text-green-500 dark:text-green-400">{salesTx.length} transacciones</p>
                 </div>
-                <div className="bg-red-50 rounded-xl p-4">
-                  <p className="text-xs text-red-600 font-medium">Gastos y compras</p>
-                  <p className="text-2xl font-bold text-red-700">{formatCurrency(totalExpenses, cur)}</p>
+                <div className="bg-red-50 dark:bg-red-950/40 rounded-xl p-4">
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">Gastos y compras</p>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">{formatCurrency(totalExpenses, cur)}</p>
                 </div>
                 {totalTax > 0 && (
-                  <div className="bg-blue-50 rounded-xl p-4">
-                    <p className="text-xs text-blue-600 font-medium">{taxName} recaudado</p>
-                    <p className="text-2xl font-bold text-blue-700">{formatCurrency(totalTax, cur)}</p>
+                  <div className="bg-blue-50 dark:bg-blue-950/40 rounded-xl p-4">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">{taxName} recaudado</p>
+                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{formatCurrency(totalTax, cur)}</p>
                   </div>
                 )}
                 {totalReturns > 0 && (
-                  <div className="bg-orange-50 rounded-xl p-4">
-                    <p className="text-xs text-orange-600 font-medium">Devoluciones</p>
-                    <p className="text-2xl font-bold text-orange-700">-{formatCurrency(totalReturns, cur)}</p>
+                  <div className="bg-orange-50 dark:bg-orange-950/40 rounded-xl p-4">
+                    <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Devoluciones</p>
+                    <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">-{formatCurrency(totalReturns, cur)}</p>
                   </div>
                 )}
               </div>
-              <div className="bg-gray-900 text-white rounded-xl p-4 text-center">
-                <p className="text-sm text-gray-300">Utilidad neta</p>
-                <p className={`text-3xl font-black ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className="bg-gray-900 dark:bg-slate-100 text-white rounded-xl p-4 text-center">
+                <p className="text-sm text-gray-300 dark:text-slate-600">Utilidad neta</p>
+                <p className={`text-3xl font-black ${profit >= 0 ? 'text-green-400 dark:text-green-400' : 'text-red-400 dark:text-red-400'}`}>
                   {formatCurrency(profit, cur)}
                 </p>
               </div>
@@ -606,14 +606,14 @@ export function Reportes() {
 
             {salesTx.length > 0 && (
               <div className="card p-5">
-                <h3 className="font-semibold text-gray-900 mb-3">Desglose por forma de pago</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-3">Desglose por forma de pago</h3>
                 {(['CASH', 'CARD', 'TRANSFER'] as const).map(method => {
                   const label = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia' }[method]
                   const total = salesTx.filter(t => t.paymentMethod === method).reduce((s, t) => s + (t.amount as number), 0)
                   if (total === 0) return null
                   return (
-                    <div key={method} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-gray-600">{label}</span>
+                    <div key={method} className="flex justify-between py-2 border-b border-gray-50 dark:border-slate-800 last:border-0">
+                      <span className="text-gray-600 dark:text-slate-300">{label}</span>
                       <span className="font-semibold">{formatCurrency(total, cur)}</span>
                     </div>
                   )
@@ -623,11 +623,11 @@ export function Reportes() {
 
             {transactions.length > 0 && (
               <div className="card overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="font-semibold text-sm text-gray-700">Detalle de movimientos</p>
+                <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                  <p className="font-semibold text-sm text-gray-700 dark:text-slate-300">Detalle de movimientos</p>
                 </div>
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
                       <th className="table-header">Tipo</th>
                       <th className="table-header">DescripciÃ³n</th>
@@ -635,17 +635,17 @@ export function Reportes() {
                       <th className="table-header text-right">Monto</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                     {transactions.slice(0, 50).map(tx => (
                       <tr key={tx.id as string} className="table-row">
                         <td className="table-cell">
-                          <span className={`badge ${tx.type === 'SALE' ? 'text-green-700 bg-green-50' : tx.type === 'RETURN' ? 'text-orange-700 bg-orange-50' : 'text-red-700 bg-red-50'}`}>
+                          <span className={`badge ${tx.type === 'SALE' ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/40' : tx.type === 'RETURN' ? 'text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/40' : 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40'}`}>
                             {tx.type === 'SALE' ? 'Venta' : tx.type === 'RETURN' ? 'DevoluciÃ³n' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type as string}
                           </span>
                         </td>
-                        <td className="table-cell text-gray-600">{(tx.description as string) || 'â€”'}</td>
-                        <td className="table-cell text-gray-500">{{ CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transfer' }[tx.paymentMethod as string] || (tx.paymentMethod as string)}</td>
-                        <td className={`table-cell text-right font-semibold ${tx.type === 'SALE' ? 'text-green-600' : 'text-red-500'}`}>
+                        <td className="table-cell text-gray-600 dark:text-slate-300">{(tx.description as string) || 'â€”'}</td>
+                        <td className="table-cell text-gray-500 dark:text-slate-400">{{ CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transfer' }[tx.paymentMethod as string] || (tx.paymentMethod as string)}</td>
+                        <td className={`table-cell text-right font-semibold ${tx.type === 'SALE' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                           {tx.type === 'SALE' ? '+' : 'âˆ’'}{formatCurrency(tx.amount as number, cur)}
                         </td>
                       </tr>
@@ -653,7 +653,7 @@ export function Reportes() {
                   </tbody>
                 </table>
                 {transactions.length > 50 && (
-                  <p className="text-center text-xs text-gray-400 py-3">Mostrando 50 de {transactions.length} movimientos. Usa Exportar PDF para ver todos.</p>
+                  <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-3">Mostrando 50 de {transactions.length} movimientos. Usa Exportar PDF para ver todos.</p>
                 )}
               </div>
             )}
@@ -664,10 +664,10 @@ export function Reportes() {
         {reportType === 'cierrez' && cierreZ && (
           <div className="space-y-4">
             <div className="card p-5">
-              <div className="text-center mb-5 border-b border-gray-100 pb-4">
-                <h2 className="text-xl font-bold text-gray-900">Cierre Z</h2>
-                <p className="text-gray-500 text-sm">{format(new Date(cierreZ.date + 'T00:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: es })}</p>
-                <p className="text-xs text-gray-400">Generado: {format(today, "dd/MM/yyyy HH:mm")}</p>
+              <div className="text-center mb-5 border-b border-gray-100 dark:border-slate-700 pb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Cierre Z</h2>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">{format(new Date(cierreZ.date + 'T00:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: es })}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">Generado: {format(today, "dd/MM/yyyy HH:mm")}</p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
@@ -684,9 +684,9 @@ export function Reportes() {
                     {count && <p className={`text-xs text-${color}-500`}>{count}</p>}
                   </div>
                 ))}
-                <div className={`bg-gray-900 rounded-xl p-3`}>
-                  <p className="text-xs text-gray-400 font-medium">Utilidad del dÃ­a</p>
-                  <p className={`text-xl font-bold ${cierreZ.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <div className={`bg-gray-900 dark:bg-slate-100 rounded-xl p-3`}>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">Utilidad del dÃ­a</p>
+                  <p className={`text-xl font-bold ${cierreZ.profit >= 0 ? 'text-green-400 dark:text-green-400' : 'text-red-400 dark:text-red-400'}`}>
                     {formatCurrency(cierreZ.profit, cur)}
                   </p>
                 </div>
@@ -695,16 +695,16 @@ export function Reportes() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="card p-5">
-                <h3 className="font-semibold text-gray-900 mb-3">Por mÃ©todo de pago</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-3">Por mÃ©todo de pago</h3>
                 {['CASH', 'CARD', 'TRANSFER'].map(m => {
                   const d = cierreZ.byPaymentMethod[m]
                   const label = { CASH: 'Efectivo', CARD: 'Tarjeta', TRANSFER: 'Transferencia' }[m]
                   return (
-                    <div key={m} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-gray-600 text-sm">{label}</span>
+                    <div key={m} className="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-800 last:border-0">
+                      <span className="text-gray-600 dark:text-slate-300 text-sm">{label}</span>
                       <div className="text-right">
                         <p className="font-semibold">{formatCurrency(d?.total ?? 0, cur)}</p>
-                        <p className="text-xs text-gray-400">{d?.count ?? 0} transacciones</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">{d?.count ?? 0} transacciones</p>
                       </div>
                     </div>
                   )
@@ -713,9 +713,9 @@ export function Reportes() {
 
               {cierreZ.cashSession && (
                 <div className="card p-5">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                     SesiÃ³n de caja
-                    <span className={`badge text-xs ${cierreZ.cashSession.status === 'OPEN' ? 'text-green-700 bg-green-100' : 'text-gray-600 bg-gray-100'}`}>
+                    <span className={`badge text-xs ${cierreZ.cashSession.status === 'OPEN' ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40' : 'text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700'}`}>
                       {cierreZ.cashSession.status === 'OPEN' ? 'Abierta' : 'Cerrada'}
                     </span>
                   </h3>
@@ -724,15 +724,15 @@ export function Reportes() {
                     { label: 'Efectivo esperado', val: cierreZ.cashSession.expectedCash },
                     ...(cierreZ.cashSession.closeAmount != null ? [{ label: 'Cierre declarado', val: cierreZ.cashSession.closeAmount }] : []),
                   ].map(({ label, val }) => (
-                    <div key={label} className="flex justify-between py-1.5 border-b border-gray-50 last:border-0 text-sm">
-                      <span className="text-gray-500">{label}</span>
+                    <div key={label} className="flex justify-between py-1.5 border-b border-gray-50 dark:border-slate-800 last:border-0 text-sm">
+                      <span className="text-gray-500 dark:text-slate-400">{label}</span>
                       <span className="font-semibold">{formatCurrency(val, cur)}</span>
                     </div>
                   ))}
                   {cierreZ.cashSession.difference != null && (
-                    <div className={`mt-3 p-3 rounded-lg text-center ${Math.abs(cierreZ.cashSession.difference) < 0.01 ? 'bg-green-50' : 'bg-red-50'}`}>
-                      <p className="text-xs font-medium text-gray-500">Diferencia</p>
-                      <p className={`text-xl font-black ${Math.abs(cierreZ.cashSession.difference) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`mt-3 p-3 rounded-lg text-center ${Math.abs(cierreZ.cashSession.difference) < 0.01 ? 'bg-green-50 dark:bg-green-950/40' : 'bg-red-50 dark:bg-red-950/40'}`}>
+                      <p className="text-xs font-medium text-gray-500 dark:text-slate-400">Diferencia</p>
+                      <p className={`text-xl font-black ${Math.abs(cierreZ.cashSession.difference) < 0.01 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {formatCurrency(cierreZ.cashSession.difference, cur)}
                       </p>
                     </div>
@@ -742,11 +742,11 @@ export function Reportes() {
             </div>
 
             <div className="card overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">Movimientos ({cierreZ.transactions.length})</p>
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                <p className="font-semibold text-sm text-gray-700 dark:text-slate-300">Movimientos ({cierreZ.transactions.length})</p>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800">
                   <tr>
                     <th className="table-header">Hora</th>
                     <th className="table-header">Tipo</th>
@@ -755,18 +755,18 @@ export function Reportes() {
                     <th className="table-header text-right">Monto</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {cierreZ.transactions.slice(0, 50).map(tx => (
                     <tr key={tx.id} className="table-row">
-                      <td className="table-cell text-gray-400 text-xs">{tx.createdAt?.slice(11, 16)}</td>
+                      <td className="table-cell text-gray-400 dark:text-slate-500 text-xs">{tx.createdAt?.slice(11, 16)}</td>
                       <td className="table-cell">
-                        <span className={`badge ${tx.type === 'SALE' ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'}`}>
+                        <span className={`badge ${tx.type === 'SALE' ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/40' : 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40'}`}>
                           {tx.type === 'SALE' ? 'Venta' : tx.type === 'EXPENSE' ? 'Gasto' : tx.type}
                         </span>
                       </td>
-                      <td className="table-cell text-gray-600">{tx.client?.name || tx.description || 'â€”'}</td>
-                      <td className="table-cell text-gray-400 text-xs">{tx.createdBy?.name || 'â€”'}</td>
-                      <td className={`table-cell text-right font-semibold ${tx.type === 'SALE' ? 'text-green-600' : 'text-red-500'}`}>
+                      <td className="table-cell text-gray-600 dark:text-slate-300">{tx.client?.name || tx.description || 'â€”'}</td>
+                      <td className="table-cell text-gray-400 dark:text-slate-500 text-xs">{tx.createdBy?.name || 'â€”'}</td>
+                      <td className={`table-cell text-right font-semibold ${tx.type === 'SALE' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                         {formatCurrency(tx.amount, cur)}
                       </td>
                     </tr>
@@ -777,7 +777,7 @@ export function Reportes() {
           </div>
         )}
         {reportType === 'cierrez' && !cierreZ && (
-          <div className="card p-12 text-center text-gray-400">
+          <div className="card p-12 text-center text-gray-400 dark:text-slate-500">
             <Receipt size={36} className="mx-auto mb-3 opacity-30" />
             <p>Selecciona una fecha para ver el Cierre Z</p>
           </div>
@@ -792,20 +792,20 @@ export function Reportes() {
                 { label: 'Utilidad', val: formatCurrency(profitReport.totals.profit, cur) },
               ].map(item => (
                 <div key={item.label} className="card p-4">
-                  <p className="text-xs text-gray-500 font-medium">{item.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{item.val}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">{item.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{item.val}</p>
                 </div>
               ))}
             </div>
             <div className="card overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                <p className="font-semibold text-sm text-gray-700 dark:text-slate-300">
                   Utilidad por {reportType === 'profitClients' ? 'cliente' : 'producto'}
                 </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[760px]">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
                       <th className="table-header">{reportType === 'profitClients' ? 'Cliente' : 'Producto'}</th>
                       <th className="table-header text-right">{reportType === 'profitClients' ? 'Ventas' : 'Unidades'}</th>
@@ -815,14 +815,14 @@ export function Reportes() {
                       <th className="table-header text-right">Margen</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                     {profitReport.rows.slice(0, 80).map(row => (
                       <tr key={row.id} className="table-row">
-                        <td className="table-cell font-medium text-gray-900">{row.name}</td>
+                        <td className="table-cell font-medium text-gray-900 dark:text-slate-100">{row.name}</td>
                         <td className="table-cell text-right">{reportType === 'profitClients' ? row.count ?? 0 : row.quantity ?? 0}</td>
                         <td className="table-cell text-right">{formatCurrency(row.sales, cur)}</td>
                         <td className="table-cell text-right">{formatCurrency(row.cost, cur)}</td>
-                        <td className={`table-cell text-right font-semibold ${row.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(row.profit, cur)}</td>
+                        <td className={`table-cell text-right font-semibold ${row.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(row.profit, cur)}</td>
                         <td className="table-cell text-right">{row.margin.toFixed(1)}%</td>
                       </tr>
                     ))}
@@ -837,21 +837,21 @@ export function Reportes() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               <div className="card p-4">
-                <p className="text-xs text-gray-500 font-medium">Total pendiente</p>
-                <p className="text-xl font-bold text-red-600">{formatCurrency(agingReport.total, cur)}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Total pendiente</p>
+                <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatCurrency(agingReport.total, cur)}</p>
               </div>
               {Object.entries(agingReport.buckets).map(([bucket, data]) => (
                 <div key={bucket} className="card p-4">
-                  <p className="text-xs text-gray-500 font-medium">{bucket} dias</p>
-                  <p className="text-xl font-bold text-gray-900">{formatCurrency(data.total, cur)}</p>
-                  <p className="text-xs text-gray-400">{data.count} cuenta(s)</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">{bucket} dias</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-slate-100">{formatCurrency(data.total, cur)}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">{data.count} cuenta(s)</p>
                 </div>
               ))}
             </div>
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[820px]">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
                       <th className="table-header">Cliente</th>
                       <th className="table-header">Telefono</th>
@@ -862,16 +862,16 @@ export function Reportes() {
                       <th className="table-header text-right">Monto</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                     {agingReport.rows.map(row => (
                       <tr key={row.id} className="table-row">
-                        <td className="table-cell font-medium text-gray-900">{row.clientName}</td>
-                        <td className="table-cell text-gray-500">{row.phone || '-'}</td>
-                        <td className="table-cell text-gray-500">{row.invoiceNumber || '-'}</td>
+                        <td className="table-cell font-medium text-gray-900 dark:text-slate-100">{row.clientName}</td>
+                        <td className="table-cell text-gray-500 dark:text-slate-400">{row.phone || '-'}</td>
+                        <td className="table-cell text-gray-500 dark:text-slate-400">{row.invoiceNumber || '-'}</td>
                         <td className="table-cell">{row.date}</td>
                         <td className="table-cell text-right">{row.days}</td>
-                        <td className="table-cell"><span className="badge bg-amber-50 text-amber-700">{row.bucket}</span></td>
-                        <td className="table-cell text-right font-semibold text-red-600">{formatCurrency(row.amount, cur)}</td>
+                        <td className="table-cell"><span className="badge bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">{row.bucket}</span></td>
+                        <td className="table-cell text-right font-semibold text-red-600 dark:text-red-400">{formatCurrency(row.amount, cur)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -884,15 +884,15 @@ export function Reportes() {
         {reportType === 'fiscal' && fiscalSummary && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="card p-4"><p className="text-xs text-gray-500">Ventas validas</p><p className="text-xl font-bold">{formatCurrency(fiscalSummary.totals.sales, cur)}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">{taxName}</p><p className="text-xl font-bold">{formatCurrency(fiscalSummary.totals.tax, cur)}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">NCF emitidos</p><p className="text-xl font-bold">{fiscalSummary.totals.ncfCount}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">Anulaciones</p><p className="text-xl font-bold text-red-600">{fiscalSummary.totals.cancelledCount}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Ventas validas</p><p className="text-xl font-bold">{formatCurrency(fiscalSummary.totals.sales, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">{taxName}</p><p className="text-xl font-bold">{formatCurrency(fiscalSummary.totals.tax, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">NCF emitidos</p><p className="text-xl font-bold">{fiscalSummary.totals.ncfCount}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Anulaciones</p><p className="text-xl font-bold text-red-600 dark:text-red-400">{fiscalSummary.totals.cancelledCount}</p></div>
             </div>
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[900px]">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
                       <th className="table-header">Fecha</th>
                       <th className="table-header">Factura</th>
@@ -903,14 +903,14 @@ export function Reportes() {
                       <th className="table-header text-right">{taxName}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                     {fiscalSummary.rows.map((row, index) => (
                       <tr key={`${row.invoiceNumber}-${index}`} className="table-row">
                         <td className="table-cell">{row.date}</td>
                         <td className="table-cell">{row.invoiceNumber || '-'}</td>
                         <td className="table-cell">{row.ncf || '-'}</td>
                         <td className="table-cell">{row.clientName}</td>
-                        <td className="table-cell"><span className={`badge ${row.status === 'CANCELLED' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{row.status}</span></td>
+                        <td className="table-cell"><span className={`badge ${row.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300' : 'bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300'}`}>{row.status}</span></td>
                         <td className="table-cell text-right">{formatCurrency(row.amount, cur)}</td>
                         <td className="table-cell text-right">{formatCurrency(row.taxAmount, cur)}</td>
                       </tr>
@@ -932,17 +932,17 @@ export function Reportes() {
                 { label: `${taxName} total`, val: formatCurrency(r606.totals.itbis, cur), isCur: true },
               ].map(({ label, val }) => (
                 <div key={label} className="card p-4 text-center">
-                  <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{val}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">{label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{val}</p>
                 </div>
               ))}
             </div>
             <div className="card overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">606 â€” Compras ({r606.month})</p>
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                <p className="font-semibold text-sm text-gray-700 dark:text-slate-300">606 â€” Compras ({r606.month})</p>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800">
                   <tr>
                     <th className="table-header">Fecha</th>
                     <th className="table-header">RNC/CÃ©dula</th>
@@ -953,24 +953,24 @@ export function Reportes() {
                     <th className="table-header text-right">{taxName}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {r606.rows.map((row, i) => (
                     <tr key={i} className="table-row">
-                      <td className="table-cell text-gray-500 text-xs">{row.fecha}</td>
-                      <td className="table-cell text-gray-600">{row.rnc_cedula || 'â€”'}</td>
+                      <td className="table-cell text-gray-500 dark:text-slate-400 text-xs">{row.fecha}</td>
+                      <td className="table-cell text-gray-600 dark:text-slate-300">{row.rnc_cedula || 'â€”'}</td>
                       <td className="table-cell font-medium">{row.razon_social}</td>
-                      <td className="table-cell"><span className="badge text-purple-700 bg-purple-50">{row.tipo_bienes === '01' ? 'Compra' : 'Gasto'}</span></td>
-                      <td className="table-cell text-gray-500 text-xs">{row.ncf || 'â€”'}</td>
+                      <td className="table-cell"><span className="badge text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40">{row.tipo_bienes === '01' ? 'Compra' : 'Gasto'}</span></td>
+                      <td className="table-cell text-gray-500 dark:text-slate-400 text-xs">{row.ncf || 'â€”'}</td>
                       <td className="table-cell text-right font-semibold">{formatCurrency(row.monto_facturado, cur)}</td>
-                      <td className="table-cell text-right text-blue-600">{formatCurrency(row.itbis_facturado, cur)}</td>
+                      <td className="table-cell text-right text-blue-600 dark:text-blue-400">{formatCurrency(row.itbis_facturado, cur)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-gray-50 font-bold">
+                  <tr className="bg-gray-50 dark:bg-slate-800 font-bold">
                     <td className="table-cell" colSpan={5}>Totales</td>
-                    <td className="table-cell text-right text-gray-900">{formatCurrency(r606.totals.monto, cur)}</td>
-                    <td className="table-cell text-right text-blue-700">{formatCurrency(r606.totals.itbis, cur)}</td>
+                    <td className="table-cell text-right text-gray-900 dark:text-slate-100">{formatCurrency(r606.totals.monto, cur)}</td>
+                    <td className="table-cell text-right text-blue-700 dark:text-blue-300">{formatCurrency(r606.totals.itbis, cur)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -988,17 +988,17 @@ export function Reportes() {
                 { label: `${taxName} recaudado`, val: formatCurrency(r607.totals.itbis, cur) },
               ].map(({ label, val }) => (
                 <div key={label} className="card p-4 text-center">
-                  <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{val}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">{label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{val}</p>
                 </div>
               ))}
             </div>
             <div className="card overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">607 â€” Ventas ({r607.month})</p>
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                <p className="font-semibold text-sm text-gray-700 dark:text-slate-300">607 â€” Ventas ({r607.month})</p>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800">
                   <tr>
                     <th className="table-header">Fecha</th>
                     <th className="table-header">NCF</th>
@@ -1009,25 +1009,25 @@ export function Reportes() {
                     <th className="table-header text-right">Sin imp.</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {r607.rows.map((row, i) => (
                     <tr key={i} className="table-row">
-                      <td className="table-cell text-gray-500 text-xs">{row.fecha}</td>
-                      <td className="table-cell text-gray-500 text-xs">{row.ncf || 'â€”'}</td>
-                      <td className="table-cell text-gray-600">{row.rnc_cedula || 'â€”'}</td>
+                      <td className="table-cell text-gray-500 dark:text-slate-400 text-xs">{row.fecha}</td>
+                      <td className="table-cell text-gray-500 dark:text-slate-400 text-xs">{row.ncf || 'â€”'}</td>
+                      <td className="table-cell text-gray-600 dark:text-slate-300">{row.rnc_cedula || 'â€”'}</td>
                       <td className="table-cell font-medium">{row.razon_social}</td>
                       <td className="table-cell text-right font-semibold">{formatCurrency(row.monto_facturado, cur)}</td>
-                      <td className="table-cell text-right text-blue-600">{formatCurrency(row.itbis_facturado, cur)}</td>
-                      <td className="table-cell text-right text-gray-500">{formatCurrency(row.monto_sin_impuesto, cur)}</td>
+                      <td className="table-cell text-right text-blue-600 dark:text-blue-400">{formatCurrency(row.itbis_facturado, cur)}</td>
+                      <td className="table-cell text-right text-gray-500 dark:text-slate-400">{formatCurrency(row.monto_sin_impuesto, cur)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-gray-50 font-bold">
+                  <tr className="bg-gray-50 dark:bg-slate-800 font-bold">
                     <td className="table-cell" colSpan={4}>Totales</td>
-                    <td className="table-cell text-right text-gray-900">{formatCurrency(r607.totals.monto, cur)}</td>
-                    <td className="table-cell text-right text-blue-700">{formatCurrency(r607.totals.itbis, cur)}</td>
-                    <td className="table-cell text-right text-gray-600">{formatCurrency(r607.totals.monto - r607.totals.itbis, cur)}</td>
+                    <td className="table-cell text-right text-gray-900 dark:text-slate-100">{formatCurrency(r607.totals.monto, cur)}</td>
+                    <td className="table-cell text-right text-blue-700 dark:text-blue-300">{formatCurrency(r607.totals.itbis, cur)}</td>
+                    <td className="table-cell text-right text-gray-600 dark:text-slate-300">{formatCurrency(r607.totals.monto - r607.totals.itbis, cur)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -1038,12 +1038,12 @@ export function Reportes() {
         {/* â”€â”€ Inventario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === 'inventory' && (
           <div className="card overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <p className="font-semibold text-gray-700">Inventario â€” {format(today, "dd/MM/yyyy")}</p>
-              <p className="text-sm text-gray-500">{products.length} productos</p>
+            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-between">
+              <p className="font-semibold text-gray-700 dark:text-slate-300">Inventario â€” {format(today, "dd/MM/yyyy")}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">{products.length} productos</p>
             </div>
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-slate-800">
                 <tr>
                   <th className="table-header">Producto</th>
                   <th className="table-header text-center">Stock</th>
@@ -1052,25 +1052,25 @@ export function Reportes() {
                   <th className="table-header text-right">Valor stock</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                 {(products as Record<string, unknown>[]).sort((a, b) => (a.name as string).localeCompare(b.name as string)).map(p => (
                   <tr key={p.id as string} className="table-row">
-                    <td className="table-cell font-medium text-gray-900">{p.name as string}</td>
+                    <td className="table-cell font-medium text-gray-900 dark:text-slate-100">{p.name as string}</td>
                     <td className="table-cell text-center">
-                      <span className={`badge ${(p.quantity as number) === 0 ? 'text-red-700 bg-red-50' : (p.quantity as number) <= 5 ? 'text-yellow-700 bg-yellow-50' : 'text-green-700 bg-green-50'}`}>
+                      <span className={`badge ${(p.quantity as number) === 0 ? 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40' : (p.quantity as number) <= 5 ? 'text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950/40' : 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/40'}`}>
                         {p.quantity as number}
                       </span>
                     </td>
                     <td className="table-cell text-right">{formatCurrency(p.price as number, cur)}</td>
-                    <td className="table-cell text-right text-gray-500">{formatCurrency(p.cost as number, cur)}</td>
+                    <td className="table-cell text-right text-gray-500 dark:text-slate-400">{formatCurrency(p.cost as number, cur)}</td>
                     <td className="table-cell text-right font-semibold">{formatCurrency((p.cost as number) * (p.quantity as number), cur)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-gray-50 font-bold">
+                <tr className="bg-gray-50 dark:bg-slate-800 font-bold">
                   <td className="table-cell" colSpan={4}>Total valor inventario (al costo)</td>
-                  <td className="table-cell text-right text-blue-700">
+                  <td className="table-cell text-right text-blue-700 dark:text-blue-300">
                     {formatCurrency(products.reduce((s, p) => s + (p.cost as number) * (p.quantity as number), 0), cur)}
                   </td>
                 </tr>
@@ -1082,12 +1082,12 @@ export function Reportes() {
         {/* â”€â”€ Clientes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {reportType === 'clients' && (
           <div className="card overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <p className="font-semibold text-gray-700">Clientes â€” {format(today, "dd/MM/yyyy")}</p>
-              <p className="text-sm text-gray-500">{clients.length} clientes</p>
+            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-between">
+              <p className="font-semibold text-gray-700 dark:text-slate-300">Clientes â€” {format(today, "dd/MM/yyyy")}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">{clients.length} clientes</p>
             </div>
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-slate-800">
                 <tr>
                   <th className="table-header">Cliente</th>
                   <th className="table-header">TelÃ©fono</th>
@@ -1096,16 +1096,16 @@ export function Reportes() {
                   <th className="table-header text-right">Deuda pendiente</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                 {(clients as Record<string, unknown>[]).map(c => (
                   <tr key={c.id as string} className="table-row">
-                    <td className="table-cell font-medium text-gray-900">
-                      {Boolean(c.isVip) && <span className="text-yellow-500 mr-1">â˜…</span>}{c.name as string}
+                    <td className="table-cell font-medium text-gray-900 dark:text-slate-100">
+                      {Boolean(c.isVip) && <span className="text-yellow-500 dark:text-yellow-400 mr-1">â˜…</span>}{c.name as string}
                     </td>
-                    <td className="table-cell text-gray-500">{(c.phone as string) || 'â€”'}</td>
-                    <td className="table-cell text-gray-500">{(c.document as string) || 'â€”'}</td>
+                    <td className="table-cell text-gray-500 dark:text-slate-400">{(c.phone as string) || 'â€”'}</td>
+                    <td className="table-cell text-gray-500 dark:text-slate-400">{(c.document as string) || 'â€”'}</td>
                     <td className="table-cell text-center">{(c._count as Record<string, unknown>)?.transactions as number || 0}</td>
-                    <td className={`table-cell text-right font-semibold ${(c.pendingDebt as number) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <td className={`table-cell text-right font-semibold ${(c.pendingDebt as number) > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                       {formatCurrency((c.pendingDebt as number) || 0, cur)}
                     </td>
                   </tr>
@@ -1125,17 +1125,17 @@ export function Reportes() {
                 { label: 'Transacciones', val: String(empReport.totals.count) },
               ].map(({ label, val }) => (
                 <div key={label} className="card p-4 text-center">
-                  <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{val}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">{label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{val}</p>
                 </div>
               ))}
             </div>
             <div className="card overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="font-semibold text-sm text-gray-700">Ventas por empleado â€” {empFrom} al {empTo}</p>
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                <p className="font-semibold text-sm text-gray-700 dark:text-slate-300">Ventas por empleado â€” {empFrom} al {empTo}</p>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800">
                   <tr>
                     <th className="table-header">Empleado</th>
                     <th className="table-header">Rol</th>
@@ -1146,26 +1146,26 @@ export function Reportes() {
                     <th className="table-header text-right">Tarjeta</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {empReport.employees.map(emp => (
                     <tr key={emp.userId} className="table-row">
-                      <td className="table-cell font-medium text-gray-900">{emp.name}</td>
+                      <td className="table-cell font-medium text-gray-900 dark:text-slate-100">{emp.name}</td>
                       <td className="table-cell">
-                        <span className="badge text-indigo-700 bg-indigo-50">{emp.role}</span>
+                        <span className="badge text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40">{emp.role}</span>
                       </td>
                       <td className="table-cell text-center">{emp.count}</td>
-                      <td className="table-cell text-right font-semibold text-green-600">{formatCurrency(emp.total, cur)}</td>
-                      <td className="table-cell text-right text-blue-600">{formatCurrency(emp.tax, cur)}</td>
-                      <td className="table-cell text-right text-gray-600">{formatCurrency(emp.byMethod['CASH'] ?? 0, cur)}</td>
-                      <td className="table-cell text-right text-gray-600">{formatCurrency(emp.byMethod['CARD'] ?? 0, cur)}</td>
+                      <td className="table-cell text-right font-semibold text-green-600 dark:text-green-400">{formatCurrency(emp.total, cur)}</td>
+                      <td className="table-cell text-right text-blue-600 dark:text-blue-400">{formatCurrency(emp.tax, cur)}</td>
+                      <td className="table-cell text-right text-gray-600 dark:text-slate-300">{formatCurrency(emp.byMethod['CASH'] ?? 0, cur)}</td>
+                      <td className="table-cell text-right text-gray-600 dark:text-slate-300">{formatCurrency(emp.byMethod['CARD'] ?? 0, cur)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-gray-50 font-bold">
+                  <tr className="bg-gray-50 dark:bg-slate-800 font-bold">
                     <td className="table-cell" colSpan={2}>Totales</td>
                     <td className="table-cell text-center">{empReport.totals.count}</td>
-                    <td className="table-cell text-right text-green-700">{formatCurrency(empReport.totals.total, cur)}</td>
+                    <td className="table-cell text-right text-green-700 dark:text-green-300">{formatCurrency(empReport.totals.total, cur)}</td>
                     <td className="table-cell" colSpan={3}></td>
                   </tr>
                 </tfoot>
@@ -1174,7 +1174,7 @@ export function Reportes() {
           </div>
         )}
         {reportType === 'employees' && !empReport && (
-          <div className="card p-12 text-center text-gray-400">
+          <div className="card p-12 text-center text-gray-400 dark:text-slate-500">
             <UserCheck size={36} className="mx-auto mb-3 opacity-30" />
             <p>Selecciona un perÃ­odo para ver el reporte de empleados</p>
           </div>

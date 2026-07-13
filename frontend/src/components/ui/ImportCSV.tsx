@@ -147,11 +147,11 @@ export function ImportCSV({ businessId, onClose }: ImportCSVProps) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-        <FileSpreadsheet size={20} className="text-blue-600 flex-shrink-0" />
+      <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-100 dark:border-blue-900/50">
+        <FileSpreadsheet size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-blue-800">Plantilla Excel validada</p>
-          <p className="text-xs text-blue-600">Incluye categoria, umbral de stock y ejemplo de formato correcto.</p>
+          <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Plantilla Excel validada</p>
+          <p className="text-xs text-blue-600 dark:text-blue-400">Incluye categoria, umbral de stock y ejemplo de formato correcto.</p>
         </div>
         <button onClick={downloadTemplate} className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">
           <Download size={13} /> Plantilla
@@ -161,11 +161,11 @@ export function ImportCSV({ businessId, onClose }: ImportCSVProps) {
       {!result && (
         <div
           onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all group"
+          className="border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 transition-all group"
         >
-          <Upload size={32} className="mx-auto mb-3 text-gray-300 group-hover:text-blue-400 transition-colors" />
-          <p className="font-semibold text-gray-700 text-sm">Arrastra tu archivo aqui o haz clic</p>
-          <p className="text-xs text-gray-400 mt-1">Soporta .csv, .xlsx, .xls. Maximo 500 filas.</p>
+          <Upload size={32} className="mx-auto mb-3 text-gray-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-400 transition-colors" />
+          <p className="font-semibold text-gray-700 dark:text-slate-300 text-sm">Arrastra tu archivo aqui o haz clic</p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Soporta .csv, .xlsx, .xls. Maximo 500 filas.</p>
           <input
             ref={fileRef}
             type="file"
@@ -177,9 +177,9 @@ export function ImportCSV({ businessId, onClose }: ImportCSVProps) {
       )}
 
       {errors.length > 0 && (
-        <div className="bg-red-50 rounded-xl p-4 space-y-1 max-h-32 overflow-y-auto">
+        <div className="bg-red-50 dark:bg-red-950/40 rounded-xl p-4 space-y-1 max-h-32 overflow-y-auto">
           {errors.map((e, i) => (
-            <p key={i} className="text-xs text-red-600 flex items-start gap-1.5">
+            <p key={i} className="text-xs text-red-600 dark:text-red-400 flex items-start gap-1.5">
               <AlertCircle size={11} className="flex-shrink-0 mt-0.5" /> {e}
             </p>
           ))}
@@ -187,9 +187,9 @@ export function ImportCSV({ businessId, onClose }: ImportCSVProps) {
       )}
 
       {warnings.length > 0 && errors.length === 0 && (
-        <div className="bg-amber-50 rounded-xl p-4 space-y-1 max-h-32 overflow-y-auto">
+        <div className="bg-amber-50 dark:bg-amber-950/40 rounded-xl p-4 space-y-1 max-h-32 overflow-y-auto">
           {warnings.map((w, i) => (
-            <p key={i} className="text-xs text-amber-700 flex items-start gap-1.5">
+            <p key={i} className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-1.5">
               <AlertCircle size={11} className="flex-shrink-0 mt-0.5" /> {w}
             </p>
           ))}
@@ -198,48 +198,48 @@ export function ImportCSV({ businessId, onClose }: ImportCSVProps) {
 
       {rows.length > 0 && !result && (
         <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">
+          <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
             Vista previa: {rows.length} producto{rows.length !== 1 ? 's' : ''} valido{rows.length !== 1 ? 's' : ''}
           </p>
-          <div className="border border-gray-100 rounded-xl overflow-hidden max-h-64 overflow-auto">
+          <div className="border border-gray-100 dark:border-slate-700 rounded-xl overflow-hidden max-h-64 overflow-auto">
             <table className="w-full text-xs min-w-[760px]">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="bg-gray-50 dark:bg-slate-800 sticky top-0">
                 <tr>
                   {['Nombre', 'Precio', 'Costo', 'Stock', 'Categoria', 'Umbral', 'Codigo'].map(h => (
-                    <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-slate-400">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                 {rows.slice(0, 30).map((r, i) => (
                   <tr key={i} className="hover:bg-gray-50/50">
-                    <td className="px-3 py-2 font-medium text-gray-900 max-w-[180px] truncate">{r.name}</td>
-                    <td className="px-3 py-2 text-gray-600">{r.price}</td>
-                    <td className="px-3 py-2 text-gray-600">{r.cost || 0}</td>
-                    <td className="px-3 py-2 text-gray-600">{r.quantity || 0}</td>
-                    <td className="px-3 py-2 text-gray-500">{r.category || '-'}</td>
-                    <td className="px-3 py-2 text-gray-500">{r.lowStockThreshold || '-'}</td>
-                    <td className="px-3 py-2 text-gray-400 font-mono">{r.barcode || '-'}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-slate-100 max-w-[180px] truncate">{r.name}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-slate-300">{r.price}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-slate-300">{r.cost || 0}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-slate-300">{r.quantity || 0}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{r.category || '-'}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{r.lowStockThreshold || '-'}</td>
+                    <td className="px-3 py-2 text-gray-400 dark:text-slate-500 font-mono">{r.barcode || '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {rows.length > 30 && <p className="text-center text-xs text-gray-400 py-2">y {rows.length - 30} mas...</p>}
+            {rows.length > 30 && <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-2">y {rows.length - 30} mas...</p>}
           </div>
         </div>
       )}
 
       {result && (
         <div className="text-center py-6">
-          <CheckCircle2 size={48} className="mx-auto mb-4 text-green-500" />
-          <h3 className="text-lg font-bold text-gray-900">{result.created} productos importados</h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <CheckCircle2 size={48} className="mx-auto mb-4 text-green-500 dark:text-green-400" />
+          <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">{result.created} productos importados</h3>
+          <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
             Tu inventario ha sido actualizado{result.skipped ? `; ${result.skipped} duplicados fueron omitidos` : ''}
           </p>
         </div>
       )}
 
-      <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+      <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
         <button onClick={onClose} className="btn-secondary">
           <X size={15} /> {result ? 'Cerrar' : 'Cancelar'}
         </button>

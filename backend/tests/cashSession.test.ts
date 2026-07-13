@@ -60,7 +60,8 @@ describe('Flujo de caja (apertura → venta → cierre)', () => {
       .set(authed(token))
       .send({ openAmount: 50 })
 
-    expect(second.status).toBe(400)
+    // 409 Conflict: ya existe una caja abierta (recurso en conflicto)
+    expect(second.status).toBe(409)
     expect(second.body.error).toMatch(/caja abierta/i)
   })
 

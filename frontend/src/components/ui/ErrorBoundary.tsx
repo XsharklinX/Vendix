@@ -18,14 +18,14 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle size={28} className="text-red-500" />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-800 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-red-100 dark:border-red-900/50 p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={28} className="text-red-500 dark:text-red-400" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Algo salió mal</h2>
-            <p className="text-sm text-gray-500 mb-1">Ocurrió un error inesperado en la aplicación.</p>
-            <p className="text-xs text-red-400 font-mono bg-red-50 rounded-lg p-3 mb-6 text-left break-all">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">Algo salió mal</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">Ocurrió un error inesperado en la aplicación.</p>
+            <p className="text-xs text-red-400 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 rounded-lg p-3 mb-6 text-left break-all">
               {this.state.error.message}
             </p>
             <button

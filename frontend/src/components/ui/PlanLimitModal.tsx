@@ -14,8 +14,8 @@ export function PlanLimitModal({ open, onClose, message }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fade-in">
-        <button onClick={onClose} className="absolute right-4 top-4 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fade-in">
+        <button onClick={onClose} className="absolute right-4 top-4 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500">
           <X size={16} />
         </button>
 
@@ -23,14 +23,14 @@ export function PlanLimitModal({ open, onClose, message }: Props) {
           <Zap size={24} className="text-white" />
         </div>
 
-        <h2 className="text-xl font-bold text-gray-900 text-center mb-2">Límite del plan gratuito</h2>
-        <p className="text-sm text-gray-500 text-center mb-5">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 text-center mb-2">Límite del plan gratuito</h2>
+        <p className="text-sm text-gray-500 dark:text-slate-400 text-center mb-5">
           {message || 'Has alcanzado el límite de tu plan gratuito. Actualiza a Pro para continuar sin restricciones.'}
         </p>
 
-        <div className="bg-blue-50 rounded-xl p-4 mb-5">
-          <p className="text-xs font-semibold text-blue-800 mb-2">Plan Pro incluye:</p>
-          <ul className="text-xs text-blue-700 space-y-1.5">
+        <div className="bg-blue-50 dark:bg-blue-950/40 rounded-xl p-4 mb-5">
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">Plan Pro incluye:</p>
+          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1.5">
             <li>✓ Productos ilimitados</li>
             <li>✓ Clientes ilimitados</li>
             <li>✓ Transacciones ilimitadas</li>

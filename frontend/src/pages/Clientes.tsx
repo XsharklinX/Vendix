@@ -98,10 +98,10 @@ interface ProductLite {
 }
 
 const segmentStyles: Record<string, string> = {
-  VIP: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  Nuevo: 'bg-blue-50 text-blue-700 border-blue-200',
-  Frecuente: 'bg-green-50 text-green-700 border-green-200',
-  'En riesgo': 'bg-red-50 text-red-700 border-red-200',
+  VIP: 'bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
+  Nuevo: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  Frecuente: 'bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
+  'En riesgo': 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
 }
 
 export function Clientes() {
@@ -295,11 +295,11 @@ export function Clientes() {
       <PageHeader
         title="Clientes"
         subtitle={`${clients.length} clientes - ${formatCurrency(totalDebt, cur)} te deben - ${totalPoints} puntos activos`}
-        icon={<Users size={18} className="text-pink-500" />}
+        icon={<Users size={18} className="text-pink-500 dark:text-pink-400" />}
         action={
           <div className="flex gap-2">
             <button onClick={handleExport} className="btn-secondary"><Download size={15} /> Exportar</button>
-            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 border-rose-200 text-rose-700' : ''}`}><Trash2 size={15} /> Papelera</button>
+            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300' : ''}`}><Trash2 size={15} /> Papelera</button>
             <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Crear cliente</button>
           </div>
         }
@@ -310,24 +310,24 @@ export function Clientes() {
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="card p-4">
-            <p className="text-xs font-semibold uppercase text-gray-400">Deuda pendiente</p>
-            <p className="text-2xl font-bold text-red-600">{formatCurrency(totalDebt, cur)}</p>
+            <p className="text-xs font-semibold uppercase text-gray-400 dark:text-slate-500">Deuda pendiente</p>
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(totalDebt, cur)}</p>
           </div>
           <div className="card p-4">
-            <p className="text-xs font-semibold uppercase text-gray-400">Puntos activos</p>
-            <p className="text-2xl font-bold text-emerald-600">{totalPoints}</p>
+            <p className="text-xs font-semibold uppercase text-gray-400 dark:text-slate-500">Puntos activos</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalPoints}</p>
           </div>
           <div className="card p-4">
-            <p className="text-xs font-semibold uppercase text-gray-400">Clientes en riesgo</p>
-            <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.segments.includes('En riesgo')).length}</p>
+            <p className="text-xs font-semibold uppercase text-gray-400 dark:text-slate-500">Clientes en riesgo</p>
+            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{clients.filter(c => c.segments.includes('En riesgo')).length}</p>
           </div>
         </div>
 
         <div className="card p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm font-bold text-gray-900">Campaña de reactivación</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-bold text-gray-900 dark:text-slate-100">Campaña de reactivación</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">
                 {inactiveCampaign?.count ?? 0} cliente{(inactiveCampaign?.count ?? 0) !== 1 ? 's' : ''} sin comprar hace {campaignDays}+ días.
               </p>
             </div>
@@ -355,7 +355,7 @@ export function Clientes() {
           {inactiveCampaign && inactiveCampaign.clients.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {inactiveCampaign.clients.slice(0, 8).map(c => (
-                <span key={c.id} className="rounded-full bg-orange-50 border border-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                <span key={c.id} className="rounded-full bg-orange-50 dark:bg-orange-950/40 border border-orange-100 dark:border-orange-900/50 px-3 py-1 text-xs font-semibold text-orange-700 dark:text-orange-300">
                   {c.name}{c.daysSinceSale ? ` · ${c.daysSinceSale}d` : ' · nunca compró'}
                 </span>
               ))}
@@ -364,7 +364,7 @@ export function Clientes() {
         </div>
 
         <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Buscar por nombre, telefono, documento o segmento..." className="input pl-10" />
         </div>
 
@@ -384,7 +384,7 @@ export function Clientes() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
                   <tr>
                     <th className="table-header">Cliente</th>
                     <th className="table-header hidden md:table-cell">Contacto</th>
@@ -395,7 +395,7 @@ export function Clientes() {
                     <th className="table-header text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {paged.map(c => (
                     <tr key={c.id} className="table-row">
                       <td className="table-cell">
@@ -405,45 +405,45 @@ export function Clientes() {
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <p className="font-semibold text-gray-900">{c.name}</p>
-                              {c.isVip && <span className="flex items-center gap-0.5 text-xs text-yellow-600 font-bold"><Star size={10} className="fill-yellow-500 text-yellow-500" />VIP</span>}
+                              <p className="font-semibold text-gray-900 dark:text-slate-100">{c.name}</p>
+                              {c.isVip && <span className="flex items-center gap-0.5 text-xs text-yellow-600 dark:text-yellow-400 font-bold"><Star size={10} className="fill-yellow-500 text-yellow-500 dark:text-yellow-400" />VIP</span>}
                             </div>
-                            {c.document && <p className="text-xs text-gray-400">{c.document}</p>}
+                            {c.document && <p className="text-xs text-gray-400 dark:text-slate-500">{c.document}</p>}
                           </div>
                         </div>
                       </td>
                       <td className="table-cell hidden md:table-cell">
                         <div className="space-y-0.5">
-                          {c.phone && <div className="flex items-center gap-1.5 text-sm text-gray-600"><Phone size={12} className="text-gray-400" />{c.phone}</div>}
-                          {c.email && <div className="flex items-center gap-1.5 text-xs text-gray-400"><Mail size={11} />{c.email}</div>}
-                          {!c.phone && !c.email && <span className="text-gray-400 text-sm">-</span>}
+                          {c.phone && <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-slate-300"><Phone size={12} className="text-gray-400 dark:text-slate-500" />{c.phone}</div>}
+                          {c.email && <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-500"><Mail size={11} />{c.email}</div>}
+                          {!c.phone && !c.email && <span className="text-gray-400 dark:text-slate-500 text-sm">-</span>}
                         </div>
                       </td>
                       <td className="table-cell hidden lg:table-cell">
                         <div className="flex flex-wrap gap-1">
-                          {c.segments.length === 0 ? <span className="text-xs text-gray-400">Sin etiqueta</span> : c.segments.map(segment => (
-                            <span key={segment} className={`text-xs px-2 py-1 rounded-full border font-semibold ${segmentStyles[segment] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>{segment}</span>
+                          {c.segments.length === 0 ? <span className="text-xs text-gray-400 dark:text-slate-500">Sin etiqueta</span> : c.segments.map(segment => (
+                            <span key={segment} className={`text-xs px-2 py-1 rounded-full border font-semibold ${segmentStyles[segment] || 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-600'}`}>{segment}</span>
                           ))}
                         </div>
                       </td>
                       <td className="table-cell text-right font-semibold hidden md:table-cell">{formatCurrency(c.totalSales || 0, cur)}</td>
                       <td className="table-cell text-center hidden lg:table-cell">
-                        <span className="badge bg-emerald-50 text-emerald-700">{c.loyaltyPoints}</span>
+                        <span className="badge bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">{c.loyaltyPoints}</span>
                       </td>
                       <td className="table-cell text-right">
-                        <span className={`text-base font-bold ${c.pendingDebt > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        <span className={`text-base font-bold ${c.pendingDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                           {formatCurrency(c.pendingDebt, cur)}
                         </span>
                       </td>
                       <td className="table-cell">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => openCrm(c)} className="btn-ghost text-xs px-2.5 py-1.5 text-emerald-600 hover:bg-emerald-50">
+                          <button onClick={() => openCrm(c)} className="btn-ghost text-xs px-2.5 py-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
                             <Activity size={14} /> CRM
                           </button>
-                          <button onClick={() => openEdit(c)} className="btn-ghost text-xs px-2.5 py-1.5 text-blue-600 hover:bg-blue-50">
+                          <button onClick={() => openEdit(c)} className="btn-ghost text-xs px-2.5 py-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40">
                             <Edit2 size={14} /> Editar
                           </button>
-                          <button onClick={() => handleDelete(c)} className="btn-ghost text-xs px-2.5 py-1.5 text-red-500 hover:bg-red-50">
+                          <button onClick={() => handleDelete(c)} className="btn-ghost text-xs px-2.5 py-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -463,7 +463,7 @@ export function Clientes() {
           <div>
             <label className="label">Nombre completo *</label>
             <input {...register('name')} className="input" placeholder="Ej: Juan Carlos Perez" />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+            {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -473,7 +473,7 @@ export function Clientes() {
             <div>
               <label className="label">Correo electronico</label>
               <input {...register('email')} type="email" className="input" placeholder="correo@ejemplo.com" />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+              {errors.email && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.email.message}</p>}
             </div>
             <div>
               <label className="label">Cedula / Documento</label>
@@ -485,10 +485,10 @@ export function Clientes() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-2 p-3 border border-gray-200 rounded-xl">
+            <div className="flex items-center gap-2 p-3 border border-gray-200 dark:border-slate-600 rounded-xl">
               <input type="checkbox" id="isVip" {...register('isVip')} className="w-4 h-4 accent-yellow-500" />
-              <label htmlFor="isVip" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                <Star size={13} className="text-yellow-500" /> Cliente VIP
+              <label htmlFor="isVip" className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-1">
+                <Star size={13} className="text-yellow-500 dark:text-yellow-400" /> Cliente VIP
               </label>
             </div>
             <div>
@@ -499,9 +499,9 @@ export function Clientes() {
           <div>
             <label className="label">Etiquetas manuales</label>
             <input {...register('manualTagsText')} className="input" placeholder="Ej: mayorista, cumple abril, preferente" />
-            <p className="text-xs text-gray-400 mt-1">Separalas por coma. Se muestran junto a los segmentos automáticos.</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Separalas por coma. Se muestran junto a los segmentos automáticos.</p>
           </div>
-          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
             <button type="button" onClick={closeModal} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">
               {isSubmitting ? 'Guardando...' : editing ? 'Guardar cambios' : 'Crear cliente'}
@@ -514,29 +514,29 @@ export function Clientes() {
         {selectedClient && (
           <div className="space-y-5">
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-gray-100 p-3">
-                <p className="text-xs text-gray-400">Total comprado</p>
-                <p className="font-bold text-gray-900">{formatCurrency(selectedClient.totalSales || 0, cur)}</p>
+              <div className="rounded-xl border border-gray-100 dark:border-slate-700 p-3">
+                <p className="text-xs text-gray-400 dark:text-slate-500">Total comprado</p>
+                <p className="font-bold text-gray-900 dark:text-slate-100">{formatCurrency(selectedClient.totalSales || 0, cur)}</p>
               </div>
-              <div className="rounded-xl border border-gray-100 p-3">
-                <p className="text-xs text-gray-400">Puntos</p>
-                <p className="font-bold text-emerald-600">{selectedClient.loyaltyPoints}</p>
+              <div className="rounded-xl border border-gray-100 dark:border-slate-700 p-3">
+                <p className="text-xs text-gray-400 dark:text-slate-500">Puntos</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400">{selectedClient.loyaltyPoints}</p>
               </div>
-              <div className="rounded-xl border border-gray-100 p-3">
-                <p className="text-xs text-gray-400">Ultima compra</p>
-                <p className="font-bold text-gray-900">{selectedClient.lastSaleAt ? formatDateTime(selectedClient.lastSaleAt) : 'Sin compras'}</p>
+              <div className="rounded-xl border border-gray-100 dark:border-slate-700 p-3">
+                <p className="text-xs text-gray-400 dark:text-slate-500">Ultima compra</p>
+                <p className="font-bold text-gray-900 dark:text-slate-100">{selectedClient.lastSaleAt ? formatDateTime(selectedClient.lastSaleAt) : 'Sin compras'}</p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-100 p-4 space-y-3">
-              <div className="flex items-center gap-2 font-bold text-gray-800"><MessageSquare size={16} /> Nota o recordatorio</div>
+            <div className="rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3">
+              <div className="flex items-center gap-2 font-bold text-gray-800 dark:text-slate-200"><MessageSquare size={16} /> Nota o recordatorio</div>
               <textarea value={noteContent} onChange={e => setNoteContent(e.target.value)} className="input min-h-[90px]" placeholder="Ej: Llamar para ofrecer reposicion la proxima semana..." />
               <div className="grid grid-cols-2 gap-3">
                 <select value={noteType} onChange={e => setNoteType(e.target.value as 'NOTE' | 'REMINDER')} className="input">
                   <option value="NOTE">Nota</option>
                   <option value="REMINDER">Recordatorio</option>
                 </select>
-                <input type="datetime-local" value={noteDueAt} onChange={e => setNoteDueAt(e.target.value)} disabled={noteType !== 'REMINDER'} className="input disabled:bg-gray-50" />
+                <input type="datetime-local" value={noteDueAt} onChange={e => setNoteDueAt(e.target.value)} disabled={noteType !== 'REMINDER'} className="input disabled:bg-gray-50 dark:disabled:bg-slate-800" />
               </div>
               <button
                 onClick={() => noteMutation.mutate()}
@@ -547,8 +547,8 @@ export function Clientes() {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 space-y-3">
-              <div className="flex items-center gap-2 font-bold text-emerald-800"><Gift size={16} /> Canjear puntos como descuento</div>
+            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/40 p-4 space-y-3">
+              <div className="flex items-center gap-2 font-bold text-emerald-800 dark:text-emerald-200"><Gift size={16} /> Canjear puntos como descuento</div>
               <div className="grid grid-cols-2 gap-3">
                 <input type="number" min={1} max={selectedClient.loyaltyPoints} value={redeemPoints} onChange={e => setRedeemPoints(e.target.value)} className="input" placeholder="Puntos" />
                 <input type="number" min={0} value={redeemAmount} onChange={e => setRedeemAmount(e.target.value)} className="input" placeholder={`Descuento en ${cur}`} />
@@ -562,21 +562,21 @@ export function Clientes() {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
-              <div className="flex items-center gap-2 font-bold text-indigo-800"><Tag size={16} /> Lista de precios especiales</div>
+            <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/40 p-4 space-y-3">
+              <div className="flex items-center gap-2 font-bold text-indigo-800 dark:text-indigo-200"><Tag size={16} /> Lista de precios especiales</div>
               {priceList.length > 0 && (
                 <div className="space-y-1.5">
                   {priceList.map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-gray-100 px-3 py-2">
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 px-3 py-2">
                       <div>
-                        <p className="text-sm font-semibold text-gray-800">{entry.product.name}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">{entry.product.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">
                           Precio normal: {formatCurrency(entry.product.price, cur)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-indigo-700">{formatCurrency(entry.price, cur)}</span>
-                        <button onClick={() => deletePriceMutation.mutate(entry.id)} className="btn-ghost text-red-500 hover:bg-red-50 p-1.5">
+                        <span className="font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(entry.price, cur)}</span>
+                        <button onClick={() => deletePriceMutation.mutate(entry.id)} className="btn-ghost text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5">
                           <X size={14} />
                         </button>
                       </div>
@@ -603,29 +603,29 @@ export function Clientes() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2 font-bold text-gray-800"><Clock size={16} /> Timeline</div>
+              <div className="flex items-center gap-2 font-bold text-gray-800 dark:text-slate-200"><Clock size={16} /> Timeline</div>
               {timelineLoading ? (
-                <p className="text-sm text-gray-400">Cargando historial...</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">Cargando historial...</p>
               ) : timeline?.events.length === 0 ? (
-                <p className="text-sm text-gray-400">Sin actividad registrada.</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">Sin actividad registrada.</p>
               ) : (
                 <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
                   {timeline?.events.map(event => (
-                    <div key={`${event.type}-${event.id}`} className="rounded-xl border border-gray-100 p-3">
+                    <div key={`${event.type}-${event.id}`} className="rounded-xl border border-gray-100 dark:border-slate-700 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-semibold text-gray-900">{event.title}</p>
-                          <p className="text-xs text-gray-400">{formatDateTime(event.date)}</p>
-                          {event.description && <p className="text-sm text-gray-600 mt-1">{event.description}</p>}
-                          {event.metadata?.points && <p className="text-xs text-emerald-600 mt-1">{event.metadata.points} puntos</p>}
+                          <p className="font-semibold text-gray-900 dark:text-slate-100">{event.title}</p>
+                          <p className="text-xs text-gray-400 dark:text-slate-500">{formatDateTime(event.date)}</p>
+                          {event.description && <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">{event.description}</p>}
+                          {event.metadata?.points && <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">{event.metadata.points} puntos</p>}
                         </div>
                         <div className="text-right">
-                          {event.amount !== undefined && <p className="font-bold text-gray-900">{formatCurrency(event.amount, cur)}</p>}
-                          <span className="text-xs text-gray-400">{event.status}</span>
+                          {event.amount !== undefined && <p className="font-bold text-gray-900 dark:text-slate-100">{formatCurrency(event.amount, cur)}</p>}
+                          <span className="text-xs text-gray-400 dark:text-slate-500">{event.status}</span>
                         </div>
                       </div>
                       {event.type === 'REMINDER' && event.status !== 'COMPLETED' && (
-                        <button onClick={() => completeNoteMutation.mutate(event.id)} className="mt-2 text-xs font-semibold text-emerald-700 flex items-center gap-1">
+                        <button onClick={() => completeNoteMutation.mutate(event.id)} className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
                           <CheckCircle2 size={13} /> Marcar completado
                         </button>
                       )}

@@ -8,6 +8,7 @@ import { logAudit } from '../lib/audit'
 import { checkLowStock } from '../lib/notifications'
 import { recordStockMovement } from '../lib/stockMovement'
 import { logger } from '../lib/logger'
+import { recordSyncChange } from '../lib/syncOutbox'
 
 const router = Router({ mergeParams: true })
 router.use(authMiddleware)
@@ -235,6 +236,10 @@ router.post('/', checkTransactionLimit, async (req: AuthRequest, res) => {
       checkLowStock(businessId, req.userId!).catch(() => {})
     }
 
+    // Las transacciones son append-only: solo se sincroniza su creación, nunca
+    // ediciones posteriores (anular = crear una transacción de reverso, no editar esta).
+    await recordSyncChange({ businessId, entity: 'transaction', entityId: transaction.id, operation: 'UPSERT', payload: transaction, conflictPolicy: 'APPEND_ONLY' })
+
     return res.status(201).json(transaction)
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: e.errors[0].message })
@@ -322,14 +327,35 @@ router.post('/cash-session/open', async (req: AuthRequest, res) => {
       notes: z.string().optional(),
     }).parse(req.body)
 
-    const existing = await prisma.cashSession.findFirst({
-      where: { businessId, status: 'OPEN' },
-    })
-    if (existing) return res.status(400).json({ error: 'Ya hay una caja abierta' })
+    // Apertura atómica: el check y el create van dentro de la misma transacción
+    // para que dos aperturas simultáneas (ej. dos cajas en red local) no creen
+    // ambas un turno. SQLite serializa las escrituras, así se cierra la ventana
+    // de carrera real.
+    let session
+    try {
+      session = await prisma.$transaction(async (tx) => {
+        const existing = await tx.cashSession.findFirst({
+          where: { businessId, status: 'OPEN' },
+          include: { openedBy: { select: { name: true } } },
+        })
+        if (existing) {
+          const who = existing.openedBy?.name ? ` por ${existing.openedBy.name}` : ''
+          const when = existing.openedAt.toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' })
+          const err = new Error(`Ya hay una caja abierta${who} desde ${when}. Ciérrala antes de abrir otra.`)
+          err.name = 'CashSessionConflict'
+          throw err
+        }
+        return tx.cashSession.create({
+          data: { openAmount, notes, businessId, openedById: req.userId || null },
+        })
+      })
+    } catch (e) {
+      if (e instanceof Error && e.name === 'CashSessionConflict') {
+        return res.status(409).json({ error: e.message })
+      }
+      throw e
+    }
 
-    const session = await prisma.cashSession.create({
-      data: { openAmount, notes, businessId, openedById: req.userId || null },
-    })
     logAudit(req, businessId, 'CREATE', 'CASH_SESSION', session.id, { openAmount })
     return res.status(201).json(session)
   } catch (e) {
@@ -560,6 +586,7 @@ router.post('/return/:txId', async (req: AuthRequest, res) => {
     })
 
     logAudit(req, businessId, 'DELETE', 'TRANSACTION', txId, { type: 'RETURN', amount: original.amount })
+    await recordSyncChange({ businessId, entity: 'transaction', entityId: returned.id, operation: 'UPSERT', payload: returned, conflictPolicy: 'APPEND_ONLY' })
     return res.status(201).json(returned)
   } catch (e) {
     logger.error({ err: e }, '[transactions] POST /return/:txId')

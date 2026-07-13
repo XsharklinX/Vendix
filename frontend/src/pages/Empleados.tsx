@@ -256,11 +256,11 @@ export function Empleados() {
       <PageHeader
         title="Nomina y equipo"
         subtitle={`${activeCount} activos · Nomina base: ${formatCurrency(totalPayroll, cur)}`}
-        icon={<Briefcase size={18} className="text-indigo-500" />}
+        icon={<Briefcase size={18} className="text-indigo-500 dark:text-indigo-400" />}
         action={
           <div className="flex gap-2">
             <button onClick={handleExportEmployees} className="btn-secondary"><Download size={15} /> Exportar</button>
-            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 border-rose-200 text-rose-700' : ''}`}><Trash2 size={15} /> Papelera</button>
+            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300' : ''}`}><Trash2 size={15} /> Papelera</button>
             <button onClick={openCreate} className="btn-primary"><Plus size={16} /> Agregar empleado</button>
           </div>
         }
@@ -279,7 +279,7 @@ export function Empleados() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${activeTab === tab ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${activeTab === tab ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
             >
               <Icon size={15} /> {label}
             </button>
@@ -288,7 +288,7 @@ export function Empleados() {
 
         {activeTab !== 'team' && (
           <div className="card p-4 flex flex-wrap gap-3 items-center">
-            <span className="text-sm text-gray-500">Periodo</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">Periodo</span>
             <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="input w-40" />
             <input type="date" value={to} onChange={e => setTo(e.target.value)} className="input w-40" />
           </div>
@@ -297,7 +297,7 @@ export function Empleados() {
         {activeTab === 'team' && (
           <>
             <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Buscar por nombre o cargo..." className="input pl-10" />
             </div>
             <div className="card overflow-hidden">
@@ -310,7 +310,7 @@ export function Empleados() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-100">
+                    <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
                       <tr>
                         <th className="table-header">Empleado</th>
                         <th className="table-header">Cargo</th>
@@ -321,23 +321,23 @@ export function Empleados() {
                         <th className="table-header text-center">Acciones</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                       {paged.map(emp => (
                         <tr key={emp.id} className="table-row">
                           <td className="table-cell">
-                            <p className="font-semibold text-gray-900">{emp.name}</p>
-                            {emp.email && <p className="text-xs text-gray-400">{emp.email}</p>}
+                            <p className="font-semibold text-gray-900 dark:text-slate-100">{emp.name}</p>
+                            {emp.email && <p className="text-xs text-gray-400 dark:text-slate-500">{emp.email}</p>}
                           </td>
-                          <td className="table-cell">{emp.role ? <span className="badge bg-indigo-50 text-indigo-700">{emp.role}</span> : '—'}</td>
+                          <td className="table-cell">{emp.role ? <span className="badge bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">{emp.role}</span> : '—'}</td>
                           <td className="table-cell">{emp.phone ? <span className="flex items-center gap-1 text-sm"><Phone size={12} />{emp.phone}</span> : '—'}</td>
                           <td className="table-cell text-right font-bold">{formatCurrency(emp.salary, cur)}</td>
-                          <td className="table-cell text-right font-bold text-emerald-600">{emp.commissionRate}%</td>
-                          <td className="table-cell text-center"><span className={`badge ${emp.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{emp.active ? 'Activo' : 'Inactivo'}</span></td>
+                          <td className="table-cell text-right font-bold text-emerald-600 dark:text-emerald-400">{emp.commissionRate}%</td>
+                          <td className="table-cell text-center"><span className={`badge ${emp.active ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'}`}>{emp.active ? 'Activo' : 'Inactivo'}</span></td>
                           <td className="table-cell">
                             <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => openPayroll(emp)} className="btn-ghost text-xs px-2 py-1.5 text-emerald-600 hover:bg-emerald-50"><Wallet size={14} /> Pagar</button>
-                              <button onClick={() => openEdit(emp)} className="btn-ghost text-xs px-2 py-1.5 text-blue-600 hover:bg-blue-50"><Edit2 size={14} /> Editar</button>
-                              <button onClick={() => handleDelete(emp)} className="btn-ghost text-xs px-2 py-1.5 text-red-500 hover:bg-red-50"><Trash2 size={14} /></button>
+                              <button onClick={() => openPayroll(emp)} className="btn-ghost text-xs px-2 py-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"><Wallet size={14} /> Pagar</button>
+                              <button onClick={() => openEdit(emp)} className="btn-ghost text-xs px-2 py-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"><Edit2 size={14} /> Editar</button>
+                              <button onClick={() => handleDelete(emp)} className="btn-ghost text-xs px-2 py-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"><Trash2 size={14} /></button>
                             </div>
                           </td>
                         </tr>
@@ -354,8 +354,8 @@ export function Empleados() {
         {activeTab === 'payroll' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="card p-4"><p className="text-xs text-gray-500">Pagos</p><p className="text-2xl font-bold">{payroll.length}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">Total pagado</p><p className="text-2xl font-bold text-emerald-600">{formatCurrency(payrollTotal, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Pagos</p><p className="text-2xl font-bold">{payroll.length}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Total pagado</p><p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(payrollTotal, cur)}</p></div>
               <div className="card p-4 flex gap-2 items-center justify-end">
                 <button onClick={handleExportPayroll} className="btn-secondary"><Download size={14} /> CSV/Excel</button>
                 <button onClick={() => printPayrollReport(business?.name ?? 'Vendix', payroll, cur)} className="btn-secondary"><Printer size={14} /> PDF</button>
@@ -363,15 +363,15 @@ export function Empleados() {
             </div>
             <div className="card overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50"><tr><th className="table-header">Empleado</th><th className="table-header">Periodo</th><th className="table-header">Fecha</th><th className="table-header text-right">Salario</th><th className="table-header text-right">Comision</th><th className="table-header text-right">Total</th></tr></thead>
-                <tbody className="divide-y divide-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800"><tr><th className="table-header">Empleado</th><th className="table-header">Periodo</th><th className="table-header">Fecha</th><th className="table-header text-right">Salario</th><th className="table-header text-right">Comision</th><th className="table-header text-right">Total</th></tr></thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {payroll.map(p => (
                     <tr key={p.id} className="table-row">
                       <td className="table-cell font-semibold">{p.employee.name}</td>
                       <td className="table-cell">{p.period}</td>
-                      <td className="table-cell text-gray-500">{formatDateTime(p.paidAt)}</td>
+                      <td className="table-cell text-gray-500 dark:text-slate-400">{formatDateTime(p.paidAt)}</td>
                       <td className="table-cell text-right">{formatCurrency(p.baseSalary, cur)}</td>
-                      <td className="table-cell text-right text-emerald-600">{formatCurrency(p.commissionAmount, cur)}</td>
+                      <td className="table-cell text-right text-emerald-600 dark:text-emerald-400">{formatCurrency(p.commissionAmount, cur)}</td>
                       <td className="table-cell text-right font-bold">{formatCurrency(p.totalAmount, cur)}</td>
                     </tr>
                   ))}
@@ -384,22 +384,22 @@ export function Empleados() {
         {activeTab === 'sales' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="card p-4"><p className="text-xs text-gray-500">Ventas del periodo</p><p className="text-2xl font-bold text-green-600">{formatCurrency(salesTotal, cur)}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">Comisiones ganadas</p><p className="text-2xl font-bold text-emerald-600">{formatCurrency(commissionTotal, cur)}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">Nota</p><p className="text-sm text-gray-500">Se empareja empleado con cajero por email.</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Ventas del periodo</p><p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(salesTotal, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Comisiones ganadas</p><p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(commissionTotal, cur)}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Nota</p><p className="text-sm text-gray-500 dark:text-slate-400">Se empareja empleado con cajero por email.</p></div>
             </div>
             <div className="card overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50"><tr><th className="table-header">Empleado</th><th className="table-header">Usuario cajero</th><th className="table-header text-center">Ventas</th><th className="table-header text-right">Total vendido</th><th className="table-header text-right">%</th><th className="table-header text-right">Comision</th></tr></thead>
-                <tbody className="divide-y divide-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800"><tr><th className="table-header">Empleado</th><th className="table-header">Usuario cajero</th><th className="table-header text-center">Ventas</th><th className="table-header text-right">Total vendido</th><th className="table-header text-right">%</th><th className="table-header text-right">Comision</th></tr></thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {(salesReport?.rows ?? []).map(row => (
                     <tr key={row.employee.id} className="table-row">
                       <td className="table-cell font-semibold">{row.employee.name}</td>
-                      <td className="table-cell text-gray-500">{row.matchedUser?.email ?? 'Sin vincular'}</td>
+                      <td className="table-cell text-gray-500 dark:text-slate-400">{row.matchedUser?.email ?? 'Sin vincular'}</td>
                       <td className="table-cell text-center">{row.count}</td>
                       <td className="table-cell text-right font-semibold">{formatCurrency(row.total, cur)}</td>
                       <td className="table-cell text-right">{row.commissionRate}%</td>
-                      <td className="table-cell text-right font-bold text-emerald-600">{formatCurrency(row.commissionAmount, cur)}</td>
+                      <td className="table-cell text-right font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(row.commissionAmount, cur)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -411,8 +411,8 @@ export function Empleados() {
         {activeTab === 'attendance' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="card p-4"><p className="text-xs text-gray-500">Registros</p><p className="text-2xl font-bold">{attendance.length}</p></div>
-              <div className="card p-4"><p className="text-xs text-gray-500">Horas trabajadas</p><p className="text-2xl font-bold text-blue-600">{totalHours.toFixed(2)}h</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Registros</p><p className="text-2xl font-bold">{attendance.length}</p></div>
+              <div className="card p-4"><p className="text-xs text-gray-500 dark:text-slate-400">Horas trabajadas</p><p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalHours.toFixed(2)}h</p></div>
               <div className="card p-4 flex flex-wrap gap-2 justify-end">
                 {employees.filter(e => e.active).slice(0, 4).map(emp => (
                   <button key={emp.id} onClick={() => attendanceMutation.mutate({ id: emp.id, action: 'check-in' })} className="btn-secondary text-xs"><LogIn size={12} /> {emp.name}</button>
@@ -421,13 +421,13 @@ export function Empleados() {
             </div>
             <div className="card overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50"><tr><th className="table-header">Empleado</th><th className="table-header">Entrada</th><th className="table-header">Salida</th><th className="table-header text-right">Horas</th><th className="table-header text-center">Accion</th></tr></thead>
-                <tbody className="divide-y divide-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-800"><tr><th className="table-header">Empleado</th><th className="table-header">Entrada</th><th className="table-header">Salida</th><th className="table-header text-right">Horas</th><th className="table-header text-center">Accion</th></tr></thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {attendance.map(r => (
                     <tr key={r.id} className="table-row">
                       <td className="table-cell font-semibold">{r.employee.name}</td>
                       <td className="table-cell">{formatDateTime(r.checkIn)}</td>
-                      <td className="table-cell">{r.checkOut ? formatDateTime(r.checkOut) : <span className="badge bg-green-100 text-green-700">Abierto</span>}</td>
+                      <td className="table-cell">{r.checkOut ? formatDateTime(r.checkOut) : <span className="badge bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">Abierto</span>}</td>
                       <td className="table-cell text-right">{r.hours != null ? `${r.hours.toFixed(2)}h` : '—'}</td>
                       <td className="table-cell text-center">
                         {!r.checkOut && <button onClick={() => attendanceMutation.mutate({ id: r.employee.id, action: 'check-out' })} className="btn-secondary text-xs"><LogOut size={12} /> Salida</button>}
@@ -446,7 +446,7 @@ export function Empleados() {
           <div>
             <label className="label">Nombre completo *</label>
             <input {...register('name')} className="input" placeholder="Nombre del empleado" />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+            {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Cargo / Rol</label><input {...register('role')} className="input" placeholder="Cajero, vendedor..." /></div>
@@ -455,11 +455,11 @@ export function Empleados() {
             <div><label className="label">Telefono</label><input {...register('phone')} className="input" /></div>
             <div className="col-span-2"><label className="label">Correo del cajero</label><input {...register('email')} type="email" className="input" placeholder="Debe coincidir con el usuario cajero para comisiones" /></div>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
             <input {...register('active')} type="checkbox" id="emp-active" className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
-            <label htmlFor="emp-active" className="text-sm font-medium text-gray-700 cursor-pointer">Empleado activo</label>
+            <label htmlFor="emp-active" className="text-sm font-medium text-gray-700 dark:text-slate-300 cursor-pointer">Empleado activo</label>
           </div>
-          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
             <button type="button" onClick={closeModal} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">{isSubmitting ? 'Guardando...' : 'Guardar'}</button>
           </div>
@@ -471,14 +471,14 @@ export function Empleados() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">Periodo</label><input type="month" value={payrollForm.period} onChange={e => setPayrollForm(f => ({ ...f, period: e.target.value }))} className="input" /></div>
-              <div><label className="label">Salario base</label><input value={paying.salary} disabled className="input bg-gray-50" /></div>
+              <div><label className="label">Salario base</label><input value={paying.salary} disabled className="input bg-gray-50 dark:bg-slate-800" /></div>
               <div><label className="label">Comision</label><input type="number" step="0.01" value={payrollForm.commissionAmount} onChange={e => setPayrollForm(f => ({ ...f, commissionAmount: Number(e.target.value) }))} className="input" /></div>
               <div><label className="label">Bono</label><input type="number" step="0.01" value={payrollForm.bonusAmount} onChange={e => setPayrollForm(f => ({ ...f, bonusAmount: Number(e.target.value) }))} className="input" /></div>
               <div><label className="label">Deducciones</label><input type="number" step="0.01" value={payrollForm.deductions} onChange={e => setPayrollForm(f => ({ ...f, deductions: Number(e.target.value) }))} className="input" /></div>
-              <div className="rounded-xl bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Total a pagar</p><p className="text-xl font-black text-emerald-700">{formatCurrency(Math.max(0, paying.salary + payrollForm.commissionAmount + payrollForm.bonusAmount - payrollForm.deductions), cur)}</p></div>
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 p-3"><p className="text-xs text-emerald-700 dark:text-emerald-300">Total a pagar</p><p className="text-xl font-black text-emerald-700 dark:text-emerald-300">{formatCurrency(Math.max(0, paying.salary + payrollForm.commissionAmount + payrollForm.bonusAmount - payrollForm.deductions), cur)}</p></div>
             </div>
             <div><label className="label">Notas</label><input value={payrollForm.notes} onChange={e => setPayrollForm(f => ({ ...f, notes: e.target.value }))} className="input" /></div>
-            <div className="flex justify-end gap-3 border-t border-gray-100 pt-3">
+            <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-slate-700 pt-3">
               <button onClick={() => setPayrollOpen(false)} className="btn-secondary">Cancelar</button>
               <button onClick={() => payrollMutation.mutate()} disabled={payrollMutation.isPending} className="btn-primary"><Receipt size={15} /> Registrar pago</button>
             </div>

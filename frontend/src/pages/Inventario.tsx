@@ -376,7 +376,7 @@ export function Inventario() {
       <PageHeader
         title="Inventario"
         subtitle={`${products.length} productos · Valor total: ${formatCurrency(totalValue, cur)}`}
-        icon={<Package size={18} className="text-cyan-500" />}
+        icon={<Package size={18} className="text-cyan-500 dark:text-cyan-400" />}
         action={
           <div className="flex gap-2">
             <button onClick={handleExport} className="btn-secondary" title="Exportar a CSV">
@@ -388,7 +388,7 @@ export function Inventario() {
             <button onClick={() => setCatModalOpen(true)} className="btn-secondary">
               <Tag size={15} /> Categorías
             </button>
-            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 border-rose-200 text-rose-700' : ''}`}>
+            <button onClick={() => setShowTrash(v => !v)} className={`btn-secondary ${showTrash ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300' : ''}`}>
               <Trash2 size={15} /> Papelera
             </button>
             <button onClick={openCreate} className="btn-primary">
@@ -407,7 +407,7 @@ export function Inventario() {
             {outOfStock > 0 && (
               <button
                 onClick={() => setFilterLowStock(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium hover:bg-red-100 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
               >
                 <AlertTriangle size={15} />
                 {outOfStock} {outOfStock === 1 ? 'producto sin stock' : 'productos sin stock'}
@@ -416,7 +416,7 @@ export function Inventario() {
             {lowStockCount > 0 && (
               <button
                 onClick={() => setFilterLowStock(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm font-medium hover:bg-yellow-100 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded-xl text-yellow-700 dark:text-yellow-300 text-sm font-medium hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors"
               >
                 <AlertTriangle size={15} />
                 {lowStockCount} con bajo stock (≤{LOW_STOCK} uds.)
@@ -428,15 +428,15 @@ export function Inventario() {
         {inventoryAlerts && (inventoryAlerts.lowMargin.length > 0 || inventoryAlerts.noMovement.length > 0) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {inventoryAlerts.lowMargin.length > 0 && (
-              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+              <div className="rounded-2xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/40 p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle size={18} className="text-orange-600 mt-0.5" />
+                  <AlertTriangle size={18} className="text-orange-600 dark:text-orange-400 mt-0.5" />
                   <div>
-                    <p className="text-sm font-bold text-orange-800">Margen bajo detectado</p>
-                    <p className="text-xs text-orange-700 mt-1">
+                    <p className="text-sm font-bold text-orange-800 dark:text-orange-200">Margen bajo detectado</p>
+                    <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
                       {inventoryAlerts.lowMargin.length} producto{inventoryAlerts.lowMargin.length !== 1 ? 's' : ''} por debajo de {inventoryAlerts.meta.lowMarginThreshold}% de margen.
                     </p>
-                    <p className="text-xs text-orange-600 mt-2">
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
                       Revisa precios/costos: {inventoryAlerts.lowMargin.slice(0, 3).map(p => p.name).join(', ')}
                     </p>
                   </div>
@@ -465,7 +465,7 @@ export function Inventario() {
         {/* Barra de búsqueda + filtros */}
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-48">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
@@ -483,7 +483,7 @@ export function Inventario() {
           </select>
           <button
             onClick={() => { setFilterLowStock(!filterLowStock); setPage(1) }}
-            className={`btn-secondary flex items-center gap-2 ${filterLowStock ? 'bg-amber-50 border-amber-300 text-amber-700' : ''}`}
+            className={`btn-secondary flex items-center gap-2 ${filterLowStock ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300' : ''}`}
           >
             <AlertTriangle size={14} />
             Bajo stock
@@ -493,8 +493,8 @@ export function Inventario() {
 
         {/* Barra de acciones en lote */}
         {selected.size > 0 && (
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
-            <span className="text-sm font-semibold text-blue-700">{selected.size} seleccionado{selected.size !== 1 ? 's' : ''}</span>
+          <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800">
+            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{selected.size} seleccionado{selected.size !== 1 ? 's' : ''}</span>
             <select value={bulkAction} onChange={e => { setBulkAction(e.target.value as typeof bulkAction); setBulkValue('') }} className="input text-sm py-1.5 w-auto">
               <option value="">Acción en lote...</option>
               <option value="price">Cambiar precio %</option>
@@ -528,7 +528,7 @@ export function Inventario() {
                 {bulkMutation.isPending ? 'Aplicando...' : 'Aplicar'}
               </button>
             )}
-            <button onClick={() => { setSelected(new Set()); setBulkAction('') }} className="text-sm text-gray-500 hover:text-gray-700 ml-auto">Cancelar</button>
+            <button onClick={() => { setSelected(new Set()); setBulkAction('') }} className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 ml-auto">Cancelar</button>
           </div>
         )}
 
@@ -549,9 +549,9 @@ export function Inventario() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
                   <tr>
-                    <th className="table-header w-10"><input type="checkbox" checked={selected.size === paged.length && paged.length > 0} onChange={toggleAll} className="rounded border-gray-300" /></th>
+                    <th className="table-header w-10"><input type="checkbox" checked={selected.size === paged.length && paged.length > 0} onChange={toggleAll} className="rounded border-gray-300 dark:border-slate-600" /></th>
                     <th className="table-header">Producto</th>
                     <th className="table-header hidden lg:table-cell">Categoría</th>
                     <th className="table-header text-right">Precio</th>
@@ -561,79 +561,79 @@ export function Inventario() {
                     <th className="table-header text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {paged.map(p => {
                     const profit = p.price - p.cost
                     const margin = p.price > 0 ? (profit / p.price * 100) : 0
                     return (
                       <tr key={p.id} className={`table-row ${selected.has(p.id) ? 'bg-blue-50/50' : ''}`}>
-                        <td className="table-cell w-10"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} className="rounded border-gray-300" /></td>
+                        <td className="table-cell w-10"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} className="rounded border-gray-300 dark:border-slate-600" /></td>
                         <td className="table-cell">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-cyan-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                              <span className="text-cyan-600 font-bold text-sm">{p.name[0].toUpperCase()}</span>
+                            <div className="w-9 h-9 bg-cyan-50 dark:bg-cyan-950/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                              <span className="text-cyan-600 dark:text-cyan-400 font-bold text-sm">{p.name[0].toUpperCase()}</span>
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-900">{p.name}</p>
-                              {p.barcode && <p className="text-xs text-gray-400 font-mono">{p.barcode}</p>}
+                              <p className="font-semibold text-gray-900 dark:text-slate-100">{p.name}</p>
+                              {p.barcode && <p className="text-xs text-gray-400 dark:text-slate-500 font-mono">{p.barcode}</p>}
                             </div>
                           </div>
                         </td>
                         <td className="table-cell hidden lg:table-cell">
                           {p.category
-                            ? <span className="badge bg-gray-100 text-gray-600">{p.category.name}</span>
-                            : <span className="text-gray-400 text-xs">—</span>
+                            ? <span className="badge bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300">{p.category.name}</span>
+                            : <span className="text-gray-400 dark:text-slate-500 text-xs">—</span>
                           }
                         </td>
-                        <td className="table-cell text-right font-bold text-gray-900">
+                        <td className="table-cell text-right font-bold text-gray-900 dark:text-slate-100">
                           {formatCurrency(p.price, cur)}
                         </td>
-                        <td className="table-cell text-right text-gray-500 hidden md:table-cell">
+                        <td className="table-cell text-right text-gray-500 dark:text-slate-400 hidden md:table-cell">
                           {formatCurrency(p.cost, cur)}
                         </td>
                         <td className="table-cell text-center">
                           <span className={`badge font-bold ${
                             p.quantity === 0
-                              ? 'bg-red-100 text-red-700'
+                              ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                               : p.quantity <= (p.lowStockThreshold ?? LOW_STOCK)
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-green-100 text-green-700'
+                              ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300'
+                              : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
                           }`}>
                             {p.quantity === 0 ? 'Sin stock' : `${p.quantity} uds.`}
                           </span>
                         </td>
                         <td className="table-cell text-right hidden lg:table-cell">
-                          <span className={`font-bold ${margin >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`font-bold ${margin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                             {formatCurrency(profit, cur)}
                           </span>
-                          <span className={`text-xs ml-1 ${margin >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                          <span className={`text-xs ml-1 ${margin >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-400 dark:text-red-400'}`}>
                             ({margin.toFixed(0)}%)
                           </span>
                         </td>
                         <td className="table-cell">
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => openEdit(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-blue-600 hover:bg-blue-50">
+                            <button onClick={() => openEdit(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40">
                               <Edit2 size={14} /> Editar
                             </button>
-                            <button onClick={() => setPriceHistoryProduct(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-purple-500 hover:bg-purple-50" title="Historial de precios">
+                            <button onClick={() => setPriceHistoryProduct(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-purple-500 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40" title="Historial de precios">
                               <History size={14} />
                             </button>
-                            <button onClick={() => openRestock(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-emerald-600 hover:bg-emerald-50" title="Reabastecer stock">
+                            <button onClick={() => openRestock(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="Reabastecer stock">
                               <ShoppingCart size={14} />
                             </button>
-                            <button onClick={() => setKardexProduct(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-cyan-600 hover:bg-cyan-50" title="Kardex (movimientos de inventario)">
+                            <button onClick={() => setKardexProduct(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/40" title="Kardex (movimientos de inventario)">
                               <ClipboardList size={14} />
                             </button>
-                            <button onClick={() => { setAdjustProduct(p); setAdjustForm({ quantity: '', reason: '' }) }} className="btn-ghost text-xs px-2.5 py-1.5 text-amber-600 hover:bg-amber-50" title="Ajuste manual de inventario">
+                            <button onClick={() => { setAdjustProduct(p); setAdjustForm({ quantity: '', reason: '' }) }} className="btn-ghost text-xs px-2.5 py-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40" title="Ajuste manual de inventario">
                               <SlidersHorizontal size={14} />
                             </button>
                             <button onClick={() => { setCountProduct(p); setCountForm({ countedQty: String(p.quantity), reason: '' }) }} className="btn-ghost text-xs px-2.5 py-1.5 text-slate-600 hover:bg-slate-50" title="Conteo físico">
                               <Scale size={14} />
                             </button>
-                            <button onClick={() => { setTransferProduct(p); setTransferForm({ quantity: '', fromLocation: 'Principal', toLocation: '', notes: '' }) }} className="btn-ghost text-xs px-2.5 py-1.5 text-indigo-600 hover:bg-indigo-50" title="Transferencia interna">
+                            <button onClick={() => { setTransferProduct(p); setTransferForm({ quantity: '', fromLocation: 'Principal', toLocation: '', notes: '' }) }} className="btn-ghost text-xs px-2.5 py-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40" title="Transferencia interna">
                               <ArrowRightLeft size={14} />
                             </button>
-                            <button onClick={() => handleDelete(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-red-500 hover:bg-red-50">
+                            <button onClick={() => handleDelete(p)} className="btn-ghost text-xs px-2.5 py-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40">
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -656,12 +656,12 @@ export function Inventario() {
             <div className="col-span-2">
               <label className="label">Nombre del producto *</label>
               <input {...register('name')} className="input" placeholder="Ej: Bravo Pañales Talla M" />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+              {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
             </div>
             <div>
               <label className="label">Precio de venta *</label>
               <input {...register('price')} type="number" step="0.01" className="input" placeholder="0.00" />
-              {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
+              {errors.price && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.price.message}</p>}
             </div>
             <div>
               <label className="label">Costo del producto</label>
@@ -691,7 +691,7 @@ export function Inventario() {
               <textarea {...register('description')} className="input" rows={2} placeholder="Descripción opcional del producto" />
             </div>
           </div>
-          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
             <button type="button" onClick={closeModal} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">
               {isSubmitting ? 'Guardando...' : editing ? 'Guardar cambios' : 'Crear producto'}
@@ -704,18 +704,18 @@ export function Inventario() {
       <Modal open={catModalOpen} onClose={() => setCatModalOpen(false)} title="Gestionar categorías" size="sm">
         <div className="space-y-3">
           {categories.length === 0
-            ? <p className="text-gray-400 text-sm text-center py-4">No hay categorías creadas</p>
+            ? <p className="text-gray-400 dark:text-slate-500 text-sm text-center py-4">No hay categorías creadas</p>
             : categories.map(c => (
-              <div key={c.id} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl">
-                <span className="text-sm font-medium text-gray-700">{c.name}</span>
+              <div key={c.id} className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{c.name}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{products.filter(p => p.categoryId === c.id).length} productos</span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500">{products.filter(p => p.categoryId === c.id).length} productos</span>
                   <button
                     onClick={async () => {
                       const ok = await confirm('Eliminar categoría', `¿Eliminar "${c.name}"? Los productos asociados quedarán sin categoría.`, true)
                       if (ok) deleteCatMutation.mutate(c.id)
                     }}
-                    className="btn-ghost p-1.5 text-red-500 hover:bg-red-50"
+                    className="btn-ghost p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -723,7 +723,7 @@ export function Inventario() {
               </div>
             ))
           }
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-slate-700">
             <input
               value={newCatName}
               onChange={e => setNewCatName(e.target.value)}
@@ -750,38 +750,38 @@ export function Inventario() {
         size="sm"
       >
         {loadingHistory ? (
-          <p className="text-center text-gray-400 py-6">Cargando...</p>
+          <p className="text-center text-gray-400 dark:text-slate-500 py-6">Cargando...</p>
         ) : priceHistory.length === 0 ? (
           <div className="text-center py-8">
-            <History size={36} className="text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Sin cambios de precio registrados</p>
-            <p className="text-gray-300 text-xs mt-1">Los cambios futuros aparecerán aquí</p>
+            <History size={36} className="text-gray-300 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin cambios de precio registrados</p>
+            <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Los cambios futuros aparecerán aquí</p>
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-gray-400 font-semibold px-3 mb-3">
+            <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 font-semibold px-3 mb-3">
               <span>Precio anterior → nuevo</span>
               <span>Fecha</span>
             </div>
             {priceHistory.map(h => {
               const up = h.newPrice > h.oldPrice
               return (
-                <div key={h.id} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl">
+                <div key={h.id} className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
                   <div className="flex items-center gap-2">
                     {up
-                      ? <TrendingUp size={15} className="text-red-500" />
-                      : <TrendingDown size={15} className="text-green-500" />
+                      ? <TrendingUp size={15} className="text-red-500 dark:text-red-400" />
+                      : <TrendingDown size={15} className="text-green-500 dark:text-green-400" />
                     }
-                    <span className="text-sm text-gray-500">{formatCurrency(h.oldPrice, cur)}</span>
-                    <span className="text-gray-300">→</span>
-                    <span className={`text-sm font-bold ${up ? 'text-red-600' : 'text-green-600'}`}>
+                    <span className="text-sm text-gray-500 dark:text-slate-400">{formatCurrency(h.oldPrice, cur)}</span>
+                    <span className="text-gray-300 dark:text-slate-600">→</span>
+                    <span className={`text-sm font-bold ${up ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                       {formatCurrency(h.newPrice, cur)}
                     </span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${up ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${up ? 'bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400' : 'bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400'}`}>
                       {up ? '+' : ''}{(((h.newPrice - h.oldPrice) / h.oldPrice) * 100).toFixed(1)}%
                     </span>
                   </div>
-                  <span className="text-xs text-gray-400">{formatDate(h.changedAt, 'dd MMM yyyy')}</span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500">{formatDate(h.changedAt, 'dd MMM yyyy')}</span>
                 </div>
               )
             })}
@@ -797,9 +797,9 @@ export function Inventario() {
       >
         {restockProduct && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
-              <p className="text-xs text-emerald-700 font-medium">Stock actual</p>
-              <p className="text-2xl font-black text-emerald-700">{restockProduct.quantity} uds.</p>
+            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 p-3">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Stock actual</p>
+              <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">{restockProduct.quantity} uds.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -847,13 +847,13 @@ export function Inventario() {
                 placeholder="Ej: compra de reposición semanal"
               />
             </div>
-            <div className="rounded-xl bg-gray-50 p-3 flex justify-between text-sm">
-              <span className="text-gray-500">Total de compra</span>
-              <span className="font-bold text-gray-900">
+            <div className="rounded-xl bg-gray-50 dark:bg-slate-800 p-3 flex justify-between text-sm">
+              <span className="text-gray-500 dark:text-slate-400">Total de compra</span>
+              <span className="font-bold text-gray-900 dark:text-slate-100">
                 {formatCurrency((parseFloat(restockForm.unitCost) || 0) * (parseInt(restockForm.quantity, 10) || 0), cur)}
               </span>
             </div>
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
               <button type="button" onClick={() => setRestockProduct(null)} className="btn-secondary">Cancelar</button>
               <button
                 type="button"
@@ -876,16 +876,16 @@ export function Inventario() {
         size="lg"
       >
         {loadingKardex ? (
-          <p className="text-center text-gray-400 py-6">Cargando...</p>
+          <p className="text-center text-gray-400 dark:text-slate-500 py-6">Cargando...</p>
         ) : stockMovements.length === 0 ? (
           <div className="text-center py-8">
-            <ClipboardList size={36} className="text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Sin movimientos de inventario registrados</p>
+            <ClipboardList size={36} className="text-gray-300 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin movimientos de inventario registrados</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
                 <tr>
                   <th className="table-header">Fecha</th>
                   <th className="table-header">Tipo</th>
@@ -894,18 +894,18 @@ export function Inventario() {
                   <th className="table-header">Motivo / Usuario</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                 {stockMovements.map(m => (
                   <tr key={m.id} className="table-row">
-                    <td className="table-cell text-xs text-gray-500">{formatDate(m.createdAt, 'dd MMM yyyy HH:mm')}</td>
+                    <td className="table-cell text-xs text-gray-500 dark:text-slate-400">{formatDate(m.createdAt, 'dd MMM yyyy HH:mm')}</td>
                     <td className="table-cell">
-                      <span className="badge bg-gray-100 text-gray-600">{STOCK_MOVEMENT_LABELS[m.type] ?? m.type}</span>
+                      <span className="badge bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300">{STOCK_MOVEMENT_LABELS[m.type] ?? m.type}</span>
                     </td>
-                    <td className={`table-cell text-right font-bold ${m.quantity >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <td className={`table-cell text-right font-bold ${m.quantity >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                       {m.quantity >= 0 ? '+' : ''}{m.quantity}
                     </td>
-                    <td className="table-cell text-right text-gray-700">{m.balanceAfter}</td>
-                    <td className="table-cell text-xs text-gray-500">
+                    <td className="table-cell text-right text-gray-700 dark:text-slate-300">{m.balanceAfter}</td>
+                    <td className="table-cell text-xs text-gray-500 dark:text-slate-400">
                       {m.reason || '—'}{m.createdBy?.name ? ` · ${m.createdBy.name}` : ''}
                     </td>
                   </tr>
@@ -925,9 +925,9 @@ export function Inventario() {
       >
         {adjustProduct && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
-              <p className="text-xs text-amber-700 font-medium">Stock actual</p>
-              <p className="text-2xl font-black text-amber-700">{adjustProduct.quantity} uds.</p>
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 p-3">
+              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Stock actual</p>
+              <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{adjustProduct.quantity} uds.</p>
             </div>
             <div>
               <label className="label">Cantidad a ajustar *</label>
@@ -939,7 +939,7 @@ export function Inventario() {
                 placeholder="Positivo para sumar, negativo para restar"
                 autoFocus
               />
-              <p className="text-xs text-gray-400 mt-1">Ej: -2 para descontar 2 unidades por pérdida o caducidad, +5 para sumar un conteo manual.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Ej: -2 para descontar 2 unidades por pérdida o caducidad, +5 para sumar un conteo manual.</p>
             </div>
             <div>
               <label className="label">Motivo *</label>
@@ -950,7 +950,7 @@ export function Inventario() {
                 placeholder="Ej: pérdida, caducidad, corrección de conteo"
               />
             </div>
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
               <button type="button" onClick={() => setAdjustProduct(null)} className="btn-secondary">Cancelar</button>
               <button
                 type="button"
@@ -980,12 +980,12 @@ export function Inventario() {
               </div>
               <div className={`rounded-xl border p-3 ${
                 countForm.countedQty && parseInt(countForm.countedQty, 10) !== countProduct.quantity
-                  ? 'bg-amber-50 border-amber-100'
-                  : 'bg-green-50 border-green-100'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-100 dark:border-amber-900/50'
+                  : 'bg-green-50 dark:bg-green-950/40 border-green-100 dark:border-green-900/50'
               }`}>
-                <p className="text-xs font-medium text-gray-500">Diferencia</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-slate-400">Diferencia</p>
                 <p className={`text-2xl font-black ${
-                  countForm.countedQty && parseInt(countForm.countedQty, 10) !== countProduct.quantity ? 'text-amber-700' : 'text-green-700'
+                  countForm.countedQty && parseInt(countForm.countedQty, 10) !== countProduct.quantity ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'
                 }`}>
                   {countForm.countedQty ? (parseInt(countForm.countedQty, 10) || 0) - countProduct.quantity : 0}
                 </p>
@@ -1011,7 +1011,7 @@ export function Inventario() {
                 placeholder="Ej: conteo mensual, auditoría, merma detectada"
               />
             </div>
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
               <button type="button" onClick={() => setCountProduct(null)} className="btn-secondary">Cancelar</button>
               <button
                 type="button"
@@ -1034,10 +1034,10 @@ export function Inventario() {
       >
         {transferProduct && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-3">
-              <p className="text-xs text-indigo-700 font-medium">Stock disponible</p>
-              <p className="text-2xl font-black text-indigo-700">{transferProduct.quantity} uds.</p>
-              <p className="text-xs text-indigo-600 mt-1">Base preparada para sucursales futuras. Por ahora registra salida interna.</p>
+            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 p-3">
+              <p className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">Stock disponible</p>
+              <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">{transferProduct.quantity} uds.</p>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">Base preparada para sucursales futuras. Por ahora registra salida interna.</p>
             </div>
             <div>
               <label className="label">Cantidad *</label>
@@ -1078,7 +1078,7 @@ export function Inventario() {
                 placeholder="Opcional"
               />
             </div>
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
               <button type="button" onClick={() => setTransferProduct(null)} className="btn-secondary">Cancelar</button>
               <button
                 type="button"

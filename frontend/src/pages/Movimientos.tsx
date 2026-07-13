@@ -189,7 +189,7 @@ export function Movimientos() {
       <PageHeader
         title="Movimientos"
         subtitle="Registro de ingresos y egresos"
-        icon={<ArrowLeftRight size={18} className="text-purple-500" />}
+        icon={<ArrowLeftRight size={18} className="text-purple-500 dark:text-purple-400" />}
         action={
           <div className="flex gap-2">
             <button onClick={handleExport} className="btn-secondary">
@@ -207,30 +207,30 @@ export function Movimientos() {
         <div className="grid grid-cols-3 gap-4">
           <div className="card p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center">
-                <TrendingUp size={18} className="text-green-600" />
+              <div className="w-9 h-9 bg-green-50 dark:bg-green-950/40 rounded-xl flex items-center justify-center">
+                <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
               </div>
-              <p className="text-sm text-gray-500 font-medium">Ingresos</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Ingresos</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(totals.income, cur)}</p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totals.income, cur)}</p>
           </div>
           <div className="card p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center">
-                <TrendingDown size={18} className="text-red-500" />
+              <div className="w-9 h-9 bg-red-50 dark:bg-red-950/40 rounded-xl flex items-center justify-center">
+                <TrendingDown size={18} className="text-red-500 dark:text-red-400" />
               </div>
-              <p className="text-sm text-gray-500 font-medium">Egresos</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Egresos</p>
             </div>
-            <p className="text-2xl font-bold text-red-500">{formatCurrency(totals.expenses, cur)}</p>
+            <p className="text-2xl font-bold text-red-500 dark:text-red-400">{formatCurrency(totals.expenses, cur)}</p>
           </div>
           <div className="card p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
-                <Scale size={18} className="text-blue-600" />
+              <div className="w-9 h-9 bg-blue-50 dark:bg-blue-950/40 rounded-xl flex items-center justify-center">
+                <Scale size={18} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <p className="text-sm text-gray-500 font-medium">Balance</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Balance</p>
             </div>
-            <p className={`text-2xl font-bold ${totals.income - totals.expenses >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+            <p className={`text-2xl font-bold ${totals.income - totals.expenses >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
               {formatCurrency(totals.income - totals.expenses, cur)}
             </p>
           </div>
@@ -238,11 +238,11 @@ export function Movimientos() {
 
         {/* Filtros */}
         <div className="card p-4 flex flex-wrap gap-3 items-center">
-          <Filter size={15} className="text-gray-400" />
+          <Filter size={15} className="text-gray-400 dark:text-slate-500" />
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Desde</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">Desde</span>
             <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1) }} className="input w-36" />
-            <span className="text-sm text-gray-500">hasta</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">hasta</span>
             <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1) }} className="input w-36" />
           </div>
           <select value={typeFilter} onChange={e => handleFilterChange(setTypeFilter)(e.target.value)} className="input w-44">
@@ -264,7 +264,7 @@ export function Movimientos() {
           ) : transactions.length === 0 ? (
             <EmptyState icon={ArrowLeftRight} tone="blue" title="Sin movimientos en este período" description="Las ventas, compras y demás transacciones que registres aparecerán aquí" />
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800">
               {transactions.map(tx => {
                 const typeInfo = TX_TYPE_LABELS[tx.type]
                 const isIncome = tx.type === 'SALE' || tx.type === 'INCOME'
@@ -282,21 +282,21 @@ export function Movimientos() {
                   <div key={tx.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/70 transition-colors group">
                     {/* Icono de dirección */}
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
-                      ${isIncome ? 'bg-green-100' : 'bg-red-100'}`}>
-                      <TxIcon size={17} className={isIncome ? 'text-green-600' : 'text-red-500'} />
+                      ${isIncome ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40'}`}>
+                      <TxIcon size={17} className={isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'} />
                     </div>
 
                     {/* Info principal */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate leading-tight">{primaryLabel}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">
-                        {secondaryLabel && <span className="mr-1.5 text-gray-500">{secondaryLabel} ·</span>}
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 truncate leading-tight">{primaryLabel}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 truncate">
+                        {secondaryLabel && <span className="mr-1.5 text-gray-500 dark:text-slate-400">{secondaryLabel} ·</span>}
                         <span className={`font-medium ${
-                          tx.type === 'SALE' ? 'text-green-600'
-                          : tx.type === 'INCOME' ? 'text-blue-600'
-                          : tx.type === 'EXPENSE' ? 'text-red-500'
-                          : tx.type === 'PURCHASE' ? 'text-orange-600'
-                          : 'text-gray-500'
+                          tx.type === 'SALE' ? 'text-green-600 dark:text-green-400'
+                          : tx.type === 'INCOME' ? 'text-blue-600 dark:text-blue-400'
+                          : tx.type === 'EXPENSE' ? 'text-red-500 dark:text-red-400'
+                          : tx.type === 'PURCHASE' ? 'text-orange-600 dark:text-orange-400'
+                          : 'text-gray-500 dark:text-slate-400'
                         }`}>
                           {typeInfo?.label || tx.type}
                         </span>
@@ -307,14 +307,14 @@ export function Movimientos() {
 
                     {/* Fecha + Estado */}
                     <div className="text-right flex-shrink-0 hidden sm:block">
-                      <p className="text-xs text-gray-400">{formatDateTime(tx.createdAt)}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">{formatDateTime(tx.createdAt)}</p>
                       {tx.status === 'PENDING' && (
-                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-50 text-yellow-700">
+                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300">
                           Pendiente
                         </span>
                       )}
                       {tx.status === 'CANCELLED' && (
-                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400">
                           Anulada
                         </span>
                       )}
@@ -323,15 +323,15 @@ export function Movimientos() {
                     {/* Monto — la estrella */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <div className="text-right">
-                        <p className={`text-base font-black tracking-tight ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                        <p className={`text-base font-black tracking-tight ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                           {isIncome ? '+' : '−'}{formatCurrency(tx.amount, cur)}
                         </p>
                       </div>
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
-                        ${isIncome ? 'bg-green-100' : 'bg-red-100'}`}>
+                        ${isIncome ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40'}`}>
                         {isIncome
-                          ? <ArrowUpRight size={13} className="text-green-600" />
-                          : <ArrowDownRight size={13} className="text-red-500" />}
+                          ? <ArrowUpRight size={13} className="text-green-600 dark:text-green-400" />
+                          : <ArrowDownRight size={13} className="text-red-500 dark:text-red-400" />}
                       </div>
                     </div>
 
@@ -339,7 +339,7 @@ export function Movimientos() {
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => setDetailTx(tx)}
-                        className="btn-ghost text-xs px-2 py-1.5 text-blue-500 hover:bg-blue-50 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+                        className="btn-ghost text-xs px-2 py-1.5 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
                         title="Ver detalles"
                       >
                         <Eye size={13} />
@@ -350,7 +350,7 @@ export function Movimientos() {
                             const ok = await confirm('Devolver venta', `¿Devolver esta venta de ${formatCurrency(tx.amount, cur)}? Se restaurará el stock.`, true)
                             if (ok) returnMutation.mutate(tx.id)
                           }}
-                          className="btn-ghost text-xs px-2 py-1.5 text-orange-500 hover:bg-orange-50 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+                          className="btn-ghost text-xs px-2 py-1.5 text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
                           title="Devolver venta"
                         >
                           <RotateCcw size={13} />
@@ -365,15 +365,15 @@ export function Movimientos() {
 
           {/* Paginación */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-              <p className="text-xs text-gray-500">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50/50">
+              <p className="text-xs text-gray-500 dark:text-slate-400">
                 Mostrando {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, totalCount)} de {totalCount} movimientos
               </p>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage(p => Math.max(p - 1, 1))}
                   disabled={page <= 1}
-                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   ← Anterior
                 </button>
@@ -390,7 +390,7 @@ export function Movimientos() {
                         className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
                           p === page
                             ? 'bg-blue-600 text-white'
-                            : 'hover:bg-gray-100 text-gray-600'
+                            : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300'
                         }`}
                       >
                         {p}
@@ -401,7 +401,7 @@ export function Movimientos() {
                 <button
                   onClick={() => setPage(p => Math.min(p + 1, totalPages))}
                   disabled={page >= totalPages}
-                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Siguiente →
                 </button>
@@ -426,12 +426,12 @@ export function Movimientos() {
           <div>
             <label className="label">Monto *</label>
             <input {...register('amount')} type="number" step="0.01" className="input" placeholder="0.00" />
-            {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
+            {errors.amount && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.amount.message}</p>}
           </div>
           <div>
             <label className="label">Descripción *</label>
             <input {...register('description')} className="input" placeholder="Ej: Pago de alquiler local" />
-            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+            {errors.description && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.description.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -468,7 +468,7 @@ export function Movimientos() {
               </select>
             </div>
           )}
-          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+          <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
             <button type="button" onClick={() => { setModalOpen(false); reset() }} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">
               {isSubmitting ? 'Guardando...' : 'Guardar movimiento'}
@@ -487,69 +487,69 @@ export function Movimientos() {
 
           return (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm bg-gray-50/50 p-4 rounded-2xl border border-gray-100 dark:border-slate-700">
                 <div>
-                  <p className="text-gray-400 font-medium text-xs">Tipo</p>
+                  <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Tipo</p>
                   <span className={`inline-block mt-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    detailTx.type === 'SALE' ? 'bg-green-100 text-green-700'
-                    : detailTx.type === 'INCOME' ? 'bg-blue-100 text-blue-700'
-                    : detailTx.type === 'EXPENSE' ? 'bg-red-100 text-red-700'
-                    : detailTx.type === 'PURCHASE' ? 'bg-orange-100 text-orange-700'
-                    : 'bg-gray-100 text-gray-700'
+                    detailTx.type === 'SALE' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                    : detailTx.type === 'INCOME' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                    : detailTx.type === 'EXPENSE' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                    : detailTx.type === 'PURCHASE' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                   }`}>
                     {typeInfo?.label || detailTx.type}
                   </span>
                 </div>
                 <div>
-                  <p className="text-gray-400 font-medium text-xs">Estado</p>
+                  <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Estado</p>
                   <span className={`inline-block mt-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    detailTx.status === 'COMPLETED' ? 'bg-green-100 text-green-700'
-                    : detailTx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-gray-100 text-gray-500'
+                    detailTx.status === 'COMPLETED' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                    : detailTx.status === 'PENDING' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'
                   }`}>
                     {detailTx.status === 'COMPLETED' ? '✓ Completado' : detailTx.status === 'PENDING' ? 'Pendiente' : detailTx.status}
                   </span>
                 </div>
                 <div>
-                  <p className="text-gray-400 font-medium text-xs">Fecha</p>
-                  <p className="font-semibold text-gray-800 mt-0.5">{formatDateTime(detailTx.createdAt)}</p>
+                  <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Fecha</p>
+                  <p className="font-semibold text-gray-800 dark:text-slate-200 mt-0.5">{formatDateTime(detailTx.createdAt)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 font-medium text-xs">Forma de pago</p>
-                  <p className="font-semibold text-gray-800 mt-0.5">
+                  <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Forma de pago</p>
+                  <p className="font-semibold text-gray-800 dark:text-slate-200 mt-0.5">
                     {PAYMENT_METHOD_LABELS[detailTx.paymentMethod] || detailTx.paymentMethod || '—'}
                   </p>
                 </div>
                 {detailTx.ncfNumber && (
                   <div>
-                    <p className="text-gray-400 font-medium text-xs">NCF</p>
-                    <p className="font-mono font-semibold text-gray-800 mt-0.5">{detailTx.ncfNumber}</p>
+                    <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">NCF</p>
+                    <p className="font-mono font-semibold text-gray-800 dark:text-slate-200 mt-0.5">{detailTx.ncfNumber}</p>
                   </div>
                 )}
                 {detailTx.client && (
                   <div>
-                    <p className="text-gray-400 font-medium text-xs">Cliente</p>
-                    <p className="font-semibold text-gray-800 mt-0.5">{detailTx.client.name}</p>
+                    <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Cliente</p>
+                    <p className="font-semibold text-gray-800 dark:text-slate-200 mt-0.5">{detailTx.client.name}</p>
                   </div>
                 )}
                 {detailTx.supplier && (
                   <div>
-                    <p className="text-gray-400 font-medium text-xs">Proveedor</p>
-                    <p className="font-semibold text-gray-800 mt-0.5">{detailTx.supplier.name}</p>
+                    <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Proveedor</p>
+                    <p className="font-semibold text-gray-800 dark:text-slate-200 mt-0.5">{detailTx.supplier.name}</p>
                   </div>
                 )}
                 {detailTx.originalCurrency && detailTx.originalCurrency !== cur && (
                   <div>
-                    <p className="text-gray-400 font-medium text-xs">Moneda de Pago</p>
-                    <p className="font-semibold text-gray-800 mt-0.5">
+                    <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Moneda de Pago</p>
+                    <p className="font-semibold text-gray-800 dark:text-slate-200 mt-0.5">
                       {detailTx.originalCurrency} (Tasa: {detailTx.exchangeRate})
                     </p>
                   </div>
                 )}
                 {detailTx.originalAmount !== undefined && detailTx.originalCurrency && detailTx.originalCurrency !== cur && (
                   <div>
-                    <p className="text-gray-400 font-medium text-xs">Monto Original</p>
-                    <p className="font-semibold text-gray-800 mt-0.5">
+                    <p className="text-gray-400 dark:text-slate-500 font-medium text-xs">Monto Original</p>
+                    <p className="font-semibold text-gray-800 dark:text-slate-200 mt-0.5">
                       {formatCurrency(detailTx.originalAmount, detailTx.originalCurrency)}
                     </p>
                   </div>
@@ -557,30 +557,30 @@ export function Movimientos() {
               </div>
 
               {detailTx.description && (
-                <div className="text-sm bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                  <p className="text-gray-400 font-medium text-xs mb-1">Descripción</p>
-                  <p className="text-gray-700 font-medium">{detailTx.description}</p>
+                <div className="text-sm bg-gray-50/50 p-4 rounded-2xl border border-gray-100 dark:border-slate-700">
+                  <p className="text-gray-400 dark:text-slate-500 font-medium text-xs mb-1">Descripción</p>
+                  <p className="text-gray-700 dark:text-slate-300 font-medium">{detailTx.description}</p>
                 </div>
               )}
 
               {showItems && (
-                <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="border border-gray-100 dark:border-slate-700 rounded-2xl overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 dark:bg-slate-800">
                       <tr>
-                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Producto</th>
-                        <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Cant.</th>
-                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Precio Unit.</th>
-                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Producto</th>
+                        <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Cant.</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Precio Unit.</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                       {detailTx.items!.map(item => (
                         <tr key={item.id} className="hover:bg-gray-50/30">
-                          <td className="px-4 py-3 text-gray-900 font-medium">{item.name}</td>
-                          <td className="px-4 py-3 text-center text-gray-500 font-semibold">{item.quantity}</td>
-                          <td className="px-4 py-3 text-right text-gray-500 font-mono">{formatCurrency(item.price, cur)}</td>
-                          <td className="px-4 py-3 text-right text-gray-900 font-semibold font-mono">{formatCurrency(item.price * item.quantity, cur)}</td>
+                          <td className="px-4 py-3 text-gray-900 dark:text-slate-100 font-medium">{item.name}</td>
+                          <td className="px-4 py-3 text-center text-gray-500 dark:text-slate-400 font-semibold">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right text-gray-500 dark:text-slate-400 font-mono">{formatCurrency(item.price, cur)}</td>
+                          <td className="px-4 py-3 text-right text-gray-900 dark:text-slate-100 font-semibold font-mono">{formatCurrency(item.price * item.quantity, cur)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -588,34 +588,34 @@ export function Movimientos() {
                 </div>
               )}
 
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-sm border border-gray-100">
+              <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 space-y-2 text-sm border border-gray-100 dark:border-slate-700">
                 {showItems && (
-                  <div className="flex justify-between text-gray-500">
+                  <div className="flex justify-between text-gray-500 dark:text-slate-400">
                     <span>Subtotal</span>
                     <span className="font-mono">{formatCurrency(subtotal, cur)}</span>
                   </div>
                 )}
                 {detailTx.discountValue !== undefined && detailTx.discountValue > 0 && (
-                  <div className="flex justify-between text-orange-600">
+                  <div className="flex justify-between text-orange-600 dark:text-orange-400">
                     <span>Descuento {detailTx.discountType === 'PERCENT' ? `(%)` : ''}</span>
                     <span className="font-mono">-{formatCurrency(detailTx.discountValue, cur)}</span>
                   </div>
                 )}
                 {detailTx.taxAmount !== undefined && detailTx.taxAmount > 0 && (
-                  <div className="flex justify-between text-gray-500">
+                  <div className="flex justify-between text-gray-500 dark:text-slate-400">
                     <span>Impuestos</span>
                     <span className="font-mono">{formatCurrency(detailTx.taxAmount, cur)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                  <span className="font-bold text-gray-800 text-base">Total</span>
-                  <span className={`text-xl font-black font-mono ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-slate-600">
+                  <span className="font-bold text-gray-800 dark:text-slate-200 text-base">Total</span>
+                  <span className={`text-xl font-black font-mono ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(detailTx.amount, cur)}
                   </span>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-gray-100">
+              <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setDetailTx(null)}

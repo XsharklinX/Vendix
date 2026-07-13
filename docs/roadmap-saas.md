@@ -49,46 +49,37 @@ La clave: **lo gratis es genuinamente útil** (así se corre la voz), y lo pago 
 - Railway propaga `NODE_ENV=production` al build de Docker, lo que rompe `npm ci` (omite devDependencies como `typescript`) — el Dockerfile ahora usa `npm ci --include=dev` explícitamente
 - Faltaba `backend/.dockerignore` — sin él, un build sin `--path-as-root` podía sobrescribir `node_modules` limpio con el local
 
-### 1.4 Cuenta en la nube desde el desktop
-En la app Electron, nueva sección en Configuraciones: **"Cuenta Vendix Cloud"** — registrarse/iniciar sesión contra el servidor cloud (ya desplegado y accesible). Esto vincula la instalación local a una identidad central. Guarda el token cloud en el config.json local (junto al jwtSecret existente). **Pendiente — próximo paso de esta fase.**
+### 1.4 ~~Cuenta en la nube desde el desktop~~ ✅ (vía pestaña "Cloud sync" en Configuraciones)
+La pestaña "Cloud sync" agregada en v3.2 cubre esto — vincula la instalación local al servidor cloud. Verificar en la próxima sesión si el flujo específico de "registrarse/iniciar sesión" está completo o si solo expone el estado del worker de sync (son cosas relacionadas pero no idénticas).
 
-**Entregable de la fase:** ~~API desplegada y accesible~~ ✅, cuenta cloud creable desde el desktop (pendiente), sin sync todavía.
+**Entregable de la fase:** ~~API desplegada y accesible~~ ✅, ~~cuenta cloud creable desde el desktop~~ ✅ (verificar alcance exacto), sync del catálogo maestro ✅ parcial (ver Fase 2).
 
 ---
 
-## Fase 2 — Respaldo y sincronización en la nube (3-4 semanas)
+## Fase 2 — Respaldo y sincronización en la nube (3-4 semanas) — INICIADA, PARCIAL (v3.2)
 
 > *Objetivo: los datos del negocio viven seguros en la nube. Empezar simple, evolucionar a sync real.*
 
-### 2.1 Respaldo automático a la nube (rápido, alto valor)
-Ya existe `GET /:id/export` que genera el JSON completo del negocio, y el `backupScheduler`. El paso natural:
-- El scheduler local, si hay cuenta cloud + plan Pro, sube el export cifrado a la nube (`POST cloud/backups`)
-- Servidor guarda versiones con timestamp (retener últimas 30)
-- En Configuraciones → Respaldo: lista de respaldos en la nube con botón "Restaurar"
-- **Cifrado en tránsito (HTTPS) + en reposo**: cifrar el JSON con una clave derivada de la contraseña del usuario antes de subirlo (así ni tú puedes leer los datos del negocio — argumento de venta de privacidad)
+### 2.1 Respaldo automático a la nube — sigue pendiente
+No implementado todavía. `GET /:id/export` + `backupScheduler` existen localmente, pero no suben a la nube automáticamente. Sigue siendo el ítem de mayor ROI de esta fase — con solo esto ya es vendible el plan Pro.
 
-Esto solo ya justifica la suscripción Pro y toma ~1 semana.
+### 2.2 Sync incremental — implementado, pero más simple de lo diseñado aquí
+v3.2 entregó un MVP real y funcional (no un esqueleto), pero con alcance menor al descrito en este documento:
+- ✅ `updatedAt` en todos los modelos sincronizables (Fase 1.1)
+- ✅ Outbox local (`syncOutbox.ts`) — registra cada cambio de forma tolerante a fallos, desactivable por env
+- ✅ Worker local (`syncWorker.ts`) — loop `ensureDevice → push → pull` configurable, cursor persistido en disco
+- ✅ Servidor (`routes/cloud.ts`) — `POST /sync/push`, `GET /sync/changes?since=`, manifest, registro de dispositivos
+- ✅ UI: pestaña "Cloud sync" en Configuraciones
+- ⚠️ **Alcance real: solo 4 entidades maestras** (`product`, `client`, `supplier`, `employee`) — **ventas, caja, pagos y auditoría NO sincronizan** (por diseño, para no arriesgar el historial append-only; sigue siendo la limitación central)
+- ⚠️ **Conflictos: `LAST_WRITE_WINS` puro** — sin comparación real de `updatedAt` origen/destino más allá de "el último que llega gana". Más simple y más arriesgado que lo que proponía este documento originalmente.
+- El worker está **apagado por defecto** (`VENDIX_SYNC_ENABLED=false`)
 
-### 2.2 Sync incremental real (multi-dispositivo)
-Para que el dueño vea desde su laptop lo que el cajero vendió en la tienda:
+**Qué falta para cerrar esta fase de verdad:** extender el sync a transacciones (append-only, tal como se diseñó aquí — es lo más seguro de sincronizar y lo que más valor le da al dueño con 2+ dispositivos), y resolver conflictos comparando `updatedAt` real en vez de "el último que llega gana" ciego.
 
-**Diseño (pull + push por lotes, last-write-wins):**
-- Cada modelo sincronizable lleva `updatedAt` (Fase 1.1) + los soft-deletes ya existentes (`deletedAt`)
-- Cliente guarda `lastSyncAt` por entidad
-- `POST /sync/push`: envía cambios locales desde `lastSyncAt` (el servidor resuelve conflictos por `updatedAt` más reciente)
-- `GET /sync/pull?since=`: recibe cambios remotos
-- Las transacciones (ventas) son **append-only** — nunca hay conflicto, solo se agregan. Esto simplifica el 80% del problema
-- Los conflictos reales solo ocurren en catálogo (productos, clientes) y son raros; last-write-wins con registro en AuditLog es suficiente
+### 2.3 El stock: sigue siendo el problema difícil, sin resolver
+Como las ventas no están en el alcance del sync (ver 2.2), el problema de stock negativo por ventas concurrentes en dos dispositivos **ni siquiera se ha presentado todavía** porque no hay nada que dispare el conflicto. Cuando se extienda el sync a ventas, esta pieza (recalcular stock desde `StockMovement`) sigue siendo necesaria y no se ha construido.
 
-**No reinventar si no hace falta:** evaluar [PowerSync](https://www.powersync.com/) o [ElectricSQL](https://electric-sql.com/) que hacen sync SQLite↔Postgres. Si el pricing/fit no convence, la implementación manual descrita arriba es viable porque el dominio es simple (append-only en lo crítico).
-
-### 2.3 El stock: el único problema difícil
-Dos dispositivos vendiendo el mismo producto offline pueden dejar stock negativo al sincronizar. Solución pragmática para v1 del sync:
-- El stock se recalcula en el servidor desde los `StockMovement` (ya existen y son append-only)
-- Si queda negativo tras el merge, notificación al dueño: "Revisa el stock de X — se vendió más de lo registrado"
-- No bloquear la venta offline jamás (la venta real ya ocurrió; el sistema se ajusta a la realidad, no al revés)
-
-**Entregable de la fase:** respaldo cloud automático funcionando (2.1) y sync multi-dispositivo (2.2-2.3).
+**Entregable de la fase:** respaldo cloud automático (2.1, pendiente) y sync multi-dispositivo del catálogo maestro (2.2, hecho parcial) — sync de ventas/stock (2.3) sigue abierto.
 
 ---
 

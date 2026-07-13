@@ -30,8 +30,8 @@ export function DocumentPreviewModal({ open, onClose, title, html, filename }: D
   return (
     <Modal open={open} onClose={onClose} title={title} size="xl">
       <div className="space-y-3">
-        <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50" style={{ height: '65vh' }}>
-          <iframe ref={iframeRef} srcDoc={html} title={title} className="w-full h-full bg-white" />
+        <div className="border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-slate-800" style={{ height: '65vh' }}>
+          <iframe ref={iframeRef} srcDoc={html} title={title} className="w-full h-full bg-white dark:bg-slate-800" />
         </div>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="flex-1 btn-secondary justify-center py-2.5 gap-2">

@@ -3,11 +3,14 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middleware/auth'
 import { verifyBusiness } from '../lib/verifyBusiness'
+import { extractIncomingUpdatedAt, isLocalNewerOrEqual } from '../lib/syncConflict'
+import { resolveTransactionReferences } from '../lib/syncReferences'
+import { logger } from '../lib/logger'
 
 const router = Router()
 router.use(authMiddleware)
 
-const entitySchema = z.enum(['product', 'client', 'supplier', 'employee'])
+const entitySchema = z.enum(['product', 'client', 'supplier', 'employee', 'transaction'])
 const operationSchema = z.enum(['UPSERT', 'DELETE'])
 
 const registerDeviceSchema = z.object({
@@ -65,6 +68,11 @@ async function applySyncChange(businessId: string, change: z.infer<typeof pushCh
   const payload = change.payload
 
   if (change.entity === 'product') {
+    const existing = await prisma.product.findFirst({ where: { id: change.entityId, businessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ businessId, entity: 'product', entityId: change.entityId }, '[sync] cambio descartado: local es más reciente')
+      return
+    }
     const data = {
       name: cleanString(payload.name) || 'Producto sincronizado',
       description: cleanString(payload.description),
@@ -84,6 +92,11 @@ async function applySyncChange(businessId: string, change: z.infer<typeof pushCh
   }
 
   if (change.entity === 'client') {
+    const existing = await prisma.client.findFirst({ where: { id: change.entityId, businessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ businessId, entity: 'client', entityId: change.entityId }, '[sync] cambio descartado: local es más reciente')
+      return
+    }
     const manualTags = Array.isArray(payload.manualTags)
       ? JSON.stringify(payload.manualTags.map(String).filter(Boolean))
       : typeof payload.manualTags === 'string'
@@ -108,6 +121,11 @@ async function applySyncChange(businessId: string, change: z.infer<typeof pushCh
   }
 
   if (change.entity === 'supplier') {
+    const existing = await prisma.supplier.findFirst({ where: { id: change.entityId, businessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ businessId, entity: 'supplier', entityId: change.entityId }, '[sync] cambio descartado: local es más reciente')
+      return
+    }
     const data = {
       name: cleanString(payload.name) || 'Proveedor sincronizado',
       phone: cleanString(payload.phone),
@@ -123,6 +141,11 @@ async function applySyncChange(businessId: string, change: z.infer<typeof pushCh
   }
 
   if (change.entity === 'employee') {
+    const existing = await prisma.employee.findFirst({ where: { id: change.entityId, businessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ businessId, entity: 'employee', entityId: change.entityId }, '[sync] cambio descartado: local es más reciente')
+      return
+    }
     const data = {
       name: cleanString(payload.name) || 'Empleado sincronizado',
       phone: cleanString(payload.phone),
@@ -137,6 +160,47 @@ async function applySyncChange(businessId: string, change: z.infer<typeof pushCh
     if (updated.count === 0) {
       await prisma.employee.create({ data: { id: change.entityId, businessId, ...data } })
     }
+  }
+
+  if (change.entity === 'transaction') {
+    // Append-only: si ya existe (por id), no se toca — las ventas no se editan
+    // vía sync, solo se crean (anular = una transacción de reverso nueva).
+    const existing = await prisma.transaction.findFirst({ where: { id: change.entityId, businessId }, select: { id: true } })
+    if (existing) return
+
+    const items = Array.isArray(payload.items) ? payload.items as Record<string, unknown>[] : []
+    const refs = await resolveTransactionReferences(businessId, payload)
+    await prisma.transaction.create({
+      data: {
+        id: change.entityId,
+        businessId,
+        type: cleanString(payload.type) || 'SALE',
+        amount: cleanNumber(payload.amount),
+        description: cleanString(payload.description),
+        paymentMethod: cleanString(payload.paymentMethod) || 'CASH',
+        status: cleanString(payload.status) || 'COMPLETED',
+        discountValue: cleanNumber(payload.discountValue),
+        discountType: cleanString(payload.discountType) || 'NONE',
+        taxAmount: cleanNumber(payload.taxAmount),
+        returnOfId: cleanString(payload.returnOfId),
+        ncfNumber: cleanString(payload.ncfNumber),
+        originalCurrency: cleanString(payload.originalCurrency),
+        exchangeRate: cleanNumber(payload.exchangeRate, 1),
+        originalAmount: payload.originalAmount == null ? undefined : cleanNumber(payload.originalAmount),
+        invoiceNumber: cleanString(payload.invoiceNumber),
+        clientId: refs.clientId,
+        supplierId: refs.supplierId,
+        items: {
+          create: items.map(item => ({
+            productId: refs.resolveProductId(cleanString(item.productId)),
+            name: cleanString(item.name) || 'Producto',
+            quantity: Math.trunc(cleanNumber(item.quantity)),
+            price: cleanNumber(item.price),
+            cost: cleanNumber(item.cost),
+          })),
+        },
+      },
+    })
   }
 }
 

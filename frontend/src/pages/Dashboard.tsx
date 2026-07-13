@@ -28,12 +28,15 @@ interface CategoryMargin { category: string; revenue: number; cost: number; gros
 interface LossProduct { id: string; name: string; price: number; cost: number; margin: number; category: string; stock: number }
 interface SalesGaps { totalDays: number; daysWithSales: number; daysWithoutSales: number }
 interface PendingTx { id: string; type: string; amount: number; status: string }
+interface PulseData { today: number; todayCount: number; average: number; activeDays: number; verdict: 'above' | 'onpar' | 'below' | 'nodata'; deltaPct: number | null }
+interface PositionData { cashInDrawer: number | null; cashSessionOpen: boolean; receivable: number; receivableCount: number; payable: number; payableCount: number }
 
 // ── Widget system ─────────────────────────────────────────────────────────────
 interface WidgetDef { id: string; label: string; description: string; hideable: boolean }
 interface WidgetState { id: string; visible: boolean }
 
 const WIDGET_DEFS: WidgetDef[] = [
+  { id: 'pulse',     label: 'Resumen del día',              description: 'Cómo vas hoy y tu posición: efectivo, por cobrar, por pagar', hideable: false },
   { id: 'status',    label: 'Alertas del día',              description: 'Lo que necesita tu atención ahora mismo',           hideable: false },
   { id: 'kpis',      label: 'Métricas principales',         description: 'Ventas hoy, mes, ganancia bruta y mejor hora',      hideable: true },
   { id: 'chart',     label: 'Gráfico de ventas',            description: 'Ventas y gastos — últimos 7, 30 o 90 días',         hideable: true },
@@ -52,9 +55,14 @@ function useWidgetLayout(bid: string) {
       const raw = localStorage.getItem(key)
       if (!raw) return DEFAULT_LAYOUT
       const saved = JSON.parse(raw) as WidgetState[]
-      // Merge: keep saved order/visibility but add any new widgets at end
+      // Merge: conserva orden/visibilidad guardados; los widgets nuevos críticos
+      // (no ocultables) van al inicio, los opcionales al final.
       const merged = saved.filter(s => WIDGET_DEFS.some(d => d.id === s.id))
-      WIDGET_DEFS.forEach(d => { if (!merged.some(m => m.id === d.id)) merged.push({ id: d.id, visible: true }) })
+      WIDGET_DEFS.forEach(d => {
+        if (merged.some(m => m.id === d.id)) return
+        if (d.hideable) merged.push({ id: d.id, visible: true })
+        else merged.unshift({ id: d.id, visible: true })
+      })
       return merged
     } catch { return DEFAULT_LAYOUT }
   }
@@ -93,9 +101,74 @@ function DeltaBadge({ current, previous, label = 'ayer' }: { current: number; pr
   const up = pct >= 0
   return (
     <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap
-      ${up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+      ${up ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'}`}>
       {up ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
       {Math.abs(pct).toFixed(0)}% vs. {label}
+    </div>
+  )
+}
+
+// Skeleton por widget — evita que un widget lento (analytics, top) muestre
+// datos en 0/vacío mientras su query sigue en curso; cada uno imita a grandes
+// rasgos la forma real del widget que reemplaza.
+function WidgetSkeleton({ id }: { id: string }) {
+  if (id === 'pulse') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="card p-5 space-y-3">
+          <Skeleton className="h-2.5 w-2.5 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-7 w-28" />
+        </div>
+        <div className="card p-5 lg:col-span-2 space-y-3">
+          <Skeleton className="h-3 w-40" />
+          <div className="grid grid-cols-3 gap-3">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (id === 'status') {
+    return <Skeleton className="h-14 w-full rounded-2xl" />
+  }
+  if (id === 'kpis') {
+    return (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="card p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-9 w-9 rounded-xl" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (id === 'chart') {
+    return (
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-7 w-32 rounded-xl" />
+        </div>
+        <Skeleton className="h-[200px] w-full rounded-xl" />
+      </div>
+    )
+  }
+  // top, monthly, analytics: layout de 2 columnas
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="card p-5 space-y-3">
+          <Skeleton className="h-4 w-32" />
+          {Array.from({ length: 4 }).map((_, j) => <Skeleton key={j} className="h-8 w-full" />)}
+        </div>
+      ))}
     </div>
   )
 }
@@ -171,7 +244,7 @@ function CustomizeDrawer({
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5 leading-snug">{def.description}</p>
                     {!def.hideable && (
-                      <span className="inline-block mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-full">
+                      <span className="inline-block mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 rounded-full">
                         Siempre visible
                       </span>
                     )}
@@ -183,7 +256,7 @@ function CustomizeDrawer({
                       onClick={() => onToggle(w.id)}
                       className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${
                         w.visible
-                          ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
                           : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                       }`}
                       title={w.visible ? 'Ocultar' : 'Mostrar'}
@@ -295,6 +368,16 @@ export function Dashboard() {
     queryFn: () => api.get(`/businesses/${bid}/employees`).then(r => r.data),
     enabled: !!bid && isOwner, staleTime: 5 * 60_000,
   })
+  const pulseQuery = useQuery<PulseData>({
+    queryKey: ['pulse', bid],
+    queryFn: () => api.get(`/businesses/${bid}/stats/pulse`).then(r => r.data),
+    enabled: !!bid, staleTime: 60_000,
+  })
+  const positionQuery = useQuery<PositionData>({
+    queryKey: ['position', bid],
+    queryFn: () => api.get(`/businesses/${bid}/stats/position`).then(r => r.data),
+    enabled: !!bid, staleTime: 60_000,
+  })
 
   const summaryMonth = summaryMonthQuery.data
   const summaryToday = summaryTodayQuery.data
@@ -310,8 +393,18 @@ export function Dashboard() {
   const salesGaps = salesGapsQuery.data
   const pendingTx = pendingTxQuery.data ?? []
   const employees = employeesQuery.data ?? []
-  const isDashboardLoading = summaryMonthQuery.isLoading || summaryTodayQuery.isLoading || productsQuery.isLoading || chartQuery.isLoading
+  const pulse = pulseQuery.data
+  const position = positionQuery.data
   const hasDashboardError = summaryMonthQuery.isError || summaryTodayQuery.isError || productsQuery.isError || chartQuery.isError
+  const widgetLoading: Record<string, boolean> = {
+    pulse: pulseQuery.isLoading || positionQuery.isLoading,
+    status: productsQuery.isLoading || pendingTxQuery.isLoading,
+    kpis: summaryTodayQuery.isLoading || summaryYesterdayQuery.isLoading || summaryMonthQuery.isLoading || summaryLastMonthQuery.isLoading || byHourQuery.isLoading,
+    chart: chartQuery.isLoading,
+    top: topProductsQuery.isLoading || byHourQuery.isLoading,
+    monthly: summaryMonthQuery.isLoading || summaryLastMonthQuery.isLoading || recentTxQuery.isLoading,
+    analytics: marginByCategoryQuery.isLoading || lossProductsQuery.isLoading || salesGapsQuery.isLoading,
+  }
   const retryDashboard = () => {
     void summaryMonthQuery.refetch()
     void summaryTodayQuery.refetch()
@@ -352,29 +445,104 @@ export function Dashboard() {
 
   // ── Widget render map ────────────────────────────────────────────────────────
   const renderWidget = (id: string) => {
+    if (widgetLoading[id]) return <div key={id}><WidgetSkeleton id={id} /></div>
     switch (id) {
+
+      case 'pulse': {
+        const v = pulse?.verdict ?? 'nodata'
+        const tone = v === 'above'
+          ? { ring: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40', dot: 'bg-green-500', text: 'text-green-700 dark:text-green-300', Icon: TrendingUp }
+          : v === 'below'
+          ? { ring: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40', dot: 'bg-red-500', text: 'text-red-700 dark:text-red-300', Icon: TrendingDown }
+          : v === 'onpar'
+          ? { ring: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40', dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', Icon: ArrowRight }
+          : { ring: 'border-gray-200 bg-gray-50', dot: 'bg-gray-400', text: 'text-gray-500', Icon: Clock }
+        const verdictText = v === 'above'
+          ? 'Hoy vas mejor que tu promedio'
+          : v === 'below'
+          ? 'Hoy vas por debajo de tu promedio'
+          : v === 'onpar'
+          ? 'Hoy vas parejo con tu promedio'
+          : 'Aún no hay suficiente historial para comparar'
+        const deltaLabel = pulse?.deltaPct != null && v !== 'nodata'
+          ? `${pulse.deltaPct > 0 ? '+' : ''}${pulse.deltaPct}% vs. tu día normal`
+          : null
+
+        return (
+          <div key="pulse" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Semáforo del día */}
+            <div className={`card p-5 border ${tone.ring}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`w-2.5 h-2.5 rounded-full ${tone.dot}`} />
+                <tone.Icon size={16} className={tone.text} />
+              </div>
+              <p className={`text-sm font-bold ${tone.text} leading-snug`}>{verdictText}</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-slate-100 mt-2 leading-tight">{formatCurrency(pulse?.today ?? 0, cur)}</p>
+              {deltaLabel && <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{deltaLabel}</p>}
+              {v === 'nodata' && <p className="text-xs text-gray-400 mt-1">Ventas de hoy</p>}
+            </div>
+
+            {/* Posición: tengo / me deben / debo */}
+            <div className="card p-5 lg:col-span-2">
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-3">Tu posición ahora mismo</p>
+              <div className="grid grid-cols-3 gap-3">
+                <Link to="/caja" className="group">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <DollarSign size={13} className="text-green-500 dark:text-green-400" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Tengo en caja</span>
+                  </div>
+                  <p className="text-lg font-black text-gray-900 dark:text-slate-100 leading-tight group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                    {position?.cashSessionOpen ? formatCurrency(position?.cashInDrawer ?? 0, cur) : '—'}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{position?.cashSessionOpen ? 'caja abierta' : 'caja cerrada'}</p>
+                </Link>
+                <Link to="/cuentas-cobrar" className="group border-l border-gray-100 dark:border-slate-700 pl-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ArrowDownRight size={13} className="text-blue-500 dark:text-blue-400" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Me deben</span>
+                  </div>
+                  <p className="text-lg font-black text-gray-900 dark:text-slate-100 leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {formatCurrency(position?.receivable ?? 0, cur)}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{position?.receivableCount ?? 0} por cobrar</p>
+                </Link>
+                <Link to="/ordenes-compra" className="group border-l border-gray-100 dark:border-slate-700 pl-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ArrowUpRight size={13} className="text-amber-500 dark:text-amber-400" />
+                    <span className="text-xs text-gray-500 dark:text-slate-400">Debo</span>
+                  </div>
+                  <p className="text-lg font-black text-gray-900 dark:text-slate-100 leading-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    {formatCurrency(position?.payable ?? 0, cur)}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{position?.payableCount ?? 0} a proveedores</p>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       case 'status':
         return attentionItems.length === 0 ? (
-          <div key="status" className="flex items-center gap-3 px-5 py-3.5 bg-green-50 border border-green-200 rounded-2xl">
-            <CheckCircle2 size={18} className="text-green-500 flex-shrink-0" />
-            <p className="text-sm font-medium text-green-700">Todo al día — sin alertas pendientes</p>
+          <div key="status" className="flex items-center gap-3 px-5 py-3.5 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-2xl">
+            <CheckCircle2 size={18} className="text-green-500 dark:text-green-400 flex-shrink-0" />
+            <p className="text-sm font-medium text-green-700 dark:text-green-300">Todo al día — sin alertas pendientes</p>
           </div>
         ) : (
-          <div key="status" className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-3 border-b border-amber-200">
-              <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
-              <p className="text-sm font-bold text-amber-800">
+          <div key="status" className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-amber-200 dark:border-amber-800">
+              <AlertTriangle size={16} className="text-amber-500 dark:text-amber-400 flex-shrink-0" />
+              <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
                 {attentionItems.length} {attentionItems.length === 1 ? 'cosa necesita' : 'cosas necesitan'} tu atención
               </p>
             </div>
-            <div className="divide-y divide-amber-100">
+            <div className="divide-y divide-amber-100 dark:divide-amber-800">
               {attentionItems.map((item, i) => (
                 <Link key={i} to={item.to}
                   className="flex items-center gap-3 px-5 py-2.5 hover:bg-amber-100/50 transition-colors group">
                   <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.color === 'red' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                  <p className={`text-sm ${item.color === 'red' ? 'text-red-700' : 'text-amber-800'}`}>{item.text}</p>
-                  <ArrowRight size={13} className="ml-auto text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <p className={`text-sm ${item.color === 'red' ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>{item.text}</p>
+                  <ArrowRight size={13} className="ml-auto text-amber-400 dark:text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               ))}
             </div>
@@ -386,8 +554,8 @@ export function Dashboard() {
           <div key="kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="card p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center">
-                  <ShoppingCart size={16} className="text-green-600" />
+                <div className="w-9 h-9 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center">
+                  <ShoppingCart size={16} className="text-green-600 dark:text-green-400" />
                 </div>
                 <DeltaBadge current={summaryToday?.totalSales ?? 0} previous={summaryYesterday?.totalSales ?? 0} label="ayer" />
               </div>
@@ -402,8 +570,8 @@ export function Dashboard() {
 
             <div className="card p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <TrendingUp size={16} className="text-blue-600" />
+                <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center">
+                  <TrendingUp size={16} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <DeltaBadge current={summaryMonth?.totalSales ?? 0} previous={summaryLastMonth?.totalSales ?? 0} label="mes ant." />
               </div>
@@ -417,14 +585,14 @@ export function Dashboard() {
 
             <div className="card p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center">
-                  <DollarSign size={16} className="text-purple-600" />
+                <div className="w-9 h-9 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center">
+                  <DollarSign size={16} className="text-purple-600 dark:text-purple-400" />
                 </div>
                 {grossMarginPct && (
                   <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full
-                    ${parseFloat(grossMarginPct) >= 30 ? 'bg-green-100 text-green-700' :
-                      parseFloat(grossMarginPct) >= 15 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-600'}`}>
+                    ${parseFloat(grossMarginPct) >= 30 ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' :
+                      parseFloat(grossMarginPct) >= 15 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' :
+                      'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'}`}>
                     {grossMarginPct}%
                   </span>
                 )}
@@ -436,8 +604,8 @@ export function Dashboard() {
 
             <div className="card p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center">
-                  <Zap size={16} className="text-amber-600" />
+                <div className="w-9 h-9 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center">
+                  <Zap size={16} className="text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Mejor hora (30d)</p>
@@ -520,7 +688,7 @@ export function Dashboard() {
               <div className="h-40 flex flex-col items-center justify-center text-gray-400">
                 <TrendingUp size={32} className="mb-2 opacity-30" />
                 <p className="text-sm">Aún no hay datos de ventas.</p>
-                <Link to="/vender" className="text-blue-500 text-sm mt-1 hover:underline">Registra tu primera venta →</Link>
+                <Link to="/vender" className="text-blue-500 dark:text-blue-400 text-sm mt-1 hover:underline">Registra tu primera venta →</Link>
               </div>
             )}
           </div>
@@ -532,7 +700,7 @@ export function Dashboard() {
             <div className="card overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Star size={15} className="text-amber-500" />
+                  <Star size={15} className="text-amber-500 dark:text-amber-400" />
                   <h2 className="font-bold text-gray-900">Top productos</h2>
                 </div>
                 <span className="text-xs text-gray-400">Este mes</span>
@@ -542,7 +710,7 @@ export function Dashboard() {
                   {topProducts.slice(0, 5).map((p, i) => (
                     <div key={p.name} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
-                        ${i === 0 ? 'bg-amber-100 text-amber-600' : i === 1 ? 'bg-gray-200 text-gray-600' : 'bg-gray-100 text-gray-400'}`}>
+                        ${i === 0 ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400' : i === 1 ? 'bg-gray-200 text-gray-600' : 'bg-gray-100 text-gray-400'}`}>
                         {i + 1}
                       </span>
                       <div className="flex-1 min-w-0">
@@ -565,7 +733,7 @@ export function Dashboard() {
 
             <div className="card p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Clock size={15} className="text-blue-500" />
+                <Clock size={15} className="text-blue-500 dark:text-blue-400" />
                 <h2 className="font-bold text-gray-900">Pico de ventas</h2>
                 <span className="text-xs text-gray-400 ml-auto">Últimos 30 días</span>
               </div>
@@ -602,11 +770,11 @@ export function Dashboard() {
               <h2 className="font-bold text-gray-900 mb-4">Resumen del mes</h2>
               <div className="space-y-1.5">
                 {[
-                  { label: 'Total ventas', value: summaryMonth?.totalSales ?? 0, prev: summaryLastMonth?.totalSales, color: 'text-green-600', icon: ArrowUpRight, bg: 'bg-green-50' },
-                  { label: 'Total gastos', value: summaryMonth?.totalExpenses ?? 0, prev: summaryLastMonth?.totalExpenses, color: 'text-red-500', icon: ArrowDownRight, bg: 'bg-red-50' },
-                  { label: 'Ganancia bruta', value: summaryMonth?.grossProfit ?? 0, color: 'text-blue-600', icon: DollarSign, bg: 'bg-blue-50' },
-                  { label: 'Ganancia neta', value: summaryMonth?.netProfit ?? 0, color: (summaryMonth?.netProfit ?? 0) >= 0 ? 'text-purple-600' : 'text-red-500', icon: TrendingUp, bg: 'bg-purple-50' },
-                  { label: 'Compras a proveedores', value: summaryMonth?.totalPurchases ?? 0, color: 'text-orange-600', icon: Truck, bg: 'bg-orange-50' },
+                  { label: 'Total ventas', value: summaryMonth?.totalSales ?? 0, prev: summaryLastMonth?.totalSales, color: 'text-green-600 dark:text-green-400', icon: ArrowUpRight, bg: 'bg-green-50 dark:bg-green-950/40' },
+                  { label: 'Total gastos', value: summaryMonth?.totalExpenses ?? 0, prev: summaryLastMonth?.totalExpenses, color: 'text-red-500 dark:text-red-400', icon: ArrowDownRight, bg: 'bg-red-50 dark:bg-red-950/40' },
+                  { label: 'Ganancia bruta', value: summaryMonth?.grossProfit ?? 0, color: 'text-blue-600 dark:text-blue-400', icon: DollarSign, bg: 'bg-blue-50 dark:bg-blue-950/40' },
+                  { label: 'Ganancia neta', value: summaryMonth?.netProfit ?? 0, color: (summaryMonth?.netProfit ?? 0) >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-500 dark:text-red-400', icon: TrendingUp, bg: 'bg-purple-50 dark:bg-purple-950/40' },
+                  { label: 'Compras a proveedores', value: summaryMonth?.totalPurchases ?? 0, color: 'text-orange-600 dark:text-orange-400', icon: Truck, bg: 'bg-orange-50 dark:bg-orange-950/40' },
                 ].map(item => {
                   const Icon = item.icon
                   return (
@@ -632,7 +800,7 @@ export function Dashboard() {
             <div className="card overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="font-bold text-gray-900">Últimos movimientos</h2>
-                <Link to="/movimientos" className="text-blue-500 text-xs flex items-center gap-1 hover:underline font-medium">
+                <Link to="/movimientos" className="text-blue-500 dark:text-blue-400 text-xs flex items-center gap-1 hover:underline font-medium">
                   Ver todos <ArrowRight size={13} />
                 </Link>
               </div>
@@ -647,7 +815,7 @@ export function Dashboard() {
                       <div key={tx.id as string} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
-                            ${isIncome ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            ${isIncome ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'}`}>
                             {isIncome ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                           </div>
                           <div className="min-w-0">
@@ -656,12 +824,12 @@ export function Dashboard() {
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
                               <span>{typeInfo?.label}</span>
-                              {isPending && <span className="px-1 py-0 bg-yellow-100 text-yellow-700 rounded text-[10px] font-semibold">Pendiente</span>}
+                              {isPending && <span className="px-1 py-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded text-[10px] font-semibold">Pendiente</span>}
                               <span>· {formatDate(tx.createdAt as string, 'dd MMM, HH:mm')}</span>
                             </p>
                           </div>
                         </div>
-                        <span className={`text-base font-black flex-shrink-0 ml-3 ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
+                        <span className={`text-base font-black flex-shrink-0 ml-3 ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                           {isIncome ? '+' : '−'}{formatCurrency(tx.amount as number, cur)}
                         </span>
                       </div>
@@ -671,7 +839,7 @@ export function Dashboard() {
               ) : (
                 <div className="py-10 text-center">
                   <p className="text-gray-400 text-sm">No hay movimientos aún.</p>
-                  <Link to="/vender" className="text-blue-500 text-sm mt-1 hover:underline inline-block">Registra una venta →</Link>
+                  <Link to="/vender" className="text-blue-500 dark:text-blue-400 text-sm mt-1 hover:underline inline-block">Registra una venta →</Link>
                 </div>
               )}
             </div>
@@ -686,7 +854,7 @@ export function Dashboard() {
               <div className="card overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-100">
                   <h2 className="font-bold text-gray-900 flex items-center gap-2">
-                    <BarChart2 size={16} className="text-blue-500" /> Margen por categoría (30d)
+                    <BarChart2 size={16} className="text-blue-500 dark:text-blue-400" /> Margen por categoría (30d)
                   </h2>
                 </div>
                 <div className="divide-y divide-gray-50">
@@ -696,7 +864,7 @@ export function Dashboard() {
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium text-gray-800 truncate">{cat.category}</span>
                           <span className={`text-xs font-bold ml-2 flex-shrink-0
-                            ${cat.margin >= 30 ? 'text-green-600' : cat.margin >= 15 ? 'text-amber-600' : 'text-red-500'}`}>
+                            ${cat.margin >= 30 ? 'text-green-600 dark:text-green-400' : cat.margin >= 15 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500 dark:text-red-400'}`}>
                             {cat.margin.toFixed(1)}%
                           </span>
                         </div>
@@ -716,8 +884,8 @@ export function Dashboard() {
             <div className="space-y-4">
               {salesGaps && salesGaps.daysWithoutSales > 0 && (
                 <div className="card p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle size={20} className="text-amber-500" />
+                  <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle size={20} className="text-amber-500 dark:text-amber-400" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{salesGaps.daysWithoutSales} días sin ventas</p>
@@ -729,7 +897,7 @@ export function Dashboard() {
                 <div className="card overflow-hidden">
                   <div className="px-5 py-3.5 border-b border-gray-100">
                     <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                      <TrendingDown size={14} className="text-red-500" /> Productos con margen bajo
+                      <TrendingDown size={14} className="text-red-500 dark:text-red-400" /> Productos con margen bajo
                     </h2>
                   </div>
                   <div className="divide-y divide-gray-50">
@@ -740,7 +908,7 @@ export function Dashboard() {
                           <p className="text-xs text-gray-400">{p.category} · stock: {p.stock}</p>
                         </div>
                         <div className="text-right flex-shrink-0 ml-3">
-                          <p className={`text-sm font-bold ${p.margin < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                          <p className={`text-sm font-bold ${p.margin < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
                             {p.margin.toFixed(1)}%
                           </p>
                           <p className="text-xs text-gray-400">{formatCurrency(p.price, cur)}</p>
@@ -786,21 +954,6 @@ export function Dashboard() {
       </div>
 
       <div className="p-6 space-y-5">
-        {isDashboardLoading && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="card p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <Skeleton className="h-9 w-9 rounded-xl" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </div>
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-7 w-32" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-            ))}
-          </div>
-        )}
         {hasDashboardError && (
           <div className="card">
             <QueryError

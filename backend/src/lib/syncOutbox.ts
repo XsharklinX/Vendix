@@ -1,7 +1,7 @@
 import { logger } from './logger'
 import { prisma } from './prisma'
 
-type SyncEntity = 'product' | 'client' | 'supplier' | 'employee'
+type SyncEntity = 'product' | 'client' | 'supplier' | 'employee' | 'transaction'
 type SyncOperation = 'UPSERT' | 'DELETE'
 type ConflictPolicy = 'LAST_WRITE_WINS' | 'APPEND_ONLY'
 

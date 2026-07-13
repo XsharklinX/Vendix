@@ -19,9 +19,10 @@ Vendix es un sistema de gestión de ventas, inventario y contabilidad diseñado 
 | [integrations.md](integrations.md) | WhatsApp (enlaces directos), Email (Resend/SMTP), Swagger |
 | [build-deploy.md](build-deploy.md) | Scripts de desarrollo, build de producción, Electron, distribución |
 | [env-configuration.md](env-configuration.md) | Todas las variables de entorno explicadas |
-| [roadmap-v3.md](roadmap-v3.md) | Roadmap técnico: accesibilidad, rendimiento, pruebas |
-| [roadmap-saas.md](roadmap-saas.md) | Roadmap de nube, sincronización y suscripciones |
-| [roadmap-diferenciacion.md](roadmap-diferenciacion.md) | Roadmap de producto y experiencia de usuario |
+| [roadmap-v4.md](roadmap-v4.md) | **Empezar aquí** — roadmap consolidado de próximas versiones, con prioridades |
+| [roadmap-v3.md](roadmap-v3.md) | Detalle técnico: accesibilidad, rendimiento, pruebas |
+| [roadmap-saas.md](roadmap-saas.md) | Detalle de nube, sincronización y suscripciones |
+| [roadmap-diferenciacion.md](roadmap-diferenciacion.md) | Detalle de producto y experiencia de usuario |
 
 ---
 

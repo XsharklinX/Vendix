@@ -1,6 +1,6 @@
 import { prisma } from './prisma'
 import { sendEmail } from './email'
-import { checkPendingDebts } from './notifications'
+import { checkPendingDebts, checkExpiringQuotes, checkStaleCashSession } from './notifications'
 import { logger } from './logger'
 
 async function buildBackupPayload(businessId: string) {
@@ -68,6 +68,8 @@ async function runDailyNotifications() {
     })
     for (const biz of businesses) {
       checkPendingDebts(biz.id, biz.userId).catch(() => {})
+      checkExpiringQuotes(biz.id, biz.userId).catch(() => {})
+      checkStaleCashSession(biz.id, biz.userId).catch(() => {})
     }
   } catch {
     // Non-blocking

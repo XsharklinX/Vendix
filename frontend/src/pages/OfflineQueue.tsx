@@ -87,7 +87,7 @@ export function OfflineQueue() {
       <PageHeader
         title="Cola offline"
         subtitle={`${sales.length} venta(s) pendiente(s) de sincronizar`}
-        icon={<WifiOff size={18} className="text-orange-500" />}
+        icon={<WifiOff size={18} className="text-orange-500 dark:text-orange-400" />}
         action={sales.length > 0 && (
           <button onClick={retryAll} disabled={!online || retryingId !== null} className="btn-primary">
             <RefreshCw size={15} /> Reintentar todo
@@ -96,7 +96,7 @@ export function OfflineQueue() {
       />
 
       <div className="p-6 space-y-4">
-        <div className={`rounded-xl px-4 py-2.5 text-sm font-medium flex items-center gap-2 ${online ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
+        <div className={`rounded-xl px-4 py-2.5 text-sm font-medium flex items-center gap-2 ${online ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' : 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300'}`}>
           <span className={`w-2 h-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-orange-500 animate-pulse'}`} />
           {online ? 'Conectado' : 'Sin conexion'}
         </div>
@@ -112,15 +112,15 @@ export function OfflineQueue() {
               description="No tienes ventas pendientes por sincronizar. Todo se guardó correctamente en el servidor."
             />
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800">
               {sales.map(sale => {
                 const data = sale.data as unknown as OfflineSaleData
                 return (
                   <div key={sale.id} className="p-4 flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <p className="font-bold text-gray-900">{formatCurrency(data.amount, cur)}</p>
-                      <p className="text-xs text-gray-400">{formatDateTime(new Date(sale.savedAt).toISOString())}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="font-bold text-gray-900 dark:text-slate-100">{formatCurrency(data.amount, cur)}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">{formatDateTime(new Date(sale.savedAt).toISOString())}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                         {data.items?.length ?? 0} producto(s) - {data.paymentMethod}
                         {data.status === 'PENDING' && ' - Al fiado'}
                       </p>
@@ -133,7 +133,7 @@ export function OfflineQueue() {
                       >
                         {retryingId === sale.id ? 'Sincronizando...' : 'Reintentar'}
                       </button>
-                      <button onClick={() => handleDelete(sale)} className="btn-ghost text-xs px-2.5 py-1.5 text-red-500 hover:bg-red-50">
+                      <button onClick={() => handleDelete(sale)} className="btn-ghost text-xs px-2.5 py-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40">
                         <Trash2 size={14} />
                       </button>
                     </div>

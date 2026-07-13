@@ -20,12 +20,12 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${danger ? 'bg-red-100' : 'bg-yellow-100'}`}>
-          <AlertTriangle size={24} className={danger ? 'text-red-600' : 'text-yellow-600'} />
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${danger ? 'bg-red-100 dark:bg-red-900/40' : 'bg-yellow-100 dark:bg-yellow-900/40'}`}>
+          <AlertTriangle size={24} className={danger ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-        <p className="text-gray-500 text-sm mb-6">{message}</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">{title}</h3>
+        <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">{message}</p>
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 btn-secondary justify-center py-2.5">
             {cancelLabel}

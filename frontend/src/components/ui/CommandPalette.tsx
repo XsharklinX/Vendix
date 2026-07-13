@@ -134,22 +134,22 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4">
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden="true" />
-      <div role="dialog" aria-modal="true" aria-label="Búsqueda rápida" className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <Search size={16} className="text-gray-400 flex-shrink-0" />
+      <div role="dialog" aria-modal="true" aria-label="Búsqueda rápida" className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden animate-fade-in">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+          <Search size={16} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Buscar páginas, productos, clientes…"
-            className="flex-1 text-sm outline-none placeholder:text-gray-400"
+            className="flex-1 text-sm outline-none placeholder:text-gray-400 dark:text-slate-500"
           />
-          <kbd className="hidden sm:inline text-[10px] font-semibold text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Esc</kbd>
+          <kbd className="hidden sm:inline text-[10px] font-semibold text-gray-400 dark:text-slate-500 border border-gray-200 dark:border-slate-600 rounded px-1.5 py-0.5">Esc</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto py-1.5">
           {results.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">Sin resultados</div>
+            <div className="py-8 text-center text-sm text-gray-400 dark:text-slate-500">Sin resultados</div>
           ) : results.map((item, i) => {
             const Icon = item.icon
             return (
@@ -158,14 +158,14 @@ export function CommandPalette() {
                 onClick={() => select(item)}
                 onMouseEnter={() => setActiveIndex(i)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                  i === activeIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  i === activeIndex ? 'bg-blue-50 dark:bg-blue-950/40' : 'hover:bg-gray-50 dark:hover:bg-slate-800'
                 }`}
               >
-                <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <Icon size={14} className="text-gray-500" />
+                <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                  <Icon size={14} className="text-gray-500 dark:text-slate-400" />
                 </div>
-                <span className="flex-1 text-sm font-medium text-gray-800 truncate">{item.label}</span>
-                {item.hint && <span className="text-xs text-gray-400 flex-shrink-0">{item.hint}</span>}
+                <span className="flex-1 text-sm font-medium text-gray-800 dark:text-slate-200 truncate">{item.label}</span>
+                {item.hint && <span className="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">{item.hint}</span>}
               </button>
             )
           })}

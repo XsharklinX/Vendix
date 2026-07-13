@@ -368,7 +368,14 @@ router.get('/', async (req: AuthRequest, res) => {
   const where: Record<string, unknown> = { businessId, deletedAt: deletedFilter }
   if (search) where.name = { contains: search as string }
 
-  const include = { category: true, volumePricing: { orderBy: { minQty: 'asc' as const } } }
+  const recentPriceChange = { changedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+  const include = {
+    category: true,
+    volumePricing: { orderBy: { minQty: 'asc' as const } },
+    // Solo el cambio de precio mas reciente dentro de los ultimos 7 dias, si existe —
+    // alimenta el badge "Antes: RD$X" en el POS sin pedir el historial completo por producto.
+    priceHistory: { where: recentPriceChange, orderBy: { changedAt: 'desc' as const }, take: 1 },
+  }
   const orderBy = { name: 'asc' as const }
 
   if (page) {

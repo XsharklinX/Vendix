@@ -24,11 +24,11 @@ function SectionHeader({ icon, title, count, color }: {
   icon: React.ReactNode; title: string; count?: number; color: string
 }) {
   return (
-    <div className={`flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50/60`}>
+    <div className={`flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/60`}>
       <span className={color}>{icon}</span>
-      <h2 className="font-bold text-gray-900 text-sm flex-1">{title}</h2>
+      <h2 className="font-bold text-gray-900 dark:text-slate-100 text-sm flex-1">{title}</h2>
       {count !== undefined && (
-        <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-semibold text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
           {count}
         </span>
       )}
@@ -39,8 +39,8 @@ function SectionHeader({ icon, title, count, color }: {
 function EmptySection({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2 px-5 py-4">
-      <CheckCircle2 size={15} className="text-green-500 flex-shrink-0" />
-      <p className="text-sm text-gray-400">{text}</p>
+      <CheckCircle2 size={15} className="text-green-500 dark:text-green-400 flex-shrink-0" />
+      <p className="text-sm text-gray-400 dark:text-slate-500">{text}</p>
     </div>
   )
 }
@@ -124,28 +124,28 @@ export function Planner() {
       <PageHeader
         title="Mi semana"
         subtitle={dayCapitalized}
-        icon={<CalendarCheck size={18} className="text-blue-500" />}
+        icon={<CalendarCheck size={18} className="text-blue-500 dark:text-blue-400" />}
       />
 
       <div className="p-6 space-y-4">
         {/* Banner de estado general */}
         {allClear ? (
-          <div className="card p-4 flex items-center gap-3 bg-green-50 border-green-100">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 size={20} className="text-green-600" />
+          <div className="card p-4 flex items-center gap-3 bg-green-50 dark:bg-green-950/40 border-green-100 dark:border-green-900/50">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 size={20} className="text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="font-bold text-green-800">¡Todo al día!</p>
-              <p className="text-sm text-green-600">No hay tareas pendientes para hoy.</p>
+              <p className="font-bold text-green-800 dark:text-green-200">¡Todo al día!</p>
+              <p className="text-sm text-green-600 dark:text-green-400">No hay tareas pendientes para hoy.</p>
             </div>
           </div>
         ) : (
-          <div className="card p-4 flex items-center gap-3 bg-amber-50 border-amber-100">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <AlertTriangle size={20} className="text-amber-600" />
+          <div className="card p-4 flex items-center gap-3 bg-amber-50 dark:bg-amber-950/40 border-amber-100 dark:border-amber-900/50">
+            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+              <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-amber-800">
+              <p className="font-bold text-amber-800 dark:text-amber-200">
                 {[
                   debtClients.length > 0 && `${debtClients.length} cobro${debtClients.length > 1 ? 's' : ''} pendiente${debtClients.length > 1 ? 's' : ''}`,
                   debtSuppliers.length > 0 && `${debtSuppliers.length} pago${debtSuppliers.length > 1 ? 's' : ''} a proveedores`,
@@ -153,23 +153,23 @@ export function Planner() {
                   pendingQuotes.length > 0 && `${pendingQuotes.length} presupuesto${pendingQuotes.length > 1 ? 's' : ''} sin respuesta`,
                 ].filter(Boolean).join(' · ')}
               </p>
-              <p className="text-xs text-amber-600 mt-0.5">Atiende estos puntos para tener el día completo.</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Atiende estos puntos para tener el día completo.</p>
             </div>
           </div>
         )}
 
         {/* Estado de caja */}
         <div className="card overflow-hidden">
-          <SectionHeader icon={<Wallet size={15} />} title="Caja" color="text-emerald-600" />
+          <SectionHeader icon={<Wallet size={15} />} title="Caja" color="text-emerald-600 dark:text-emerald-400" />
           <div className="flex items-center justify-between px-5 py-3.5">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${cashSession?.status === 'OPEN' ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${cashSession?.status === 'OPEN' ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'}`} />
               <div>
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                   {cashSession?.status === 'OPEN' ? 'Caja abierta' : 'Caja cerrada'}
                 </p>
                 {cashSession?.status === 'OPEN' && cashSession.openedAt && (
-                  <p className="text-xs text-gray-400">Desde {format(new Date(cashSession.openedAt), 'h:mm a')}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">Desde {format(new Date(cashSession.openedAt), 'h:mm a')}</p>
                 )}
               </div>
             </div>
@@ -184,21 +184,21 @@ export function Planner() {
             icon={<CalendarCheck size={15} />}
             title="Seguimientos CRM"
             count={crmReminders.length}
-            color="text-pink-500"
+            color="text-pink-500 dark:text-pink-400"
           />
           {crmReminders.length === 0 ? (
             <EmptySection text="No hay recordatorios CRM pendientes en los próximos 14 días." />
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800">
               {crmReminders.slice(0, 8).map(reminder => (
                 <div key={reminder.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${reminder.status === 'OVERDUE' ? 'bg-red-100' : 'bg-pink-100'}`}>
-                    <CalendarCheck size={15} className={reminder.status === 'OVERDUE' ? 'text-red-600' : 'text-pink-600'} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${reminder.status === 'OVERDUE' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-pink-100 dark:bg-pink-900/40'}`}>
+                    <CalendarCheck size={15} className={reminder.status === 'OVERDUE' ? 'text-red-600 dark:text-red-400' : 'text-pink-600 dark:text-pink-400'} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{reminder.client.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{reminder.content}</p>
-                    <p className={`text-[11px] font-semibold ${reminder.status === 'OVERDUE' ? 'text-red-500' : 'text-pink-500'}`}>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{reminder.client.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{reminder.content}</p>
+                    <p className={`text-[11px] font-semibold ${reminder.status === 'OVERDUE' ? 'text-red-500 dark:text-red-400' : 'text-pink-500 dark:text-pink-400'}`}>
                       {reminder.status === 'OVERDUE' ? 'Vencido' : 'Pendiente'} · {format(new Date(reminder.dueAt), 'dd MMM h:mm a', { locale: es })}
                     </p>
                   </div>
@@ -207,9 +207,9 @@ export function Planner() {
                       href={`https://wa.me/${reminder.client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${reminder.client.name}, queríamos dar seguimiento: ${reminder.content}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 transition-colors"
+                      className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/40 hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors"
                     >
-                      <MessageCircle size={13} className="text-green-700" />
+                      <MessageCircle size={13} className="text-green-700 dark:text-green-300" />
                     </a>
                   )}
                 </div>
@@ -224,7 +224,7 @@ export function Planner() {
             icon={<Users size={15} />}
             title="Lo que te deben"
             count={debtClients.length}
-            color="text-red-500"
+            color="text-red-500 dark:text-red-400"
           />
           {debtClients.length === 0 ? (
             <EmptySection text="Ningún cliente te debe dinero hoy." />
@@ -232,45 +232,45 @@ export function Planner() {
             <div>
               {/* Resumen total */}
               <div className="px-5 py-3 bg-red-50/60 flex items-center justify-between border-b border-red-100/60">
-                <p className="text-xs text-red-600 font-medium">Total pendiente de cobro</p>
-                <p className="text-sm font-black text-red-600">{formatCurrency(totalPendingDebt, cur)}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total pendiente de cobro</p>
+                <p className="text-sm font-black text-red-600 dark:text-red-400">{formatCurrency(totalPendingDebt, cur)}</p>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 dark:divide-slate-800">
                 {debtClients.slice(0, 8).map(client => (
                   <div key={client.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors group">
-                    <div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-red-600 font-bold text-sm">{client.name[0].toUpperCase()}</span>
+                    <div className="w-9 h-9 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-red-600 dark:text-red-400 font-bold text-sm">{client.name[0].toUpperCase()}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{client.name}</p>
-                      {client.phone && <p className="text-xs text-gray-400">{client.phone}</p>}
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{client.name}</p>
+                      {client.phone && <p className="text-xs text-gray-400 dark:text-slate-500">{client.phone}</p>}
                     </div>
-                    <p className="text-sm font-black text-red-600 flex-shrink-0">{formatCurrency(client.pendingDebt, cur)}</p>
+                    <p className="text-sm font-black text-red-600 dark:text-red-400 flex-shrink-0">{formatCurrency(client.pendingDebt, cur)}</p>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {client.phone && (
                         <a
                           href={`https://wa.me/${client.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${client.name}, te recordamos que tienes una deuda pendiente de ${formatCurrency(client.pendingDebt, cur)}. ¡Gracias!`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 transition-colors"
+                          className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/40 hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors"
                           title="Recordar por WhatsApp"
                         >
-                          <MessageCircle size={13} className="text-green-700" />
+                          <MessageCircle size={13} className="text-green-700 dark:text-green-300" />
                         </a>
                       )}
                       <button
                         onClick={() => markPaidMutation.mutate(client.id)}
-                        className="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors"
+                        className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
                         title="Marcar como pagado"
                       >
-                        <CheckCircle2 size={13} className="text-blue-700" />
+                        <CheckCircle2 size={13} className="text-blue-700 dark:text-blue-300" />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
               {debtClients.length > 8 && (
-                <Link to="/cuentas-cobrar" className="flex items-center justify-center gap-1.5 py-3 text-xs text-blue-500 hover:bg-gray-50 transition-colors border-t border-gray-100">
+                <Link to="/cuentas-cobrar" className="flex items-center justify-center gap-1.5 py-3 text-xs text-blue-500 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border-t border-gray-100 dark:border-slate-700">
                   Ver {debtClients.length - 8} más <ArrowRight size={11} />
                 </Link>
               )}
@@ -284,32 +284,32 @@ export function Planner() {
             icon={<Truck size={15} />}
             title="Lo que debes a proveedores"
             count={debtSuppliers.length}
-            color="text-orange-500"
+            color="text-orange-500 dark:text-orange-400"
           />
           {debtSuppliers.length === 0 ? (
             <EmptySection text="No tienes pagos pendientes con proveedores." />
           ) : (
             <div>
               <div className="px-5 py-3 bg-orange-50/60 flex items-center justify-between border-b border-orange-100/60">
-                <p className="text-xs text-orange-600 font-medium">Total que les debes</p>
-                <p className="text-sm font-black text-orange-600">{formatCurrency(totalSupplierDebt, cur)}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Total que les debes</p>
+                <p className="text-sm font-black text-orange-600 dark:text-orange-400">{formatCurrency(totalSupplierDebt, cur)}</p>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 dark:divide-slate-800">
                 {debtSuppliers.slice(0, 5).map(supplier => (
                   <div key={supplier.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors">
-                    <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-orange-600 font-bold text-sm">{supplier.name[0].toUpperCase()}</span>
+                    <div className="w-9 h-9 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">{supplier.name[0].toUpperCase()}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{supplier.name}</p>
-                      {supplier.phone && <p className="text-xs text-gray-400">{supplier.phone}</p>}
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{supplier.name}</p>
+                      {supplier.phone && <p className="text-xs text-gray-400 dark:text-slate-500">{supplier.phone}</p>}
                     </div>
-                    <p className="text-sm font-black text-orange-600 flex-shrink-0">{formatCurrency(supplier.pendingDebt, cur)}</p>
+                    <p className="text-sm font-black text-orange-600 dark:text-orange-400 flex-shrink-0">{formatCurrency(supplier.pendingDebt, cur)}</p>
                   </div>
                 ))}
               </div>
               {debtSuppliers.length > 5 && (
-                <Link to="/proveedores" className="flex items-center justify-center gap-1.5 py-3 text-xs text-blue-500 hover:bg-gray-50 transition-colors border-t border-gray-100">
+                <Link to="/proveedores" className="flex items-center justify-center gap-1.5 py-3 text-xs text-blue-500 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border-t border-gray-100 dark:border-slate-700">
                   Ver {debtSuppliers.length - 5} más <ArrowRight size={11} />
                 </Link>
               )}
@@ -324,33 +324,33 @@ export function Planner() {
               icon={<Package size={15} />}
               title="Inventario crítico"
               count={lowStock.length}
-              color="text-amber-500"
+              color="text-amber-500 dark:text-amber-400"
             />
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800">
               {outOfStock.map(p => (
                 <div key={p.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Package size={15} className="text-red-500" />
+                  <div className="w-9 h-9 bg-red-100 dark:bg-red-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Package size={15} className="text-red-500 dark:text-red-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{p.name}</p>
-                    <p className="text-xs text-red-500 font-medium">Agotado</p>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{p.name}</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 font-medium">Agotado</p>
                   </div>
-                  <Link to="/inventario" className="text-xs text-blue-500 hover:underline flex-shrink-0">
+                  <Link to="/inventario" className="text-xs text-blue-500 dark:text-blue-400 hover:underline flex-shrink-0">
                     Reabastecer →
                   </Link>
                 </div>
               ))}
               {almostOut.map(p => (
                 <div key={p.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Package size={15} className="text-amber-500" />
+                  <div className="w-9 h-9 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Package size={15} className="text-amber-500 dark:text-amber-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{p.name}</p>
-                    <p className="text-xs text-amber-600 font-medium">Solo {p.quantity} en stock</p>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{p.name}</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Solo {p.quantity} en stock</p>
                   </div>
-                  <Link to="/inventario" className="text-xs text-blue-500 hover:underline flex-shrink-0">
+                  <Link to="/inventario" className="text-xs text-blue-500 dark:text-blue-400 hover:underline flex-shrink-0">
                     Reabastecer →
                   </Link>
                 </div>
@@ -365,24 +365,24 @@ export function Planner() {
               icon={<FileText size={15} />}
               title="Cotizaciones por vencer"
               count={expiringQuotes.length}
-              color="text-yellow-500"
+              color="text-yellow-500 dark:text-yellow-400"
             />
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800">
               {expiringQuotes.slice(0, 6).map(q => {
                 const daysToExpire = q.validUntil ? Math.ceil((new Date(q.validUntil).getTime() - today.getTime()) / 86_400_000) : 0
                 return (
                   <div key={q.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                      <FileText size={15} className="text-yellow-600" />
+                    <div className="w-9 h-9 rounded-xl bg-yellow-100 dark:bg-yellow-900/40 flex items-center justify-center flex-shrink-0">
+                      <FileText size={15} className="text-yellow-600 dark:text-yellow-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{q.client?.name || q.clientName || 'Sin cliente'}</p>
-                      <p className="text-xs text-yellow-600 font-medium">
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{q.client?.name || q.clientName || 'Sin cliente'}</p>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
                         Vence {daysToExpire <= 0 ? 'hoy' : `en ${daysToExpire} día${daysToExpire !== 1 ? 's' : ''}`}
                       </p>
                     </div>
-                    <p className="text-sm font-bold text-gray-700 flex-shrink-0">{formatCurrency(q.total, cur)}</p>
-                    <Link to="/cotizaciones" className="text-xs text-blue-500 hover:underline flex-shrink-0">Ver →</Link>
+                    <p className="text-sm font-bold text-gray-700 dark:text-slate-300 flex-shrink-0">{formatCurrency(q.total, cur)}</p>
+                    <Link to="/cotizaciones" className="text-xs text-blue-500 dark:text-blue-400 hover:underline flex-shrink-0">Ver →</Link>
                   </div>
                 )
               })}
@@ -397,28 +397,28 @@ export function Planner() {
               icon={<FileText size={15} />}
               title="Presupuestos sin respuesta"
               count={pendingQuotes.length}
-              color="text-yellow-500"
+              color="text-yellow-500 dark:text-yellow-400"
             />
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-50 dark:divide-slate-800">
               {pendingQuotes.slice(0, 5).map(q => {
                 const daysAgo = Math.floor((today.getTime() - new Date(q.createdAt).getTime()) / 86_400_000)
                 const isStale = daysAgo >= 3
                 return (
                   <div key={q.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
-                      ${isStale ? 'bg-red-100' : 'bg-yellow-100'}`}>
-                      <FileText size={15} className={isStale ? 'text-red-500' : 'text-yellow-600'} />
+                      ${isStale ? 'bg-red-100 dark:bg-red-900/40' : 'bg-yellow-100 dark:bg-yellow-900/40'}`}>
+                      <FileText size={15} className={isStale ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{q.clientName || 'Sin cliente'}</p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{q.clientName || 'Sin cliente'}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 flex items-center gap-1">
                         <Clock size={10} />
                         {isToday(new Date(q.createdAt)) ? 'Hoy' : `Hace ${daysAgo} día${daysAgo > 1 ? 's' : ''}`}
-                        {isStale && <span className="text-red-400 font-medium ml-1">· Sin respuesta</span>}
+                        {isStale && <span className="text-red-400 dark:text-red-400 font-medium ml-1">· Sin respuesta</span>}
                       </p>
                     </div>
-                    <p className="text-sm font-bold text-gray-700 flex-shrink-0">{formatCurrency(q.total, cur)}</p>
-                    <Link to="/cotizaciones" className="text-xs text-blue-500 hover:underline flex-shrink-0">
+                    <p className="text-sm font-bold text-gray-700 dark:text-slate-300 flex-shrink-0">{formatCurrency(q.total, cur)}</p>
+                    <Link to="/cotizaciones" className="text-xs text-blue-500 dark:text-blue-400 hover:underline flex-shrink-0">
                       Ver →
                     </Link>
                   </div>
@@ -431,10 +431,10 @@ export function Planner() {
         {/* Quick actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { to: '/vender', icon: ShoppingBag, label: 'Nueva venta', color: 'text-green-600', bg: 'bg-green-50' },
-            { to: '/movimientos', icon: ArrowRight, label: 'Ver movimientos', color: 'text-purple-600', bg: 'bg-purple-50' },
-            { to: '/inventario', icon: Package, label: 'Inventario', color: 'text-cyan-600', bg: 'bg-cyan-50' },
-            { to: '/cotizaciones', icon: FileText, label: 'Nuevo presupuesto', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+            { to: '/vender', icon: ShoppingBag, label: 'Nueva venta', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40' },
+            { to: '/movimientos', icon: ArrowRight, label: 'Ver movimientos', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40' },
+            { to: '/inventario', icon: Package, label: 'Inventario', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-950/40' },
+            { to: '/cotizaciones', icon: FileText, label: 'Nuevo presupuesto', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950/40' },
           ].map(item => (
             <Link
               key={item.to}

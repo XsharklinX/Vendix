@@ -114,7 +114,7 @@ export function Estadisticas() {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
                 ${period === p.value
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
             >
               {p.label}
             </button>
@@ -122,7 +122,7 @@ export function Estadisticas() {
           {period === 'custom' && (
             <div className="flex gap-2 items-center">
               <input type="date" value={custom.from} onChange={e => setCustom(c => ({ ...c, from: e.target.value }))} className="input w-36 text-sm" />
-              <span className="text-gray-400">—</span>
+              <span className="text-gray-400 dark:text-slate-500">—</span>
               <input type="date" value={custom.to} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} className="input w-36 text-sm" />
             </div>
           )}
@@ -131,23 +131,23 @@ export function Estadisticas() {
         {/* KPI cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
-            { label: 'Total ventas', value: formatCurrency(summary?.totalSales ?? 0, cur), icon: ShoppingCart, color: 'text-green-600 bg-green-50', sub: `${summary?.salesCount ?? 0} transacciones` },
-            { label: 'Total gastos', value: formatCurrency(summary?.totalExpenses ?? 0, cur), icon: TrendingDown, color: 'text-red-600 bg-red-50', sub: `${summary?.expensesCount ?? 0} gastos` },
-            { label: 'Ganancia bruta', value: formatCurrency(summary?.grossProfit ?? 0, cur), icon: TrendingUp, color: 'text-blue-600 bg-blue-50', sub: 'Ventas - costo productos' },
-            { label: 'Ganancia neta', value: formatCurrency(summary?.netProfit ?? 0, cur), icon: DollarSign, color: (summary?.netProfit ?? 0) >= 0 ? 'text-indigo-600 bg-indigo-50' : 'text-red-600 bg-red-50', sub: 'Ganancia bruta - gastos' },
-            { label: 'Ticket promedio', value: formatCurrency(avgTicket, cur), icon: Receipt, color: 'text-purple-600 bg-purple-50', sub: 'Por venta' },
+            { label: 'Total ventas', value: formatCurrency(summary?.totalSales ?? 0, cur), icon: ShoppingCart, color: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40', sub: `${summary?.salesCount ?? 0} transacciones` },
+            { label: 'Total gastos', value: formatCurrency(summary?.totalExpenses ?? 0, cur), icon: TrendingDown, color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40', sub: `${summary?.expensesCount ?? 0} gastos` },
+            { label: 'Ganancia bruta', value: formatCurrency(summary?.grossProfit ?? 0, cur), icon: TrendingUp, color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40', sub: 'Ventas - costo productos' },
+            { label: 'Ganancia neta', value: formatCurrency(summary?.netProfit ?? 0, cur), icon: DollarSign, color: (summary?.netProfit ?? 0) >= 0 ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40', sub: 'Ganancia bruta - gastos' },
+            { label: 'Ticket promedio', value: formatCurrency(avgTicket, cur), icon: Receipt, color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40', sub: 'Por venta' },
           ].map(card => {
             const Icon = card.icon
             return (
               <div key={card.label} className="card p-5">
                 <div className="flex items-start justify-between mb-2">
-                  <p className="text-xs text-gray-500">{card.label}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{card.label}</p>
                   <div className={`p-2 rounded-lg ${card.color}`}>
                     <Icon size={14} />
                   </div>
                 </div>
-                <p className="text-xl font-bold text-gray-900">{card.value}</p>
-                <p className="text-xs text-gray-400 mt-1">{card.sub}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-slate-100">{card.value}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">{card.sub}</p>
               </div>
             )
           })}
@@ -155,7 +155,7 @@ export function Estadisticas() {
 
         {/* Area chart */}
         <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Ventas vs Gastos</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Ventas vs Gastos</h2>
           {chart && chart.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={chart}>
@@ -179,13 +179,13 @@ export function Estadisticas() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sin datos en el período</div>
+            <div className="h-40 flex items-center justify-center text-gray-400 dark:text-slate-500 text-sm">Sin datos en el período</div>
           )}
         </div>
 
         {/* Top products */}
         <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Productos más vendidos</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Productos más vendidos</h2>
           {topProducts && topProducts.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={topProducts.slice(0, 8)} layout="vertical">
@@ -197,7 +197,7 @@ export function Estadisticas() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin ventas en el período</div>
+            <div className="h-32 flex items-center justify-center text-gray-400 dark:text-slate-500 text-sm">Sin ventas en el período</div>
           )}
         </div>
 
@@ -205,9 +205,9 @@ export function Estadisticas() {
           {/* Horarios de mayor venta */}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900">Horarios de mayor venta</h2>
+              <h2 className="font-semibold text-gray-900 dark:text-slate-100">Horarios de mayor venta</h2>
               {peakHour && peakHour.count > 0 && (
-                <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded-full">
                   <Clock size={12} /> Pico: {String(peakHour.hour).padStart(2, '0')}:00
                 </span>
               )}
@@ -223,13 +223,13 @@ export function Estadisticas() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin ventas en el período</div>
+              <div className="h-32 flex items-center justify-center text-gray-400 dark:text-slate-500 text-sm">Sin ventas en el período</div>
             )}
           </div>
 
           {/* Ticket promedio por día de la semana */}
           <div className="card p-5">
-            <h2 className="font-semibold text-gray-900 mb-4">Ticket promedio por día</h2>
+            <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Ticket promedio por día</h2>
             {avgTicketByWeekday && avgTicketByWeekday.some((d: { count: number }) => d.count > 0) ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={avgTicketByWeekday}>
@@ -241,14 +241,14 @@ export function Estadisticas() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin ventas en el período</div>
+              <div className="h-32 flex items-center justify-center text-gray-400 dark:text-slate-500 text-sm">Sin ventas en el período</div>
             )}
           </div>
 
           {/* Productos más devueltos */}
           <div className="card p-5">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <RotateCcw size={15} className="text-rose-500" /> Productos más devueltos
+            <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <RotateCcw size={15} className="text-rose-500 dark:text-rose-400" /> Productos más devueltos
             </h2>
             {topReturns && topReturns.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
@@ -261,14 +261,14 @@ export function Estadisticas() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin devoluciones en el período</div>
+              <div className="h-32 flex items-center justify-center text-gray-400 dark:text-slate-500 text-sm">Sin devoluciones en el período</div>
             )}
           </div>
 
           {/* Clientes nuevos vs recurrentes */}
           <div className="card p-5">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Repeat size={15} className="text-teal-500" /> Clientes nuevos vs. recurrentes
+            <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <Repeat size={15} className="text-teal-500 dark:text-teal-400" /> Clientes nuevos vs. recurrentes
             </h2>
             {retention && retention.total > 0 ? (
               <div className="flex items-center gap-6">
@@ -295,21 +295,21 @@ export function Estadisticas() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-green-500" />
-                      <span className="text-sm text-gray-700">Nuevos</span>
+                      <span className="text-sm text-gray-700 dark:text-slate-300">Nuevos</span>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 ml-5">{retention.newClients}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-slate-100 ml-5">{retention.newClients}</p>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-blue-500" />
-                      <span className="text-sm text-gray-700">Recurrentes</span>
+                      <span className="text-sm text-gray-700 dark:text-slate-300">Recurrentes</span>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 ml-5">{retention.returningClients}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-slate-100 ml-5">{retention.returningClients}</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Sin clientes con compras en el período</div>
+              <div className="h-32 flex items-center justify-center text-gray-400 dark:text-slate-500 text-sm">Sin clientes con compras en el período</div>
             )}
           </div>
         </div>

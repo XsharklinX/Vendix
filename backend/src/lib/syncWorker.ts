@@ -2,8 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import { logger } from './logger'
 import { prisma } from './prisma'
+import { extractIncomingUpdatedAt, isLocalNewerOrEqual } from './syncConflict'
+import { resolveTransactionReferences } from './syncReferences'
 
-type SyncEntity = 'product' | 'client' | 'supplier' | 'employee'
+type SyncEntity = 'product' | 'client' | 'supplier' | 'employee' | 'transaction'
 type SyncOperation = 'UPSERT' | 'DELETE'
 
 type RemoteChange = {
@@ -224,6 +226,11 @@ async function applyRemoteChange(localBusinessId: string, change: RemoteChange) 
   const payload = change.payload
 
   if (change.entity === 'product') {
+    const existing = await prisma.product.findFirst({ where: { id: change.entityId, businessId: localBusinessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ entity: 'product', entityId: change.entityId }, '[sync-worker] cambio descartado: local es más reciente')
+      return
+    }
     const data = {
       name: cleanString(payload.name) || 'Producto sincronizado',
       description: cleanString(payload.description),
@@ -241,6 +248,11 @@ async function applyRemoteChange(localBusinessId: string, change: RemoteChange) 
   }
 
   if (change.entity === 'client') {
+    const existing = await prisma.client.findFirst({ where: { id: change.entityId, businessId: localBusinessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ entity: 'client', entityId: change.entityId }, '[sync-worker] cambio descartado: local es más reciente')
+      return
+    }
     const manualTags = Array.isArray(payload.manualTags)
       ? JSON.stringify(payload.manualTags.map(String).filter(Boolean))
       : typeof payload.manualTags === 'string' ? payload.manualTags : undefined
@@ -261,6 +273,11 @@ async function applyRemoteChange(localBusinessId: string, change: RemoteChange) 
   }
 
   if (change.entity === 'supplier') {
+    const existing = await prisma.supplier.findFirst({ where: { id: change.entityId, businessId: localBusinessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ entity: 'supplier', entityId: change.entityId }, '[sync-worker] cambio descartado: local es más reciente')
+      return
+    }
     const data = {
       name: cleanString(payload.name) || 'Proveedor sincronizado',
       phone: cleanString(payload.phone),
@@ -274,6 +291,11 @@ async function applyRemoteChange(localBusinessId: string, change: RemoteChange) 
   }
 
   if (change.entity === 'employee') {
+    const existing = await prisma.employee.findFirst({ where: { id: change.entityId, businessId: localBusinessId }, select: { updatedAt: true } })
+    if (isLocalNewerOrEqual(existing?.updatedAt, extractIncomingUpdatedAt(payload))) {
+      logger.info({ entity: 'employee', entityId: change.entityId }, '[sync-worker] cambio descartado: local es más reciente')
+      return
+    }
     const data = {
       name: cleanString(payload.name) || 'Empleado sincronizado',
       phone: cleanString(payload.phone),
@@ -286,6 +308,46 @@ async function applyRemoteChange(localBusinessId: string, change: RemoteChange) 
     }
     const updated = await prisma.employee.updateMany({ where: { id: change.entityId, businessId: localBusinessId }, data })
     if (updated.count === 0) await prisma.employee.create({ data: { id: change.entityId, businessId: localBusinessId, ...data } })
+  }
+
+  if (change.entity === 'transaction') {
+    // Append-only: si ya existe localmente (por id), no se toca.
+    const existing = await prisma.transaction.findFirst({ where: { id: change.entityId, businessId: localBusinessId }, select: { id: true } })
+    if (existing) return
+
+    const items = Array.isArray(payload.items) ? payload.items as Record<string, unknown>[] : []
+    const refs = await resolveTransactionReferences(localBusinessId, payload)
+    await prisma.transaction.create({
+      data: {
+        id: change.entityId,
+        businessId: localBusinessId,
+        type: cleanString(payload.type) || 'SALE',
+        amount: cleanNumber(payload.amount),
+        description: cleanString(payload.description),
+        paymentMethod: cleanString(payload.paymentMethod) || 'CASH',
+        status: cleanString(payload.status) || 'COMPLETED',
+        discountValue: cleanNumber(payload.discountValue),
+        discountType: cleanString(payload.discountType) || 'NONE',
+        taxAmount: cleanNumber(payload.taxAmount),
+        returnOfId: cleanString(payload.returnOfId),
+        ncfNumber: cleanString(payload.ncfNumber),
+        originalCurrency: cleanString(payload.originalCurrency),
+        exchangeRate: cleanNumber(payload.exchangeRate, 1),
+        originalAmount: payload.originalAmount == null ? undefined : cleanNumber(payload.originalAmount),
+        invoiceNumber: cleanString(payload.invoiceNumber),
+        clientId: refs.clientId,
+        supplierId: refs.supplierId,
+        items: {
+          create: items.map(item => ({
+            productId: refs.resolveProductId(cleanString(item.productId)),
+            name: cleanString(item.name) || 'Producto',
+            quantity: Math.trunc(cleanNumber(item.quantity)),
+            price: cleanNumber(item.price),
+            cost: cleanNumber(item.cost),
+          })),
+        },
+      },
+    })
   }
 }
 

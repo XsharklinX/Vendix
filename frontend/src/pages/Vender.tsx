@@ -7,20 +7,23 @@ import { formatCurrency } from '@/lib/utils'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart,
   CreditCard, Banknote, ArrowLeftRight, Printer, Tag, Star,
-  Barcode, X, ChevronUp, FileText, Globe, Zap, WifiOff, Mail,
+  Barcode, X, ChevronUp, FileText, Globe, Zap, WifiOff, Mail, RotateCcw,
 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { playSound } from '@/lib/sound'
 import { buildInvoiceHtml } from '@/lib/generateInvoicePdf'
 import { DocumentPreviewModal } from '@/components/ui/DocumentPreviewModal'
 import { saveOfflineSale, getOfflineSales, removeOfflineSale } from '@/lib/offlineQueue'
+import { VenderTour } from '@/components/vender/VenderTour'
 
 interface VolumePricing { id: string; minQty: number; price: number }
+interface PriceChange { oldPrice: number; newPrice: number; changedAt: string }
 interface Product {
   id: string; name: string; price: number; cost: number
   quantity: number; taxExempt: boolean; barcode?: string
   categoryId?: string; category?: { name: string }
   volumePricing: VolumePricing[]
+  priceHistory?: PriceChange[]
 }
 interface CartItem { product: Product; qty: number; unitPrice: number }
 interface ClientBasic { id: string; name: string; phone?: string; isVip: boolean; discountRate: number; loyaltyPoints: number; segments?: string[] }
@@ -192,6 +195,7 @@ export function Vender() {
   const [previewDoc, setPreviewDoc] = useState<{ title: string; html: string; filename: string } | null>(null)
   const [cartListModal, setCartListModal] = useState(false)
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false)
+  const [recoverableCart, setRecoverableCart] = useState<{ cart: CartItem[]; savedAt: number } | null>(null)
   const [ncfNumber, setNcfNumber] = useState('')
   const [generatingNcf, setGeneratingNcf] = useState(false)
   const [altCurrency, setAltCurrency] = useState('')
@@ -206,18 +210,47 @@ export function Vender() {
   const barcodeRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Cart persistence
+  // Persistencia del carrito en localStorage (no sessionStorage): así una venta a
+  // medias sobrevive a un cierre inesperado — corte de luz, crash, cerrar la app.
+  // Al reabrir NO se restaura en silencio; se ofrece recuperarla con un banner,
+  // para que el cajero entienda por qué hay productos en el carrito.
+  const cartKey = `vendix_cart_${bid}`
+  const RECOVERY_WINDOW_MS = 12 * 60 * 60 * 1000 // 12 horas
+
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem(`cart-${bid}`)
-      if (saved) setCart(JSON.parse(saved))
+      const saved = localStorage.getItem(cartKey)
+      if (!saved) return
+      const parsed = JSON.parse(saved) as { cart: CartItem[]; savedAt: number }
+      const fresh = parsed.savedAt && Date.now() - parsed.savedAt < RECOVERY_WINDOW_MS
+      if (fresh && Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+        setRecoverableCart(parsed)
+      } else {
+        localStorage.removeItem(cartKey)
+      }
     } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bid])
 
   useEffect(() => {
-    try { sessionStorage.setItem(`cart-${bid}`, JSON.stringify(cart)) }
-    catch { /* ignore */ }
+    try {
+      if (cart.length > 0) {
+        localStorage.setItem(cartKey, JSON.stringify({ cart, savedAt: Date.now() }))
+      } else {
+        localStorage.removeItem(cartKey)
+      }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, bid])
+
+  const recoverCart = () => {
+    if (recoverableCart) setCart(recoverableCart.cart)
+    setRecoverableCart(null)
+  }
+  const discardRecoverableCart = () => {
+    try { localStorage.removeItem(cartKey) } catch { /* ignore */ }
+    setRecoverableCart(null)
+  }
 
   const syncOfflineSales = useCallback(async () => {
     const pending = await getOfflineSales()
@@ -532,7 +565,7 @@ export function Vender() {
     setExchangeRate(1)
     setCashReceived(0)
     setSuccessModal(false)
-    try { sessionStorage.removeItem(`cart-${bid}`) } catch { /* ignore */ }
+    try { localStorage.removeItem(cartKey) } catch { /* ignore */ }
   }, [bid])
 
   const filtered = useMemo(() => {
@@ -549,11 +582,11 @@ export function Vender() {
 
   // ── Cart Panel ────────────────────────────────────────────────────────────
   const CartPanel = () => (
-    <div className="flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+    <div className="flex flex-col h-full" data-tour="pos-cart">
+      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <ShoppingCart size={18} className="text-gray-600" />
-          <span className="font-bold text-gray-900">Carrito</span>
+          <ShoppingCart size={18} className="text-gray-600 dark:text-slate-300" />
+          <span className="font-bold text-gray-900 dark:text-slate-100">Carrito</span>
         </div>
         {cart.length > 0 && (
           <div className="flex items-center gap-2">
@@ -564,7 +597,7 @@ export function Vender() {
             >
               {cartCount}
             </button>
-            <button onClick={() => setCart([])} className="text-xs text-red-400 hover:text-red-600 transition-colors">
+            <button onClick={() => setCart([])} className="text-xs text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
               Vaciar
             </button>
           </div>
@@ -574,33 +607,33 @@ export function Vender() {
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {cart.length === 0 ? (
           <div className="text-center py-10">
-            <ShoppingCart size={28} className="mx-auto mb-2 text-gray-200" />
-            <p className="text-gray-400 text-sm">Toca un producto para agregarlo</p>
-            <p className="text-gray-300 text-xs mt-1">Atajos: F1 Efectivo · F2 Tarjeta · F3 Transf.</p>
+            <ShoppingCart size={28} className="mx-auto mb-2 text-gray-200 dark:text-slate-600" />
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Toca un producto para agregarlo</p>
+            <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Atajos: F1 Efectivo · F2 Tarjeta · F3 Transf.</p>
           </div>
         ) : (
           cart.map(item => (
-            <div key={item.product.id} className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+            <div key={item.product.id} className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100 dark:border-blue-900/50">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{item.product.name}
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate leading-tight">{item.product.name}
                   {item.product.id.startsWith('quick-') && (
-                    <span className="ml-1 text-[9px] bg-yellow-100 text-yellow-600 px-1 rounded">rápido</span>
+                    <span className="ml-1 text-[9px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-400 px-1 rounded">rápido</span>
                   )}
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <p className="text-xs font-bold text-blue-600">{formatCurrency(item.unitPrice * item.qty, cur)}</p>
-                  {item.unitPrice !== item.product.price && <span className="text-[10px] text-purple-500 font-medium">vol.</span>}
+                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400">{formatCurrency(item.unitPrice * item.qty, cur)}</p>
+                  {item.unitPrice !== item.product.price && <span className="text-[10px] text-purple-500 dark:text-purple-400 font-medium">vol.</span>}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:border-blue-300">
+                <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-700">
                   <Minus size={12} />
                 </button>
-                <span className="w-7 text-center text-sm font-bold text-gray-900">{item.qty}</span>
-                <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:border-blue-300">
+                <span className="w-7 text-center text-sm font-bold text-gray-900 dark:text-slate-100">{item.qty}</span>
+                <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-700">
                   <Plus size={12} />
                 </button>
-                <button onClick={() => removeFromCart(item.product.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 ml-0.5">
+                <button onClick={() => removeFromCart(item.product.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 ml-0.5">
                   <Trash2 size={12} />
                 </button>
               </div>
@@ -609,7 +642,7 @@ export function Vender() {
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-100 space-y-3 flex-shrink-0">
+      <div className="p-4 border-t border-gray-100 dark:border-slate-700 space-y-3 flex-shrink-0">
         {/* Cliente */}
         <div>
           <label className="label">Cliente (opcional)</label>
@@ -620,22 +653,22 @@ export function Vender() {
             ))}
           </select>
           {selectedClient?.isVip && (
-            <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
               <Star size={10} /> VIP — {(selectedClient.discountRate * 100).toFixed(0)}% aplicado
             </p>
           )}
         </div>
 
         {selectedClient && selectedClient.loyaltyPoints > 0 && (
-          <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-2.5">
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 p-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-emerald-700">
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                 {selectedClient.loyaltyPoints} puntos disponibles
               </p>
               <button
                 type="button"
                 onClick={() => setLoyaltyPointsToRedeem(Math.min(selectedClient.loyaltyPoints, Math.floor(rawSubtotal - manualDiscountAmount)))}
-                className="text-[11px] font-bold text-emerald-700 hover:underline"
+                className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
               >
                 Usar max.
               </button>
@@ -650,7 +683,7 @@ export function Vender() {
               placeholder="Puntos a canjear"
             />
             {loyaltyDiscountAmount > 0 && (
-              <p className="text-xs text-emerald-700 mt-1">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
                 Descuento por puntos: {formatCurrency(loyaltyDiscountAmount, cur)}
               </p>
             )}
@@ -660,7 +693,7 @@ export function Vender() {
         {/* Toggle opciones avanzadas */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full flex items-center justify-between text-xs text-gray-500 hover:text-gray-700 py-1.5"
+          className="w-full flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 py-1.5"
         >
           <span className="font-medium">Descuento, NCF, multi-moneda</span>
           <ChevronUp size={14} className={`transition-transform ${showAdvanced ? '' : 'rotate-180'}`} />
@@ -674,7 +707,7 @@ export function Vender() {
             {(['NONE', 'PERCENT', 'FIXED'] as const).map(t => (
               <button key={t} onClick={() => { setDiscountType(t); if (t === 'NONE') setDiscountValue(0) }}
                 className={`flex-1 py-1.5 text-xs rounded-lg border font-semibold transition-all
-                  ${discountType === t ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300'}`}>
+                  ${discountType === t ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-600 hover:border-orange-300 dark:hover:border-orange-700'}`}>
                 {t === 'NONE' ? 'Ninguno' : t === 'PERCENT' ? '%' : 'Fijo'}
               </button>
             ))}
@@ -693,10 +726,10 @@ export function Vender() {
 
         {/* ITBIS / impuesto */}
         {taxRate > 0 && (
-          <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-slate-700">
             <div>
-              <p className="text-xs font-semibold text-gray-700">Aplicar {taxName}</p>
-              <p className="text-[10px] text-gray-400">
+              <p className="text-xs font-semibold text-gray-700 dark:text-slate-300">Aplicar {taxName}</p>
+              <p className="text-[10px] text-gray-400 dark:text-slate-500">
                 {(taxRate * 100).toFixed(0)}% · {taxIncluded ? 'incluido en el precio' : 'se añade al total'}
                 {!applyTax && ' · esta venta no llevará impuesto'}
               </p>
@@ -705,9 +738,9 @@ export function Vender() {
               type="button"
               onClick={() => setApplyTax(v => !v)}
               aria-pressed={applyTax}
-              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${applyTax ? 'bg-blue-600' : 'bg-gray-300'}`}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${applyTax ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'}`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${applyTax ? 'translate-x-5' : ''}`} />
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white dark:bg-slate-800 rounded-full shadow transition-transform ${applyTax ? 'translate-x-5' : ''}`} />
             </button>
           </div>
         )}
@@ -743,16 +776,16 @@ export function Vender() {
             </select>
             {altCurrency && altCurrency !== cur && (
               <div className="flex items-center gap-1 flex-shrink-0">
-                <span className="text-xs text-gray-500">1 {altCurrency} =</span>
+                <span className="text-xs text-gray-500 dark:text-slate-400">1 {altCurrency} =</span>
                 <input type="number" min={0.01} step={0.01} value={exchangeRate}
                   onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)}
                   className="input text-sm w-20" />
-                <span className="text-xs text-gray-500">{cur}</span>
+                <span className="text-xs text-gray-500 dark:text-slate-400">{cur}</span>
               </div>
             )}
           </div>
           {altCurrency && altCurrency !== cur && exchangeRate > 0 && (
-            <p className="text-xs text-blue-600 mt-1">
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
               Equivale a {altCurrency} {(total / exchangeRate).toFixed(2)}
             </p>
           )}
@@ -770,8 +803,8 @@ export function Vender() {
                 <button key={m} onClick={() => setPaymentMethod(m)}
                   className={`py-2 text-xs rounded-xl border font-semibold transition-all flex flex-col items-center gap-1
                     ${paymentMethod === m
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:text-blue-600'}`}>
+                      ? 'bg-blue-600 text-white border-blue-600 dark:border-blue-500 shadow-sm shadow-blue-200'
+                      : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400'}`}>
                   <Icon size={14} />
                   <span>{PAYMENT_LABELS[m].split(' ')[0]}</span>
                   <span className="text-[9px] opacity-50">F{idx + 1}</span>
@@ -795,17 +828,17 @@ export function Vender() {
             <div className="flex gap-1.5 flex-wrap">
               {getDenomPresets(total, cur).map(d => (
                 <button key={d} onClick={() => setCashReceived(d)}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-gray-100 hover:bg-blue-100 hover:text-blue-700 font-semibold text-gray-600 transition-colors">
+                  className="px-2.5 py-1 text-xs rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 font-semibold text-gray-600 dark:text-slate-300 transition-colors">
                   {formatCurrency(d, cur)}
                 </button>
               ))}
             </div>
             {cashReceived > 0 && (
-              <div className={`p-2.5 rounded-xl text-center ${cashReceived >= total ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <p className={`text-xs font-medium ${cashReceived >= total ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`p-2.5 rounded-xl text-center ${cashReceived >= total ? 'bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800'}`}>
+                <p className={`text-xs font-medium ${cashReceived >= total ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {cashReceived >= total ? 'Cambio a entregar' : 'Faltante'}
                 </p>
-                <p className={`text-xl font-black ${cashReceived >= total ? 'text-green-700' : 'text-red-700'}`}>
+                <p className={`text-xl font-black ${cashReceived >= total ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                   {formatCurrency(Math.abs(cashReceived - total), cur)}
                 </p>
               </div>
@@ -817,72 +850,95 @@ export function Vender() {
         <div className="grid grid-cols-2 gap-1.5">
           <button onClick={() => setStatus('COMPLETED')}
             className={`py-2.5 text-xs rounded-xl border font-semibold transition-all
-              ${status === 'COMPLETED' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-500 border-gray-200 hover:border-green-300'}`}>
+              ${status === 'COMPLETED' ? 'bg-green-600 text-white border-green-600 dark:border-green-500' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-700'}`}>
             ✓ Cobrado
           </button>
           <button onClick={() => setStatus('PENDING')}
             className={`py-2.5 text-xs rounded-xl border font-semibold transition-all
-              ${status === 'PENDING' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300'}`}>
+              ${status === 'PENDING' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-600 hover:border-yellow-300 dark:hover:border-yellow-700'}`}>
             Al fiado <span className="text-[9px] opacity-60">F4</span>
           </button>
         </div>
 
         {/* Totales */}
-        <div className="bg-gray-50 rounded-2xl p-3 space-y-1.5 text-sm">
-          <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>{formatCurrency(rawSubtotal, cur)}</span></div>
+        <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-3 space-y-1.5 text-sm">
+          <div className="flex justify-between text-gray-500 dark:text-slate-400"><span>Subtotal</span><span>{formatCurrency(rawSubtotal, cur)}</span></div>
           {discountAmount > 0 && (
-            <div className="flex justify-between text-orange-600"><span>Descuento</span><span>-{formatCurrency(discountAmount, cur)}</span></div>
+            <div className="flex justify-between text-orange-600 dark:text-orange-400"><span>Descuento</span><span>-{formatCurrency(discountAmount, cur)}</span></div>
           )}
           {taxAmount > 0 && (
-            <div className="flex justify-between text-gray-500">
+            <div className="flex justify-between text-gray-500 dark:text-slate-400">
               <span>{taxName} {taxIncluded ? '(inc.)' : ''}</span><span>{formatCurrency(taxAmount, cur)}</span>
             </div>
           )}
-          <div className="flex justify-between items-center pt-1.5 border-t border-gray-200">
-            <span className="font-semibold text-gray-700">Total</span>
-            <span className="text-2xl font-black text-gray-900">{formatCurrency(total, cur)}</span>
+          <div className="flex justify-between items-center pt-1.5 border-t border-gray-200 dark:border-slate-600">
+            <span className="font-semibold text-gray-700 dark:text-slate-300">Total</span>
+            <span className="text-2xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(total, cur)}</span>
           </div>
         </div>
 
         <button
+          data-tour="pos-pay"
           onClick={handleSell}
           disabled={cart.length === 0 || sellMutation.isPending}
           className={`w-full py-4 rounded-2xl font-bold text-base transition-all duration-150
             ${cart.length > 0
               ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 cursor-not-allowed'}`}
         >
           {sellMutation.isPending ? 'Procesando...' : cart.length === 0 ? 'Selecciona productos' : `Cobrar ${formatCurrency(total, cur)}`}
         </button>
-        <p className="text-center text-[10px] text-gray-300">Enter para cobrar · Esc para vaciar</p>
+        <p className="text-center text-[10px] text-gray-300 dark:text-slate-600">Enter para cobrar · Esc para vaciar</p>
       </div>
     </div>
   )
 
   return (
     <div className="flex h-[calc(100vh-0px)] overflow-hidden animate-fade-in relative">
+      <VenderTour />
+      {/* Banner de recuperación: venta a medias de una sesión anterior */}
+      {recoverableCart && cart.length === 0 && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-[min(28rem,calc(100vw-1.5rem))]">
+          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
+            <RotateCcw size={18} className="text-amber-500 dark:text-amber-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Tenías una venta sin terminar</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {recoverableCart.cart.reduce((s, i) => s + i.qty, 0)} producto(s) quedaron en el carrito. ¿Continuar donde ibas?
+              </p>
+            </div>
+            <button onClick={recoverCart} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors flex-shrink-0">
+              Continuar
+            </button>
+            <button onClick={discardRecoverableCart} className="p-1 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-500 dark:text-amber-400 flex-shrink-0" aria-label="Descartar">
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Panel de productos ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col bg-gray-50 min-w-0">
-        <div className="px-4 py-3 bg-white border-b border-gray-100 space-y-2.5">
+      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-slate-800 min-w-0">
+        <div className="px-4 py-3 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 space-y-2.5">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-gray-900">Nueva venta</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100">Nueva venta</h1>
             <div className="flex items-center gap-2">
               {offlinePending > 0 && (
-                <span className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 px-2 py-1 rounded-full">
                   <WifiOff size={11} /> {offlinePending} pendiente(s)
                 </span>
               )}
               <button
                 onClick={() => setQuickProductModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 hover:bg-yellow-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors"
               >
                 <Zap size={13} /> Venta rápida
               </button>
             </div>
           </div>
 
-          <div className="relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <div className="relative" data-tour="pos-search">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <input
               ref={searchRef} value={search}
               onChange={e => setSearch(e.target.value)}
@@ -890,22 +946,22 @@ export function Vender() {
               className="input pl-9 pr-9 text-sm"
             />
             {!search && (
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 bg-gray-50">/</kbd>
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-gray-400 dark:text-slate-500 border border-gray-200 dark:border-slate-600 rounded px-1.5 py-0.5 bg-gray-50 dark:bg-slate-800">/</kbd>
             )}
           </div>
 
           <div className="relative">
-            <Barcode size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Barcode size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <input
               ref={barcodeRef} value={barcodeInput}
               onChange={e => setBarcodeInput(e.target.value)}
               onKeyDown={handleBarcodeKey}
               placeholder="Escanear código de barras..."
-              className="input pl-9 text-sm bg-amber-50 border-amber-200 focus:border-amber-400 focus:ring-amber-200"
+              className="input pl-9 text-sm bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 focus:border-amber-400 dark:focus:border-amber-600 focus:ring-amber-200 dark:focus:ring-amber-800"
             />
             {barcodeInput && (
               <button onClick={() => setBarcodeInput('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                <X size={14} className="text-gray-400" />
+                <X size={14} className="text-gray-400 dark:text-slate-500" />
               </button>
             )}
           </div>
@@ -915,7 +971,7 @@ export function Vender() {
           <div className="px-4 pt-2 flex gap-1.5 overflow-x-auto flex-shrink-0 scrollbar-none">
             <button
               onClick={() => setFilterCat('')}
-              className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${!filterCat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${!filterCat ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
             >
               Todos
             </button>
@@ -923,7 +979,7 @@ export function Vender() {
               <button
                 key={c.id}
                 onClick={() => setFilterCat(filterCat === c.id ? '' : c.id)}
-                className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${filterCat === c.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${filterCat === c.id ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
               >
                 {c.name}
               </button>
@@ -933,12 +989,12 @@ export function Vender() {
 
         <div className="flex-1 overflow-y-auto p-4">
           {filtered.length === 0 ? (
-            <div className="text-center py-20 text-gray-400">
+            <div className="text-center py-20 text-gray-400 dark:text-slate-500">
               <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
               <p className="text-sm">No hay productos</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" data-tour="pos-grid">
               {filtered.map(p => {
                 const cartItem = cart.find(item => item.product.id === p.id)
                 const qtyInCart = cartItem?.qty ?? 0
@@ -952,7 +1008,7 @@ export function Vender() {
                         ? 'opacity-40 cursor-not-allowed'
                         : qtyInCart > 0
                           ? 'border-blue-500 bg-blue-50/20 shadow-sm'
-                          : 'hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-95'}`}
+                          : 'hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-95'}`}
                   >
                     {qtyInCart > 0 && (
                       <span className="absolute top-2 right-2 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
@@ -960,15 +1016,20 @@ export function Vender() {
                       </span>
                     )}
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-2.5 group-hover:from-blue-200 group-hover:to-blue-300 transition-colors">
-                      <span className="text-blue-700 font-bold text-base">{p.name[0].toUpperCase()}</span>
+                      <span className="text-blue-700 dark:text-blue-300 font-bold text-base">{p.name[0].toUpperCase()}</span>
                     </div>
-                    <p className="text-xs font-semibold text-gray-900 line-clamp-2 mb-1.5 leading-snug">{p.name}</p>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-slate-100 line-clamp-2 mb-1.5 leading-snug">{p.name}</p>
                     <div className="flex items-center gap-1 flex-wrap">
-                      <p className="text-sm font-bold text-blue-600">{formatCurrency(p.price, cur)}</p>
-                      {p.taxExempt && <span className="text-[9px] text-gray-400">exento</span>}
-                      {p.volumePricing?.length > 0 && <Tag size={9} className="text-purple-500" />}
+                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{formatCurrency(p.price, cur)}</p>
+                      {p.taxExempt && <span className="text-[9px] text-gray-400 dark:text-slate-500">exento</span>}
+                      {p.volumePricing?.length > 0 && <Tag size={9} className="text-purple-500 dark:text-purple-400" />}
                     </div>
-                    <p className={`text-[10px] mt-1 font-medium ${p.quantity === 0 ? 'text-red-500' : p.quantity <= 3 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                    {p.priceHistory?.[0] && (
+                      <p className={`text-[9px] font-medium mt-0.5 flex items-center gap-0.5 ${p.priceHistory[0].newPrice > p.priceHistory[0].oldPrice ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                        {p.priceHistory[0].newPrice > p.priceHistory[0].oldPrice ? '↑' : '↓'} Antes: {formatCurrency(p.priceHistory[0].oldPrice, cur)}
+                      </p>
+                    )}
+                    <p className={`text-[10px] mt-1 font-medium ${p.quantity === 0 ? 'text-red-500 dark:text-red-400' : p.quantity <= 3 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-slate-500'}`}>
                       {p.quantity === 0 ? 'Sin stock' : `${p.quantity} disp.`}
                     </p>
                   </button>
@@ -979,7 +1040,7 @@ export function Vender() {
         </div>
 
         {/* Mobile: floating cart button */}
-        <div className="lg:hidden p-3 bg-white border-t border-gray-100 flex-shrink-0">
+        <div className="lg:hidden p-3 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex-shrink-0">
           <button
             onClick={() => setCartDrawerOpen(true)}
             className="w-full py-3.5 rounded-2xl font-bold text-base bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-200 flex items-center justify-between px-5"
@@ -998,7 +1059,7 @@ export function Vender() {
       </div>
 
       {/* ── Desktop: sidebar carrito ──────────────────────────────────────── */}
-      <div className="hidden lg:flex w-80 bg-white border-l border-gray-100 flex-col shadow-xl">
+      <div className="hidden lg:flex w-80 bg-white dark:bg-slate-800 border-l border-gray-100 dark:border-slate-700 flex-col shadow-xl">
         {CartPanel()}
       </div>
 
@@ -1006,11 +1067,11 @@ export function Vender() {
       {cartDrawerOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCartDrawerOpen(false)} />
-          <div className="relative bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
-              <h2 className="font-bold text-gray-900">Carrito</h2>
-              <button onClick={() => setCartDrawerOpen(false)} className="p-1.5 rounded-xl hover:bg-gray-100">
-                <X size={18} className="text-gray-500" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <h2 className="font-bold text-gray-900 dark:text-slate-100">Carrito</h2>
+              <button onClick={() => setCartDrawerOpen(false)} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700">
+                <X size={18} className="text-gray-500 dark:text-slate-400" />
               </button>
             </div>
             <div className="overflow-y-auto flex-1">
@@ -1025,8 +1086,8 @@ export function Vender() {
         <div className="text-center py-4">
           <div className="relative w-20 h-20 mx-auto mb-5">
             <div className="absolute inset-0 rounded-full bg-green-400/40 animate-success-ring" />
-            <div className="absolute inset-0 bg-green-100 rounded-full flex items-center justify-center animate-success-pop">
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="text-green-500">
+            <div className="absolute inset-0 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center animate-success-pop">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="text-green-500 dark:text-green-400">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
                 <path
                   d="M7 12.5l3 3 6-6.5"
@@ -1040,24 +1101,24 @@ export function Vender() {
               </svg>
             </div>
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-1">¡Venta registrada!</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">¡Venta registrada!</h3>
           {lastSaleData ? (
             <>
-              <p className="text-3xl font-black text-green-600 mb-1">{formatCurrency(lastSaleData.total, cur)}</p>
-              {lastSaleData.status === 'PENDING' && <p className="text-amber-600 text-sm font-medium mb-1">Registrado al fiado</p>}
+              <p className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">{formatCurrency(lastSaleData.total, cur)}</p>
+              {lastSaleData.status === 'PENDING' && <p className="text-amber-600 dark:text-amber-400 text-sm font-medium mb-1">Registrado al fiado</p>}
               {lastSaleData.cashReceived && lastSaleData.cashReceived > 0 && (
-                <p className="text-gray-600 text-sm mb-1">
-                  Cambio: <span className="font-bold text-green-600">{formatCurrency(lastSaleData.change ?? 0, cur)}</span>
+                <p className="text-gray-600 dark:text-slate-300 text-sm mb-1">
+                  Cambio: <span className="font-bold text-green-600 dark:text-green-400">{formatCurrency(lastSaleData.change ?? 0, cur)}</span>
                 </p>
               )}
-              {lastSaleData.ncfNumber && <p className="text-gray-400 text-xs font-mono mb-1">NCF: {lastSaleData.ncfNumber}</p>}
-              <p className="text-gray-400 text-sm mb-4">
+              {lastSaleData.ncfNumber && <p className="text-gray-400 dark:text-slate-500 text-xs font-mono mb-1">NCF: {lastSaleData.ncfNumber}</p>}
+              <p className="text-gray-400 dark:text-slate-500 text-sm mb-4">
                 {lastSaleData.clientName ? `Cliente: ${lastSaleData.clientName}` : 'Venta general'}
               </p>
-              <div className="bg-gray-50 rounded-xl p-3 mb-6 max-h-40 overflow-y-auto text-left text-xs space-y-1.5 border border-gray-100">
-                <p className="font-semibold text-gray-500 mb-1">Productos vendidos:</p>
+              <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-3 mb-6 max-h-40 overflow-y-auto text-left text-xs space-y-1.5 border border-gray-100 dark:border-slate-700">
+                <p className="font-semibold text-gray-500 dark:text-slate-400 mb-1">Productos vendidos:</p>
                 {lastSaleData.items.map(item => (
-                  <div key={item.product.id} className="flex justify-between text-gray-700">
+                  <div key={item.product.id} className="flex justify-between text-gray-700 dark:text-slate-300">
                     <span className="truncate pr-2">{item.qty}x {item.product.name}</span>
                     <span className="font-semibold whitespace-nowrap">{formatCurrency(item.unitPrice * item.qty, cur)}</span>
                   </div>
@@ -1065,7 +1126,7 @@ export function Vender() {
               </div>
             </>
           ) : (
-            <p className="text-gray-500 text-sm mb-6">Guardada offline</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">Guardada offline</p>
           )}
           <div className="flex gap-2 flex-wrap">
             {lastSaleData && (
@@ -1155,32 +1216,32 @@ export function Vender() {
       <Modal open={cartListModal} onClose={() => setCartListModal(false)} title={`Productos en el carrito (${cartCount})`} size="lg">
         <div className="space-y-2 max-h-[60vh] overflow-y-auto">
           {cart.map(item => (
-            <div key={item.product.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
+            <div key={item.product.id} className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{item.product.name}</p>
-                <p className="text-xs text-gray-500">{formatCurrency(item.unitPrice, cur)} c/u</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{item.product.name}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{formatCurrency(item.unitPrice, cur)} c/u</p>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <button onClick={() => updateQty(item.product.id, -1)} className="p-1.5 rounded-lg bg-white border border-gray-200 hover:border-blue-300 transition-colors">
+                <button onClick={() => updateQty(item.product.id, -1)} className="p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
                   <Minus size={13} />
                 </button>
                 <span className="w-7 text-center text-sm font-bold">{item.qty}</span>
-                <button onClick={() => updateQty(item.product.id, 1)} className="p-1.5 rounded-lg bg-white border border-gray-200 hover:border-blue-300 transition-colors">
+                <button onClick={() => updateQty(item.product.id, 1)} className="p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
                   <Plus size={13} />
                 </button>
               </div>
-              <p className="w-24 text-right text-sm font-bold text-gray-900 flex-shrink-0">
+              <p className="w-24 text-right text-sm font-bold text-gray-900 dark:text-slate-100 flex-shrink-0">
                 {formatCurrency(item.unitPrice * item.qty, cur)}
               </p>
-              <button onClick={() => removeFromCart(item.product.id)} className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0">
+              <button onClick={() => removeFromCart(item.product.id)} className="p-1.5 rounded-lg text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors flex-shrink-0">
                 <Trash2 size={15} />
               </button>
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-between pt-4 mt-3 border-t border-gray-100">
-          <span className="text-sm font-semibold text-gray-600">Subtotal ({cartCount} productos)</span>
-          <span className="text-lg font-black text-gray-900">{formatCurrency(rawSubtotal, cur)}</span>
+        <div className="flex items-center justify-between pt-4 mt-3 border-t border-gray-100 dark:border-slate-700">
+          <span className="text-sm font-semibold text-gray-600 dark:text-slate-300">Subtotal ({cartCount} productos)</span>
+          <span className="text-lg font-black text-gray-900 dark:text-slate-100">{formatCurrency(rawSubtotal, cur)}</span>
         </div>
       </Modal>
 
@@ -1196,11 +1257,11 @@ export function Vender() {
       {quickProductModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setQuickProductModal(false)}>
-          <div className="bg-white rounded-2xl p-5 w-80 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <Zap size={16} className="text-yellow-500" /> Venta rápida
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 w-80 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-gray-900 dark:text-slate-100 mb-1 flex items-center gap-2">
+              <Zap size={16} className="text-yellow-500 dark:text-yellow-400" /> Venta rápida
             </h3>
-            <p className="text-xs text-gray-400 mb-4">Añade un producto sin registrarlo en el inventario</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">Añade un producto sin registrarlo en el inventario</p>
             <div className="space-y-2.5">
               <input
                 value={quickName}
@@ -1244,7 +1305,7 @@ export function Vender() {
                 />
               </div>
               {quickName && quickPrice > 0 && (
-                <p className="text-xs text-blue-600 font-medium">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                   Total: {formatCurrency(quickPrice * quickQty, cur)}
                 </p>
               )}

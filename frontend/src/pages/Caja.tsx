@@ -120,20 +120,20 @@ export function Caja() {
 
       <div className="p-6 space-y-6">
         {/* Estado actual */}
-        <div className={`card p-6 border-2 ${isOpen ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
+        <div className={`card p-6 border-2 ${isOpen ? 'border-green-200 dark:border-green-800 bg-green-50/30' : 'border-gray-200 dark:border-slate-600'}`}>
           <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-green-100' : 'bg-gray-100'}`}>
-              {isOpen ? <Unlock size={24} className="text-green-600" /> : <Lock size={24} className="text-gray-500" />}
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-green-100 dark:bg-green-900/40' : 'bg-gray-100 dark:bg-slate-700'}`}>
+              {isOpen ? <Unlock size={24} className="text-green-600 dark:text-green-400" /> : <Lock size={24} className="text-gray-500 dark:text-slate-400" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${isOpen ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                <span className={`font-bold text-lg ${isOpen ? 'text-green-700' : 'text-gray-700'}`}>
+                <span className={`w-2.5 h-2.5 rounded-full ${isOpen ? 'bg-green-500 animate-pulse' : 'bg-gray-400 dark:bg-slate-500'}`} />
+                <span className={`font-bold text-lg ${isOpen ? 'text-green-700 dark:text-green-300' : 'text-gray-700 dark:text-slate-300'}`}>
                   {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
                 </span>
               </div>
               {isOpen && current && (
-                <p className="text-sm text-gray-500 mt-0.5">
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
                   Turno desde {formatDate(current.openedAt, "dd MMM 'a las' HH:mm")} · Monto inicial: {formatCurrency(current.openAmount, cur)}
                 </p>
               )}
@@ -145,31 +145,31 @@ export function Caja() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Resumen del turno */}
             <div className="card p-5">
-              <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp size={18} className="text-blue-500" />
+              <h2 className="font-bold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                <TrendingUp size={18} className="text-blue-500 dark:text-blue-400" />
                 Resumen del turno
               </h2>
               <div className="space-y-3">
                 {[
-                  { label: 'Ventas realizadas', value: formatCurrency(summary.sales, cur), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-                  { label: 'Gastos registrados', value: formatCurrency(summary.expenses, cur), icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50' },
-                  { label: 'Otros ingresos', value: formatCurrency(summary.income, cur), icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50' },
-                  { label: 'Efectivo esperado en caja', value: formatCurrency(summary.expectedCash, cur), icon: Banknote, color: 'text-purple-600', bg: 'bg-purple-50' },
+                  { label: 'Ventas realizadas', value: formatCurrency(summary.sales, cur), icon: TrendingUp, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40' },
+                  { label: 'Gastos registrados', value: formatCurrency(summary.expenses, cur), icon: TrendingDown, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/40' },
+                  { label: 'Otros ingresos', value: formatCurrency(summary.income, cur), icon: Wallet, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/40' },
+                  { label: 'Efectivo esperado en caja', value: formatCurrency(summary.expectedCash, cur), icon: Banknote, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40' },
                 ].map(item => {
                   const Icon = item.icon
                   return (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-slate-800 last:border-0">
                       <div className="flex items-center gap-2.5">
                         <div className={`w-8 h-8 ${item.bg} rounded-lg flex items-center justify-center`}>
                           <Icon size={14} className={item.color} />
                         </div>
-                        <span className="text-sm text-gray-600">{item.label}</span>
+                        <span className="text-sm text-gray-600 dark:text-slate-300">{item.label}</span>
                       </div>
                       <span className={`text-sm font-bold ${item.color}`}>{item.value}</span>
                     </div>
                   )
                 })}
-                <div className="pt-2 text-xs text-gray-400 text-center">
+                <div className="pt-2 text-xs text-gray-400 dark:text-slate-500 text-center">
                   {summary.count} transacciones en este turno
                 </div>
               </div>
@@ -177,8 +177,8 @@ export function Caja() {
 
             {/* Cierre de caja */}
             <div className="card p-5">
-              <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Lock size={18} className="text-red-500" />
+              <h2 className="font-bold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                <Lock size={18} className="text-red-500 dark:text-red-400" />
                 Cerrar turno
               </h2>
               <div className="space-y-4">
@@ -193,7 +193,7 @@ export function Caja() {
                     placeholder="0.00"
                   />
                   {closeDiff !== null && (
-                    <div className={`flex items-center gap-1.5 mt-2 text-sm font-medium ${Math.abs(closeDiff) < 0.01 ? 'text-green-600' : closeDiff > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                    <div className={`flex items-center gap-1.5 mt-2 text-sm font-medium ${Math.abs(closeDiff) < 0.01 ? 'text-green-600 dark:text-green-400' : closeDiff > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
                       {Math.abs(closeDiff) < 0.01
                         ? <><CheckCircle size={14} /> Sin diferencia</>
                         : closeDiff > 0
@@ -239,8 +239,8 @@ export function Caja() {
           /* Apertura de caja */
           <div className="max-w-md mx-auto">
             <div className="card p-6">
-              <h2 className="font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <Unlock size={18} className="text-green-500" />
+              <h2 className="font-bold text-gray-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+                <Unlock size={18} className="text-green-500 dark:text-green-400" />
                 Abrir nuevo turno
               </h2>
               <div className="space-y-4">
@@ -255,7 +255,7 @@ export function Caja() {
                     placeholder="0.00"
                     autoFocus
                   />
-                  <p className="text-xs text-gray-400 mt-1">Cuánto efectivo hay en caja al comenzar el turno</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Cuánto efectivo hay en caja al comenzar el turno</p>
                 </div>
                 <div>
                   <label className="label">Notas (opcional)</label>
@@ -282,7 +282,7 @@ export function Caja() {
         {/* Métodos de pago del turno */}
         {isOpen && current && current.transactions.length > 0 && (
           <div className="card p-5">
-            <h2 className="font-bold text-gray-900 mb-4">Desglose por método de pago</h2>
+            <h2 className="font-bold text-gray-900 dark:text-slate-100 mb-4">Desglose por método de pago</h2>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { method: 'CASH', label: 'Efectivo', icon: Banknote, color: 'from-green-400 to-emerald-600' },
@@ -326,35 +326,35 @@ export function Caja() {
           </div>
         )}
         {history.length === 0 ? (
-          <p className="text-center text-gray-400 py-8">No hay turnos anteriores</p>
+          <p className="text-center text-gray-400 dark:text-slate-500 py-8">No hay turnos anteriores</p>
         ) : (
           <div className="space-y-2">
             {history.map(s => {
               const sum = sessionSummary(s)
               const diff = s.closeAmount !== undefined ? s.closeAmount - sum.expectedCash : null
               return (
-                <div key={s.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                <div key={s.id} className="p-4 bg-gray-50 dark:bg-slate-800 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                   onClick={() => setDetailSession(s)}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`w-2 h-2 rounded-full ${s.status === 'OPEN' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                        <span className="text-sm font-semibold text-gray-800">
+                        <span className={`w-2 h-2 rounded-full ${s.status === 'OPEN' ? 'bg-green-500' : 'bg-gray-400 dark:bg-slate-500'}`} />
+                        <span className="text-sm font-semibold text-gray-800 dark:text-slate-200">
                           {formatDate(s.openedAt, "dd MMM yyyy, HH:mm")}
                         </span>
-                        {s.status === 'OPEN' && <span className="badge bg-green-100 text-green-700 text-xs">Abierto</span>}
+                        {s.status === 'OPEN' && <span className="badge bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs">Abierto</span>}
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
                         Apertura: {formatCurrency(s.openAmount, cur)} · Ventas: {formatCurrency(sum.sales, cur)} · {sum.count} transacciones
                       </p>
                     </div>
                     <div className="text-right">
                       {s.closeAmount !== undefined && diff !== null && (
-                        <span className={`text-sm font-bold ${Math.abs(diff) < 0.01 ? 'text-green-600' : diff > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                        <span className={`text-sm font-bold ${Math.abs(diff) < 0.01 ? 'text-green-600 dark:text-green-400' : diff > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
                           {Math.abs(diff) < 0.01 ? 'Sin diferencia' : diff > 0 ? `+${formatCurrency(diff, cur)}` : `-${formatCurrency(Math.abs(diff), cur)}`}
                         </span>
                       )}
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
                         {s.closedAt ? formatDate(s.closedAt, 'HH:mm') : '—'}
                       </p>
                     </div>
@@ -385,13 +385,13 @@ export function Caja() {
                 ['Efectivo real', detailSession.closeAmount !== undefined ? formatCurrency(detailSession.closeAmount, cur) : '—'],
                 ['Diferencia', diff !== null ? (Math.abs(diff) < 0.01 ? 'Sin diferencia' : `${diff > 0 ? '+' : ''}${formatCurrency(diff, cur)}`) : '—'],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
-                  <span className="text-gray-500">{label}</span>
-                  <span className="font-semibold text-gray-900">{value}</span>
+                <div key={label} className="flex justify-between py-2 border-b border-gray-50 dark:border-slate-800 last:border-0">
+                  <span className="text-gray-500 dark:text-slate-400">{label}</span>
+                  <span className="font-semibold text-gray-900 dark:text-slate-100">{value}</span>
                 </div>
               ))}
               {detailSession.notes && (
-                <p className="text-gray-500 italic text-xs pt-1">Nota: {detailSession.notes}</p>
+                <p className="text-gray-500 dark:text-slate-400 italic text-xs pt-1">Nota: {detailSession.notes}</p>
               )}
             </div>
           )

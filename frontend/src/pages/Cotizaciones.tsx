@@ -153,7 +153,7 @@ export function Cotizaciones() {
       <div className="p-6 space-y-4">
         <div className="flex gap-3">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -191,7 +191,7 @@ export function Cotizaciones() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-600">
                   <tr>
                     <th className="table-header">#</th>
                     <th className="table-header">Cliente</th>
@@ -202,15 +202,15 @@ export function Cotizaciones() {
                     <th className="table-header text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                   {filtered.map(q => {
                     const statusInfo = QUOTE_STATUS_LABELS[q.status]
                     const isOverdue = q.status === 'PENDING' && q.validUntil && new Date(q.validUntil) < new Date()
                     return (
                       <tr key={q.id} className={`hover:bg-gray-50/50 cursor-pointer ${isOverdue ? 'bg-amber-50/40' : ''}`} onClick={() => setDetailQuote(q)}>
-                        <td className="table-cell font-mono text-gray-500">#{q.number}</td>
-                        <td className="table-cell font-medium text-gray-900">{q.client?.name || 'Sin cliente'}</td>
-                        <td className="table-cell text-gray-500">{q.concept || `${q.items.length} producto(s)`}</td>
+                        <td className="table-cell font-mono text-gray-500 dark:text-slate-400">#{q.number}</td>
+                        <td className="table-cell font-medium text-gray-900 dark:text-slate-100">{q.client?.name || 'Sin cliente'}</td>
+                        <td className="table-cell text-gray-500 dark:text-slate-400">{q.concept || `${q.items.length} producto(s)`}</td>
                         <td className="table-cell">
                           <div className="flex items-center gap-1.5">
                             <select
@@ -225,24 +225,24 @@ export function Cotizaciones() {
                               <option value="EXPIRED">Expirada</option>
                             </select>
                             {isOverdue && (
-                              <span title="Cotización vencida" className="text-amber-500">
+                              <span title="Cotización vencida" className="text-amber-500 dark:text-amber-400">
                                 <AlertTriangle size={13} />
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="table-cell text-gray-500 text-xs">
+                        <td className="table-cell text-gray-500 dark:text-slate-400 text-xs">
                           <div>{formatDate(q.createdAt)}</div>
                           {q.validUntil && (
-                            <div className={`text-[10px] ${isOverdue ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+                            <div className={`text-[10px] ${isOverdue ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-slate-500'}`}>
                               {isOverdue ? 'Venció ' : 'Válida hasta '}{formatDate(q.validUntil)}
                             </div>
                           )}
                         </td>
-                        <td className="table-cell text-right font-semibold text-gray-900">{formatCurrency(q.total, cur)}</td>
+                        <td className="table-cell text-right font-semibold text-gray-900 dark:text-slate-100">{formatCurrency(q.total, cur)}</td>
                         <td className="table-cell" onClick={e => e.stopPropagation()}>
                           <div className="flex justify-center">
-                            <button onClick={() => confirm('¿Eliminar cotización?') && deleteMutation.mutate(q.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                            <button onClick={() => confirm('¿Eliminar cotización?') && deleteMutation.mutate(q.id)} className="p-1.5 text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg">
                               <Trash2 size={15} />
                             </button>
                           </div>
@@ -259,7 +259,7 @@ export function Cotizaciones() {
 
       {/* Create modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nueva cotización" size="xl">
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
+        {error && <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-sm rounded-lg">{error}</div>}
         <form onSubmit={handleSubmit(d => createMutation.mutate(d))} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -283,7 +283,7 @@ export function Cotizaciones() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="label mb-0">Productos / Servicios *</label>
-              <button type="button" onClick={() => append({ name: '', quantity: 1, price: 0 })} className="text-blue-600 text-xs flex items-center gap-1 hover:underline">
+              <button type="button" onClick={() => append({ name: '', quantity: 1, price: 0 })} className="text-blue-600 dark:text-blue-400 text-xs flex items-center gap-1 hover:underline">
                 <PlusCircle size={13} /> Agregar línea
               </button>
             </div>
@@ -306,12 +306,12 @@ export function Cotizaciones() {
                   <div className="col-span-3">
                     <input {...register(`items.${index}.price`)} type="number" step="0.01" className="input text-sm" placeholder="Precio" />
                   </div>
-                  <div className="col-span-1 pt-2 text-right text-xs text-gray-500">
+                  <div className="col-span-1 pt-2 text-right text-xs text-gray-500 dark:text-slate-400">
                     {formatCurrency((Number(watchedItems?.[index]?.price) || 0) * (Number(watchedItems?.[index]?.quantity) || 0), cur)}
                   </div>
                   <div className="col-span-1 pt-1">
                     {fields.length > 1 && (
-                      <button type="button" onClick={() => remove(index)} className="p-1.5 text-gray-400 hover:text-red-600 rounded">
+                      <button type="button" onClick={() => remove(index)} className="p-1.5 text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 rounded">
                         <Trash2 size={14} />
                       </button>
                     )}
@@ -319,7 +319,7 @@ export function Cotizaciones() {
                 </div>
               ))}
             </div>
-            {errors.items && <p className="text-red-500 text-xs mt-1">{errors.items.message || errors.items.root?.message}</p>}
+            {errors.items && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.items.message || errors.items.root?.message}</p>}
           </div>
 
           <div>
@@ -327,8 +327,8 @@ export function Cotizaciones() {
             <textarea {...register('notes')} className="input" rows={2} placeholder="Condiciones, observaciones..." />
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="text-lg font-bold text-gray-900">
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-700">
+            <div className="text-lg font-bold text-gray-900 dark:text-slate-100">
               Total: {formatCurrency(subtotal, cur)}
             </div>
             <div className="flex gap-2">
@@ -346,16 +346,16 @@ export function Cotizaciones() {
         {detailQuote && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><p className="text-gray-500">Cliente</p><p className="font-medium">{detailQuote.client?.name || 'Sin cliente'}</p></div>
-              <div><p className="text-gray-500">Estado</p><span className={`badge ${QUOTE_STATUS_LABELS[detailQuote.status]?.color}`}>{QUOTE_STATUS_LABELS[detailQuote.status]?.label}</span></div>
-              <div><p className="text-gray-500">Fecha</p><p className="font-medium">{formatDate(detailQuote.createdAt)}</p></div>
+              <div><p className="text-gray-500 dark:text-slate-400">Cliente</p><p className="font-medium">{detailQuote.client?.name || 'Sin cliente'}</p></div>
+              <div><p className="text-gray-500 dark:text-slate-400">Estado</p><span className={`badge ${QUOTE_STATUS_LABELS[detailQuote.status]?.color}`}>{QUOTE_STATUS_LABELS[detailQuote.status]?.label}</span></div>
+              <div><p className="text-gray-500 dark:text-slate-400">Fecha</p><p className="font-medium">{formatDate(detailQuote.createdAt)}</p></div>
               {detailQuote.validUntil && (
                 <div>
-                  <p className="text-gray-500">Válida hasta</p>
+                  <p className="text-gray-500 dark:text-slate-400">Válida hasta</p>
                   {(() => {
                     const expired = detailQuote.status === 'PENDING' && new Date(detailQuote.validUntil!) < new Date()
                     return (
-                      <p className={`font-medium flex items-center gap-1 ${expired ? 'text-amber-600' : ''}`}>
+                      <p className={`font-medium flex items-center gap-1 ${expired ? 'text-amber-600 dark:text-amber-400' : ''}`}>
                         {expired && <AlertTriangle size={13} />}
                         {formatDate(detailQuote.validUntil!)}
                         {expired && <span className="text-xs">(vencida)</span>}
@@ -366,7 +366,7 @@ export function Cotizaciones() {
               )}
             </div>
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-slate-800">
                 <tr>
                   <th className="table-header">Descripción</th>
                   <th className="table-header text-center">Cant.</th>
@@ -376,7 +376,7 @@ export function Cotizaciones() {
               </thead>
               <tbody>
                 {detailQuote.items.map(item => (
-                  <tr key={item.id} className="border-t border-gray-100">
+                  <tr key={item.id} className="border-t border-gray-100 dark:border-slate-700">
                     <td className="table-cell">{item.name}</td>
                     <td className="table-cell text-center">{item.quantity}</td>
                     <td className="table-cell text-right">{formatCurrency(item.price, cur)}</td>
@@ -385,15 +385,15 @@ export function Cotizaciones() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-200">
+                <tr className="border-t-2 border-gray-200 dark:border-slate-600">
                   <td colSpan={3} className="table-cell text-right font-bold">Total</td>
-                  <td className="table-cell text-right text-lg font-bold text-blue-600">{formatCurrency(detailQuote.total, cur)}</td>
+                  <td className="table-cell text-right text-lg font-bold text-blue-600 dark:text-blue-400">{formatCurrency(detailQuote.total, cur)}</td>
                 </tr>
               </tfoot>
             </table>
 
             {(detailQuote.status === 'PENDING' || detailQuote.status === 'ACCEPTED') && (
-              <div className="pt-2 border-t border-gray-100">
+              <div className="pt-2 border-t border-gray-100 dark:border-slate-700">
                 <button
                   onClick={() => convertMutation.mutate(detailQuote)}
                   disabled={convertMutation.isPending}
@@ -402,7 +402,7 @@ export function Cotizaciones() {
                   <ShoppingBag size={16} />
                   {convertMutation.isPending ? 'Registrando...' : 'Convertir en venta'}
                 </button>
-                <p className="text-xs text-gray-400 text-center mt-1.5">Descuenta stock, registra venta en efectivo y marca la cotización como convertida</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500 text-center mt-1.5">Descuenta stock, registra venta en efectivo y marca la cotización como convertida</p>
               </div>
             )}
           </div>
